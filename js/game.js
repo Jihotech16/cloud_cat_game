@@ -151,6 +151,7 @@ export class Game {
     if (Math.abs(this.player.vx) > 0.01) {
       this.player.facing = this.player.vx > 0 ? 1 : -1;
     }
+    this.player.land();
     this.player.alignFeetTo(cloud.top);
     this.player.vy = 0;
     this.player.vx = 0;

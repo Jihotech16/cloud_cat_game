@@ -8,7 +8,6 @@ const JUMP_READY_FRAME_SIZE = 128;
 const JUMP_READY_FRAME_COUNT = 3;
 const JUMPING_FRAME_SIZE = 128;
 const JUMPING_FRAME_COUNT = 4;
-const JUMPING_FRAME_DURATION = 7;
 
 let catImage = null;
 let catImageReady = false;
@@ -68,7 +67,7 @@ export class Player {
     this.baseSpeed = PLAYER_BASE_SPEED;
     this.charging = false;
     this.chargeLevel = 0;
-    this.airTime = 0;
+    this.jumpPeakVy = 0;
   }
 
   get left() {
@@ -108,7 +107,6 @@ export class Player {
     this.vy += gravity;
     this.x += this.vx;
     this.y += this.vy;
-    this.airTime += 1;
 
     this.applyWallBounce(worldWidth);
 
@@ -121,7 +119,11 @@ export class Player {
     this.groundedCloud = null;
     this.charging = false;
     this.chargeLevel = 0;
-    this.airTime = 0;
+    this.jumpPeakVy = jumpForce;
+  }
+
+  land() {
+    this.jumpPeakVy = 0;
   }
 
   _getReadyFrame() {
@@ -131,8 +133,18 @@ export class Player {
   }
 
   _getJumpingFrame() {
-    const frame = Math.floor(this.airTime / JUMPING_FRAME_DURATION);
-    return Math.min(JUMPING_FRAME_COUNT - 1, frame);
+    const peak = this.jumpPeakVy;
+    if (!peak) return 0;
+
+    // 점프 궤적에 맞춰 4프레임: 발사 → 상승 → 정점 → 하강
+    if (this.vy <= -peak * 0.55) return 0;
+    if (this.vy < 0) return 1;
+    if (this.vy < peak * 0.45) return 2;
+    return 3;
+  }
+
+  _isInAir() {
+    return this.jumpPeakVy > 0 && !this.groundedCloud;
   }
 
   draw(ctx, cameraY) {
@@ -145,8 +157,8 @@ export class Player {
     const faceRight = this.vx !== 0 ? this.vx > 0 : this.facing > 0;
     if (faceRight) ctx.scale(-1, 1);
 
-    const useReady = this.charging && jumpReadyImageReady;
-    const useJumping = !this.groundedCloud && !useReady && jumpingImageReady;
+    const useReady = this.charging && this.groundedCloud && jumpReadyImageReady;
+    const useJumping = this._isInAir() && jumpingImageReady;
     if (useReady) {
       const frame = this._getReadyFrame();
       const sx = frame * JUMP_READY_FRAME_SIZE;
