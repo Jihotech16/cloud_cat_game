@@ -49,10 +49,10 @@ export class Orb {
 
 // 보상 정의. 게이지가 가득 차면 이 중 3개가 무작위로 제시된다.
 export const REWARDS = [
+  { id: 'jump', icon: '🚀', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)' },
+  { id: 'magnet', icon: '🧲', label: '자석 ⬆', desc: '오브 끌어당김 범위가 늘어나요 (중첩)' },
   { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요' },
   { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요' },
-  { id: 'magnet', icon: '🧲', label: '자석', desc: '한동안 오브를 끌어당겨요' },
-  { id: 'jump', icon: '🚀', label: '점프 파워', desc: '한동안 더 높이 점프해요' },
 ];
 
 // 무작위로 n개의 보상을 고른다.

@@ -31,12 +31,6 @@ const effectsEl = document.getElementById('effects');
 const rewardScreen = document.getElementById('reward-screen');
 const rewardCards = document.getElementById('reward-cards');
 
-const EFFECT_BADGES = {
-  shield: '🛡️',
-  scoreX2: '✨×2',
-  magnet: '🧲',
-  jump: '🚀',
-};
 
 let game = null;
 let lastScore = 0;
@@ -61,11 +55,15 @@ function updateGauge(ratio) {
   gaugeFill.classList.toggle('full', ratio >= 1);
 }
 
-function updateEffects(effects) {
-  const active = Object.entries(effects)
-    .filter(([, on]) => on)
-    .map(([key]) => `<span class="effect-badge">${EFFECT_BADGES[key]}</span>`);
-  effectsEl.innerHTML = active.join('');
+function updateEffects(effects = {}) {
+  const badges = [];
+  if (effects.jumpLevel > 0) badges.push(`🚀×${effects.jumpLevel}`);
+  if (effects.magnetLevel > 0) badges.push(`🧲×${effects.magnetLevel}`);
+  if (effects.scoreX2) badges.push('✨×2');
+  if (effects.shield) badges.push('🛡️');
+  effectsEl.innerHTML = badges
+    .map((b) => `<span class="effect-badge">${b}</span>`)
+    .join('');
 }
 
 function showRewardChoices(choices) {

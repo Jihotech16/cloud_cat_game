@@ -26,10 +26,10 @@ import {
   ORB_GAUGE_FILL,
   GAUGE_MAX,
   ORB_PICKUP_PADDING,
-  ORB_MAGNET_RANGE,
   ORB_MAGNET_SPEED,
+  JUMP_LEVEL_STEP,
+  MAGNET_RANGE_STEP,
   REWARD_DURATION,
-  REWARD_JUMP_MULT,
   REWARD_SCORE_MULT,
 } from './config.js';
 
@@ -60,7 +60,9 @@ export class Game {
     this.rawClimb = 0;
     this.frame = 0;
     this.shield = false;
-    this.effects = { scoreX2: 0, magnet: 0, jump: 0 };
+    this.jumpLevel = 0;
+    this.magnetLevel = 0;
+    this.effects = { scoreX2: 0 };
 
     this._bindInput();
     this._resize();
@@ -162,8 +164,8 @@ export class Game {
     }
 
     const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
-    const boost = this.effects.jump > 0 ? REWARD_JUMP_MULT : 1;
-    this.player.bounce(JUMP_FORCE * jumpMult * boost);
+    const upgrade = 1 + this.jumpLevel * JUMP_LEVEL_STEP;
+    this.player.bounce(JUMP_FORCE * jumpMult * upgrade);
     playJumpSound();
     this.charge = 0;
     this.callbacks.onCharge?.(0, false);
@@ -214,7 +216,9 @@ export class Game {
     this.rawClimb = 0;
     this.frame = 0;
     this.shield = false;
-    this.effects = { scoreX2: 0, magnet: 0, jump: 0 };
+    this.jumpLevel = 0;
+    this.magnetLevel = 0;
+    this.effects = { scoreX2: 0 };
     this.callbacks.onGauge?.(0);
     this.callbacks.onEffects?.(this.getEffects());
 
@@ -404,7 +408,7 @@ export class Game {
     const px = this.player.x;
     const py = this.player.y;
     const pickDist = this.player.width * 0.4 + ORB_PICKUP_PADDING;
-    const magnetOn = this.effects.magnet > 0;
+    const magnetRange = this.magnetLevel * MAGNET_RANGE_STEP;
 
     for (const orb of this.orbs) {
       if (orb.collected) continue;
@@ -413,7 +417,7 @@ export class Game {
       const dy = py - orb.y;
       const dist = Math.hypot(dx, dy);
 
-      if (magnetOn && dist < ORB_MAGNET_RANGE && dist > 0.01) {
+      if (magnetRange > 0 && dist < magnetRange && dist > 0.01) {
         orb.x += (dx / dist) * ORB_MAGNET_SPEED;
         orb.y += (dy / dist) * ORB_MAGNET_SPEED;
       }
@@ -435,14 +439,10 @@ export class Game {
   }
 
   _tickEffects() {
-    let changed = false;
-    for (const key of ['scoreX2', 'magnet', 'jump']) {
-      if (this.effects[key] > 0) {
-        this.effects[key] -= 1;
-        if (this.effects[key] === 0) changed = true;
-      }
+    if (this.effects.scoreX2 > 0) {
+      this.effects.scoreX2 -= 1;
+      if (this.effects.scoreX2 === 0) this.callbacks.onEffects?.(this.getEffects());
     }
-    if (changed) this.callbacks.onEffects?.(this.getEffects());
   }
 
   // 게이지가 가득 차면 게임을 멈추고 보상 선택을 띄운다.
@@ -462,9 +462,9 @@ export class Game {
     } else if (id === 'scoreX2') {
       this.effects.scoreX2 = REWARD_DURATION;
     } else if (id === 'magnet') {
-      this.effects.magnet = REWARD_DURATION;
+      this.magnetLevel += 1; // 영구 누적
     } else if (id === 'jump') {
-      this.effects.jump = REWARD_DURATION;
+      this.jumpLevel += 1; // 영구 누적
     }
 
     this.gauge = 0;
@@ -500,8 +500,8 @@ export class Game {
     return {
       shield: this.shield,
       scoreX2: this.effects.scoreX2 > 0,
-      magnet: this.effects.magnet > 0,
-      jump: this.effects.jump > 0,
+      jumpLevel: this.jumpLevel,
+      magnetLevel: this.magnetLevel,
     };
   }
 
