@@ -75,11 +75,14 @@ Xcode에서:
 
 ## 4. 아이콘 / 스플래시 / 네이티브 UX
 
-아이콘 소스: `icons/icon.svg` → 생성물:
-- PWA/웹: `icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`
-- Capacitor 소스: `resources/icon.png`(1024), `resources/splash.png`(2732)
+아이콘 소스: `resources/icon-source.png` (라운드 앱 아이콘 원본) → 생성물:
+- PWA/웹: `icons/icon-192.png`, `icon-512.png`(투명 코너), `icon-maskable-512.png`(풀블리드)
+- Capacitor/iOS 소스: `resources/icon.png`(1024)
 - Android 런처 아이콘: `android/.../res/mipmap-*` (이미 적용됨)
 - Android 스플래시: `android/.../res/drawable*/splash.png` (하늘색 + 로고, 이미 적용됨)
+
+> `scripts/gen-app-icon.mjs`가 검정 배경을 투명 처리하고 크롭한 뒤,
+> 용도별(투명 코너 / 배경색 풀블리드)로 PWA·iOS·Android 아이콘을 한 번에 생성합니다.
 
 ### 네이티브 플러그인 (이미 구성됨)
 - `@capacitor/splash-screen` — 앱 시작 시 하늘색 스플래시 (1.5초, 로딩 후 자동 숨김)
@@ -87,11 +90,10 @@ Xcode에서:
 - 제어 코드: `js/native.js` (네이티브 환경에서만 동작, 일반 웹은 무시)
 
 ### 아이콘/스플래시 재생성
-SVG를 수정했다면:
+아이콘을 바꾸려면 `resources/icon-source.png`를 교체 후:
 
 ```bash
-npm run icons           # 웹/PWA + resources/ PNG 재생성
-npm run icons:android   # Android 런처 아이콘 재생성
+npm run icons           # PWA + iOS + Android 런처 아이콘 일괄 재생성
 npm run splash:android  # Android 스플래시 재생성
 ```
 
