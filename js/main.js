@@ -1,6 +1,6 @@
 import { Game } from './game.js';
 import { isMobileDevice, isPortrait } from './device.js';
-import { initScores } from './score.js';
+import { initScores, getGlobalBest } from './score.js';
 
 const app = document.getElementById('app');
 const desktopGate = document.getElementById('desktop-gate');
@@ -14,7 +14,9 @@ const gameoverScreen = document.getElementById('gameover-screen');
 
 const scoreEl = document.getElementById('score');
 const bestScoreEl = document.getElementById('best-score');
+const globalBestEl = document.getElementById('global-best');
 const menuBestEl = document.getElementById('menu-best');
+const menuGlobalBestEl = document.getElementById('menu-global-best');
 const finalScoreEl = document.getElementById('final-score');
 const newRecordEl = document.getElementById('new-record');
 
@@ -31,6 +33,10 @@ function updateChargeBar(charge, holding) {
 function updateBestDisplays(best) {
   bestScoreEl.textContent = best;
   menuBestEl.textContent = best;
+
+  const global = getGlobalBest();
+  globalBestEl.textContent = global;
+  menuGlobalBestEl.textContent = global;
 }
 
 function ensureGame() {

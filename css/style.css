@@ -155,6 +155,10 @@ body {
   color: var(--accent-dark);
 }
 
+.score-box.global span:last-child {
+  color: #e17055;
+}
+
 .charge-bar {
   position: absolute;
   left: 50%;
@@ -318,6 +322,14 @@ body {
 .best-record strong {
   color: var(--accent-dark);
   font-size: 1.05rem;
+}
+
+.best-record.global-record {
+  margin-top: 4px;
+}
+
+.best-record.global-record strong {
+  color: #e17055;
 }
 
 .install-hint {

@@ -4,6 +4,7 @@ const STORAGE_KEY = 'cloudCatJump_bestScore';
 const DEVICE_KEY = 'cloudCatJump_deviceId';
 
 let cachedBest = 0;
+let cachedGlobalBest = 0;
 
 function readLocalBest() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -28,14 +29,35 @@ function firebaseScorePath() {
   return `${FIREBASE_DB_URL}/bestScores/${getDeviceId()}.json`;
 }
 
+function firebaseAllScoresPath() {
+  return `${FIREBASE_DB_URL}/bestScores.json`;
+}
+
+function extractScore(value) {
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value.score === 'number') return value.score;
+  return 0;
+}
+
 async function fetchRemoteBest() {
   const res = await fetch(firebaseScorePath());
   if (!res.ok) throw new Error(`Firebase read failed: ${res.status}`);
   const data = await res.json();
-  if (data == null) return 0;
-  if (typeof data === 'number') return data;
-  if (typeof data.score === 'number') return data.score;
-  return 0;
+  return extractScore(data);
+}
+
+async function fetchGlobalBest() {
+  const res = await fetch(firebaseAllScoresPath());
+  if (!res.ok) throw new Error(`Firebase read failed: ${res.status}`);
+  const data = await res.json();
+  if (data == null || typeof data !== 'object') return 0;
+  let max = 0;
+  for (const value of Object.values(data)) {
+    const score = extractScore(value);
+    if (score > max) max = score;
+  }
+  return max;
 }
 
 async function pushRemoteBest(score) {
@@ -55,8 +77,12 @@ export async function initScores() {
   cachedBest = local;
 
   try {
-    const remote = await fetchRemoteBest();
+    const [remote, global] = await Promise.all([
+      fetchRemoteBest(),
+      fetchGlobalBest(),
+    ]);
     cachedBest = Math.max(local, remote);
+    cachedGlobalBest = Math.max(global, cachedBest);
     writeLocalBest(cachedBest);
 
     if (remote < cachedBest) {
@@ -71,11 +97,16 @@ export function getBestScore() {
   return cachedBest;
 }
 
+export function getGlobalBest() {
+  return cachedGlobalBest;
+}
+
 export function saveBestScore(score) {
   const floored = Math.floor(score);
   if (floored <= cachedBest) return false;
 
   cachedBest = floored;
+  if (floored > cachedGlobalBest) cachedGlobalBest = floored;
   writeLocalBest(floored);
 
   pushRemoteBest(floored).catch((err) => {
