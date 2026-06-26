@@ -339,6 +339,20 @@ body {
   line-height: 1.4;
 }
 
+.gameover-cat {
+  display: block;
+  width: 128px;
+  height: 128px;
+  margin: 8px auto 0;
+  object-fit: contain;
+  animation: cat-sob 1.4s ease-in-out infinite;
+}
+
+@keyframes cat-sob {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(4px) rotate(1.5deg); }
+}
+
 .result {
   margin: 16px 0;
 }
