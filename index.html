@@ -47,18 +47,27 @@
     </div>
 
     <div id="hud" class="hud hidden">
-      <div class="score-box">
-        <span class="label">점수</span>
-        <span id="score">0</span>
+      <div class="score-row">
+        <div class="score-box">
+          <span class="label">점수</span>
+          <span id="score">0</span>
+        </div>
+        <div class="score-box best">
+          <span class="label">최고</span>
+          <span id="best-score">0</span>
+        </div>
+        <div class="score-box global">
+          <span class="label">전체</span>
+          <span id="global-best">0</span>
+        </div>
       </div>
-      <div class="score-box best">
-        <span class="label">최고</span>
-        <span id="best-score">0</span>
+      <div class="gauge">
+        <span class="gauge-icon" aria-hidden="true">⭐</span>
+        <div class="gauge-track">
+          <div id="gauge-fill" class="gauge-fill"></div>
+        </div>
       </div>
-      <div class="score-box global">
-        <span class="label">전체</span>
-        <span id="global-best">0</span>
-      </div>
+      <div id="effects" class="effects"></div>
     </div>
 
     <div id="start-screen" class="overlay">
@@ -91,6 +100,14 @@
         <p id="new-record" class="new-record hidden">🎉 새 최고 기록!</p>
         <button id="btn-retry" class="btn-primary">다시 도전</button>
         <button id="btn-share" class="btn-secondary">📤 결과 공유하기</button>
+      </div>
+    </div>
+
+    <div id="reward-screen" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title">⭐ 보상 획득!</h2>
+        <p class="subtitle">하나를 골라 능력을 얻으세요</p>
+        <div id="reward-cards" class="reward-cards"></div>
       </div>
     </div>
   </div>

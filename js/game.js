@@ -1,5 +1,6 @@
 import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
+import { Orb, pickRewardChoices } from './orb.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { playJumpSound } from './audio.js';
 import {
@@ -20,6 +21,16 @@ import {
   CULL_BELOW_PADDING,
   GAME_OVER_MARGIN,
   GAME_SCALE,
+  ORB_RADIUS,
+  ORB_SPAWN_CHANCE,
+  ORB_GAUGE_FILL,
+  GAUGE_MAX,
+  ORB_PICKUP_PADDING,
+  ORB_MAGNET_RANGE,
+  ORB_MAGNET_SPEED,
+  REWARD_DURATION,
+  REWARD_JUMP_MULT,
+  REWARD_SCORE_MULT,
 } from './config.js';
 
 export class Game {
@@ -43,6 +54,13 @@ export class Game {
     this.charge = 0;
     this.stars = [];
     this.cloudDecor = [];
+
+    this.orbs = [];
+    this.gauge = 0;
+    this.rawClimb = 0;
+    this.frame = 0;
+    this.shield = false;
+    this.effects = { scoreX2: 0, magnet: 0, jump: 0 };
 
     this._bindInput();
     this._resize();
@@ -144,7 +162,8 @@ export class Game {
     }
 
     const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
-    this.player.bounce(JUMP_FORCE * jumpMult);
+    const boost = this.effects.jump > 0 ? REWARD_JUMP_MULT : 1;
+    this.player.bounce(JUMP_FORCE * jumpMult * boost);
     playJumpSound();
     this.charge = 0;
     this.callbacks.onCharge?.(0, false);
@@ -189,6 +208,15 @@ export class Game {
     this.score = 0;
     this.cameraY = 0;
     this.highestY = 0;
+
+    this.orbs = [];
+    this.gauge = 0;
+    this.rawClimb = 0;
+    this.frame = 0;
+    this.shield = false;
+    this.effects = { scoreX2: 0, magnet: 0, jump: 0 };
+    this.callbacks.onGauge?.(0);
+    this.callbacks.onEffects?.(this.getEffects());
 
     const startY = this.worldHeight - START_Y_OFFSET;
     this.startCloud = new Cloud(
@@ -235,15 +263,24 @@ export class Game {
 
     let y = this.highestSpawnedY;
     while (y > spawnAbove) {
-      y -= CLOUD_GAP_MIN + Math.random() * (CLOUD_GAP_MAX - CLOUD_GAP_MIN);
+      const gap = CLOUD_GAP_MIN + Math.random() * (CLOUD_GAP_MAX - CLOUD_GAP_MIN);
+      y -= gap;
       const x = Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
       const type = pickCloudType(this.score);
       this.clouds.push(new Cloud(x, y, type, randomCloudWidth()));
       this.highestSpawnedY = y;
+
+      // 구름 사이 점프 경로에 오브를 가끔 띄운다.
+      if (Math.random() < ORB_SPAWN_CHANCE) {
+        const ox = ORB_RADIUS * 2 + Math.random() * (this.worldWidth - ORB_RADIUS * 4);
+        const oy = y + gap * (0.4 + Math.random() * 0.3);
+        this.orbs.push(new Orb(ox, oy));
+      }
     }
 
     const cullBelow = this.cameraY + this.worldHeight + CULL_BELOW_PADDING;
     this.clouds = this.clouds.filter((c) => c.y < cullBelow);
+    this.orbs = this.orbs.filter((o) => !o.collected && o.y < cullBelow);
   }
 
   _checkLanding() {
@@ -305,8 +342,11 @@ export class Game {
     }
 
     const climbed = Math.max(0, Math.floor((this.worldHeight - START_Y_OFFSET - this.player.y) / SCORE_DIVISOR));
-    if (climbed > this.score) {
-      this.score = climbed;
+    if (climbed > this.rawClimb) {
+      const delta = climbed - this.rawClimb;
+      this.rawClimb = climbed;
+      const mult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
+      this.score += delta * mult;
       this.callbacks.onScore?.(this.score);
     }
   }
@@ -319,6 +359,8 @@ export class Game {
   }
 
   _update() {
+    this.frame += 1;
+
     if (this.state === 'ready') {
       this._snapToStartCloud();
       if (this.input.holding) {
@@ -341,12 +383,126 @@ export class Game {
     }
 
     this._spawnClouds();
+    this._updateOrbs();
+    this._tickEffects();
     this._updateCamera();
     this._syncPlayerChargeAnim();
 
     if (this.player.y - this.cameraY > this.worldHeight + GAME_OVER_MARGIN) {
-      this._gameOver();
+      if (this.shield) {
+        this.shield = false;
+        this._revive();
+        this.callbacks.onEffects?.(this.getEffects());
+      } else {
+        this._gameOver();
+      }
     }
+  }
+
+  // 오브 자석 이동 + 수집 판정
+  _updateOrbs() {
+    const px = this.player.x;
+    const py = this.player.y;
+    const pickDist = this.player.width * 0.4 + ORB_PICKUP_PADDING;
+    const magnetOn = this.effects.magnet > 0;
+
+    for (const orb of this.orbs) {
+      if (orb.collected) continue;
+
+      const dx = px - orb.x;
+      const dy = py - orb.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (magnetOn && dist < ORB_MAGNET_RANGE && dist > 0.01) {
+        orb.x += (dx / dist) * ORB_MAGNET_SPEED;
+        orb.y += (dy / dist) * ORB_MAGNET_SPEED;
+      }
+
+      if (dist < pickDist + orb.r) {
+        orb.collected = true;
+        this._collectOrb();
+      }
+    }
+    this.orbs = this.orbs.filter((o) => !o.collected);
+  }
+
+  _collectOrb() {
+    this.gauge = Math.min(GAUGE_MAX, this.gauge + ORB_GAUGE_FILL);
+    this.callbacks.onGauge?.(this.gauge / GAUGE_MAX);
+    if (this.gauge >= GAUGE_MAX) {
+      this._triggerReward();
+    }
+  }
+
+  _tickEffects() {
+    let changed = false;
+    for (const key of ['scoreX2', 'magnet', 'jump']) {
+      if (this.effects[key] > 0) {
+        this.effects[key] -= 1;
+        if (this.effects[key] === 0) changed = true;
+      }
+    }
+    if (changed) this.callbacks.onEffects?.(this.getEffects());
+  }
+
+  // 게이지가 가득 차면 게임을 멈추고 보상 선택을 띄운다.
+  _triggerReward() {
+    this.state = 'reward';
+    if (this._loopId) cancelAnimationFrame(this._loopId);
+    const choices = pickRewardChoices(3);
+    this.callbacks.onReward?.(choices);
+  }
+
+  // main.js가 카드 선택 후 호출한다.
+  chooseReward(id) {
+    if (this.state !== 'reward') return;
+
+    if (id === 'shield') {
+      this.shield = true;
+    } else if (id === 'scoreX2') {
+      this.effects.scoreX2 = REWARD_DURATION;
+    } else if (id === 'magnet') {
+      this.effects.magnet = REWARD_DURATION;
+    } else if (id === 'jump') {
+      this.effects.jump = REWARD_DURATION;
+    }
+
+    this.gauge = 0;
+    this.callbacks.onGauge?.(0);
+    this.callbacks.onEffects?.(this.getEffects());
+
+    this.state = 'playing';
+    this._loop();
+  }
+
+  // 보호막으로 부활: 화면 중앙으로 끌어올리고 받쳐줄 구름을 둔다.
+  _revive() {
+    const reviveY = this.cameraY + this.worldHeight * 0.4;
+    this.clouds.push(new Cloud(
+      this.worldWidth / 2,
+      this.cameraY + this.worldHeight * 0.62,
+      CLOUD_TYPES.NORMAL,
+      START_CLOUD_WIDTH,
+    ));
+    this.player.x = this.worldWidth / 2;
+    this.player.y = reviveY;
+    this.player.vx = 0;
+    this.player.vy = -JUMP_FORCE * 1.3;
+    this.player.groundedCloud = null;
+    this.player.onGround = false;
+  }
+
+  getGauge() {
+    return this.gauge / GAUGE_MAX;
+  }
+
+  getEffects() {
+    return {
+      shield: this.shield,
+      scoreX2: this.effects.scoreX2 > 0,
+      magnet: this.effects.magnet > 0,
+      jump: this.effects.jump > 0,
+    };
   }
 
   _gameOver() {
@@ -562,6 +718,10 @@ export class Game {
     const sorted = [...this.clouds].sort((a, b) => a.y - b.y);
     for (const cloud of sorted) {
       cloud.draw(this.ctx, this.cameraY);
+    }
+
+    for (const orb of this.orbs) {
+      orb.draw(this.ctx, this.cameraY, this.frame);
     }
 
     this.player.draw(this.ctx, this.cameraY);

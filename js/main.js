@@ -26,6 +26,18 @@ const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
 
+const gaugeFill = document.getElementById('gauge-fill');
+const effectsEl = document.getElementById('effects');
+const rewardScreen = document.getElementById('reward-screen');
+const rewardCards = document.getElementById('reward-cards');
+
+const EFFECT_BADGES = {
+  shield: '🛡️',
+  scoreX2: '✨×2',
+  magnet: '🧲',
+  jump: '🚀',
+};
+
 let game = null;
 let lastScore = 0;
 let lastIsNewRecord = false;
@@ -44,6 +56,37 @@ function updateBestDisplays(best) {
   menuGlobalBestEl.textContent = global;
 }
 
+function updateGauge(ratio) {
+  gaugeFill.style.width = `${Math.round(ratio * 100)}%`;
+  gaugeFill.classList.toggle('full', ratio >= 1);
+}
+
+function updateEffects(effects) {
+  const active = Object.entries(effects)
+    .filter(([, on]) => on)
+    .map(([key]) => `<span class="effect-badge">${EFFECT_BADGES[key]}</span>`);
+  effectsEl.innerHTML = active.join('');
+}
+
+function showRewardChoices(choices) {
+  rewardCards.innerHTML = '';
+  for (const reward of choices) {
+    const card = document.createElement('button');
+    card.className = 'reward-card';
+    card.innerHTML = `
+      <span class="reward-icon">${reward.icon}</span>
+      <span class="reward-label">${reward.label}</span>
+      <span class="reward-desc">${reward.desc}</span>
+    `;
+    card.addEventListener('click', () => {
+      rewardScreen.classList.add('hidden');
+      game.chooseReward(reward.id);
+    });
+    rewardCards.appendChild(card);
+  }
+  rewardScreen.classList.remove('hidden');
+}
+
 function ensureGame() {
   if (game) return;
 
@@ -53,6 +96,15 @@ function ensureGame() {
     },
     onCharge(charge, holding) {
       updateChargeBar(charge, holding);
+    },
+    onGauge(ratio) {
+      updateGauge(ratio);
+    },
+    onEffects(effects) {
+      updateEffects(effects);
+    },
+    onReward(choices) {
+      showRewardChoices(choices);
     },
     onGameOver(score, isNewRecord) {
       hud.classList.add('hidden');
@@ -88,12 +140,15 @@ function startGame() {
   ensureGame();
   startScreen.classList.add('hidden');
   gameoverScreen.classList.add('hidden');
+  rewardScreen.classList.add('hidden');
   hud.classList.remove('hidden');
   chargeBar.classList.remove('hidden');
   chargeBar.classList.remove('visible');
   chargeFill.style.width = '0%';
   newRecordEl.classList.add('hidden');
   scoreEl.textContent = '0';
+  updateGauge(0);
+  updateEffects({});
   game.start();
 }
 
