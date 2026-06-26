@@ -235,8 +235,13 @@ export class Game {
   _checkLanding() {
     if (this.player.groundedCloud || this.player.vy <= 0) return;
 
+    const viewportBottom = this.cameraY + this.worldHeight;
+
     for (const cloud of this.clouds) {
       if (cloud.broken) continue;
+
+      // 화면 아래로 사라진(보이지 않는) 구름에는 착지하지 않는다.
+      if (cloud.top > viewportBottom) continue;
 
       const playerBottom = this.player.bottom;
       const prevBottom = playerBottom - this.player.vy;
