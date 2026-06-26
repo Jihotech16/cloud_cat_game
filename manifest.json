@@ -1,0 +1,19 @@
+{
+  "name": "Cloud Cat Jump",
+  "short_name": "Cloud Cat",
+  "description": "구름 위를 뛰어올라 최고 점수에 도전하는 고양이 점프 게임",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#6ec6ff",
+  "theme_color": "#6ec6ff",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

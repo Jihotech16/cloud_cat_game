@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="구름 위를 뛰어올라 최고 점수에 도전하는 고양이 점프 게임">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cloud Cat">
+  <meta name="theme-color" content="#6ec6ff">
+  <meta name="format-detection" content="telephone=no">
+  <title>Cloud Cat Jump</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="desktop-gate" class="gate hidden">
+    <div class="gate-panel">
+      <p class="gate-icon" aria-hidden="true">📱</p>
+      <h1>모바일 전용 게임</h1>
+      <p>스마트폰 브라우저에서<br>접속해 주세요.</p>
+    </div>
+  </div>
+
+  <div id="landscape-gate" class="gate hidden">
+    <div class="gate-panel">
+      <p class="gate-icon rotate-hint" aria-hidden="true">📱</p>
+      <h1>세로 모드로 플레이</h1>
+      <p>기기를 세로로 돌려 주세요.</p>
+    </div>
+  </div>
+
+  <div id="app" class="hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="charge-bar" class="charge-bar hidden" aria-hidden="true">
+      <span class="charge-label">점프 파워</span>
+      <div class="charge-track">
+        <div id="charge-fill" class="charge-fill"></div>
+      </div>
+    </div>
+
+    <div id="hud" class="hud hidden">
+      <div class="score-box">
+        <span class="label">점수</span>
+        <span id="score">0</span>
+      </div>
+      <div class="score-box best">
+        <span class="label">최고</span>
+        <span id="best-score">0</span>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+      <div class="panel">
+        <h1 class="title">☁️ Cloud Cat Jump</h1>
+        <p class="subtitle">구름 위를 뛰어올라 하늘 끝까지!</p>
+        <div class="cat-preview" aria-hidden="true">🐱</div>
+        <p class="controls">
+          <span class="touch-hint">👆 꾹 눌렀다 떼면 점프</span>
+          <span class="touch-hint sub">오래 누를수록 더 높이 · 벽에 부딪히면 방향 전환</span>
+        </p>
+        <button id="btn-start" class="btn-primary">게임 시작</button>
+        <p class="best-record">최고 기록: <strong id="menu-best">0</strong>m</p>
+        <p class="install-hint">홈 화면에 추가하면 앱처럼 플레이할 수 있어요</p>
+      </div>
+    </div>
+
+    <div id="gameover-screen" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title">앗, 떨어졌어요!</h2>
+        <div class="result">
+          <p>이번 점수</p>
+          <p id="final-score" class="big-number">0</p>
+          <p class="unit">m</p>
+        </div>
+        <p id="new-record" class="new-record hidden">🎉 새 최고 기록!</p>
+        <button id="btn-retry" class="btn-primary">다시 도전</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
