@@ -7,6 +7,8 @@
   "scripts": {
     "build": "node scripts/build-www.mjs",
     "icons": "node scripts/gen-icons.mjs",
+    "icons:android": "node scripts/gen-android-icons.mjs",
+    "splash:android": "node scripts/gen-splash.mjs",
     "sync": "npm run build && cap sync",
     "add:android": "cap add android",
     "add:ios": "cap add ios",
@@ -19,12 +21,19 @@
     "type": "git",
     "url": "https://github.com/Jihotech16/cloud_cat_game.git"
   },
-  "keywords": ["game", "capacitor", "pwa", "cat"],
+  "keywords": [
+    "game",
+    "capacitor",
+    "pwa",
+    "cat"
+  ],
   "license": "ISC",
   "dependencies": {
     "@capacitor/android": "^8.4.1",
     "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1"
+    "@capacitor/ios": "^8.4.1",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",

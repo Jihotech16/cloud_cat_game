@@ -73,19 +73,26 @@ Xcode에서:
 
 ---
 
-## 4. 아이콘 / 스플래시
+## 4. 아이콘 / 스플래시 / 네이티브 UX
 
 아이콘 소스: `icons/icon.svg` → 생성물:
 - PWA/웹: `icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`
 - Capacitor 소스: `resources/icon.png`(1024), `resources/splash.png`(2732)
 - Android 런처 아이콘: `android/.../res/mipmap-*` (이미 적용됨)
+- Android 스플래시: `android/.../res/drawable*/splash.png` (하늘색 + 로고, 이미 적용됨)
 
-### 아이콘 재생성
+### 네이티브 플러그인 (이미 구성됨)
+- `@capacitor/splash-screen` — 앱 시작 시 하늘색 스플래시 (1.5초, 로딩 후 자동 숨김)
+- `@capacitor/status-bar` — 상태바를 테마색(#6ec6ff)으로 맞춤
+- 제어 코드: `js/native.js` (네이티브 환경에서만 동작, 일반 웹은 무시)
+
+### 아이콘/스플래시 재생성
 SVG를 수정했다면:
 
 ```bash
-npm run icons                       # 웹/PWA + resources/ PNG 재생성
-node scripts/gen-android-icons.mjs  # Android 런처 아이콘 재생성
+npm run icons           # 웹/PWA + resources/ PNG 재생성
+npm run icons:android   # Android 런처 아이콘 재생성
+npm run splash:android  # Android 스플래시 재생성
 ```
 
 > 이 리포의 스크립트는 sharp 바이너리 다운로드가 막힌 환경 때문에 Chromium으로 렌더링합니다.
