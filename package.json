@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-www.mjs",
-    "icons": "node scripts/gen-icons.mjs",
-    "icons:android": "node scripts/gen-android-icons.mjs",
+    "icons": "node scripts/gen-app-icon.mjs",
     "splash:android": "node scripts/gen-splash.mjs",
     "sync": "npm run build && cap sync",
     "add:android": "cap add android",
