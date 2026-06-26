@@ -2,6 +2,7 @@ import { Game } from './game.js';
 import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
+import { shareResult } from './share.js';
 
 const app = document.getElementById('app');
 const desktopGate = document.getElementById('desktop-gate');
@@ -23,8 +24,11 @@ const newRecordEl = document.getElementById('new-record');
 
 const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
+const btnShare = document.getElementById('btn-share');
 
 let game = null;
+let lastScore = 0;
+let lastIsNewRecord = false;
 
 function updateChargeBar(charge, holding) {
   chargeFill.style.width = `${charge * 100}%`;
@@ -57,6 +61,9 @@ function ensureGame() {
       gameoverScreen.classList.remove('hidden');
       finalScoreEl.textContent = score;
       newRecordEl.classList.toggle('hidden', !isNewRecord);
+      lastScore = score;
+      lastIsNewRecord = isNewRecord;
+      btnShare.textContent = '📤 결과 공유하기';
       updateBestDisplays(game.getBestScore());
     },
   });
@@ -97,6 +104,18 @@ window.addEventListener('orientationchange', () => {
 
 btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
+
+btnShare.addEventListener('click', async () => {
+  btnShare.disabled = true;
+  const result = await shareResult(lastScore, lastIsNewRecord);
+  if (result === 'copied') {
+    btnShare.textContent = '✅ 결과를 복사했어요!';
+    setTimeout(() => {
+      btnShare.textContent = '📤 결과 공유하기';
+    }, 2000);
+  }
+  btnShare.disabled = false;
+});
 
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 
