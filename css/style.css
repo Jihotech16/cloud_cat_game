@@ -196,6 +196,93 @@ body {
   to { transform: scale(1); opacity: 1; }
 }
 
+.coin-hud {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #b8860b;
+  white-space: nowrap;
+}
+
+.coin-earned {
+  margin-top: 10px;
+  font-size: 0.95rem;
+  color: #b8860b;
+}
+
+.coin-earned strong {
+  font-size: 1.1rem;
+}
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.shop-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  background: rgba(110, 198, 255, 0.1);
+  border: 2px solid rgba(110, 198, 255, 0.35);
+  border-radius: 14px;
+}
+
+.shop-icon {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.shop-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.shop-label {
+  font-size: 0.98rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.shop-label em {
+  font-style: normal;
+  font-size: 0.78rem;
+  color: #888;
+  font-weight: 400;
+}
+
+.shop-desc {
+  font-size: 0.76rem;
+  color: #636e72;
+}
+
+.shop-buy {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 9px 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #ffc24a, #f5a623);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.shop-buy:disabled {
+  background: #cfd6db;
+  color: #fff;
+  cursor: default;
+}
+
 .reward-cards {
   display: flex;
   flex-direction: column;

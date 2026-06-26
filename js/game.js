@@ -2,7 +2,13 @@ import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
 import { Orb, pickRewardChoices } from './orb.js';
 import { getBestScore, saveBestScore } from './score.js';
-import { playJumpSound } from './audio.js';
+import { addCoins } from './meta.js';
+import {
+  playJumpSound,
+  playCollectSound,
+  playRainbowSound,
+  playRewardSound,
+} from './audio.js';
 import {
   GRAVITY,
   JUMP_FORCE,
@@ -23,6 +29,7 @@ import {
   GAME_SCALE,
   ORB_RADIUS,
   ORB_SPAWN_CHANCE,
+  ORB_RAINBOW_CHANCE,
   ORB_GAUGE_FILL,
   GAUGE_MAX,
   ORB_PICKUP_PADDING,
@@ -30,8 +37,18 @@ import {
   JUMP_LEVEL_STEP,
   MAGNET_RANGE_STEP,
   SCORE_LEVEL_STEP,
+  ORB_VALUE_STEP,
+  DOUBLE_JUMP_FORCE_MULT,
   REWARD_DURATION,
   REWARD_SCORE_MULT,
+  SLOWMO_DURATION,
+  SLOWMO_FACTOR,
+  BIGCLOUD_DURATION,
+  BIGCLOUD_SCALE,
+  FEATHER_DURATION,
+  FEATHER_MAX_FALL,
+  COIN_PER_ORB,
+  COIN_PER_RAINBOW,
 } from './config.js';
 
 export class Game {
@@ -57,14 +74,19 @@ export class Game {
     this.cloudDecor = [];
 
     this.orbs = [];
+    this.particles = [];
     this.gauge = 0;
     this.rawClimb = 0;
     this.frame = 0;
+    this.coins = 0;
+    this.airJumpsLeft = 0;
     this.shield = false;
     this.jumpLevel = 0;
+    this.doubleJumpLevel = 0;
     this.magnetLevel = 0;
     this.scoreLevel = 0;
-    this.effects = { scoreX2: 0 };
+    this.orbValueLevel = 0;
+    this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0 };
 
     this._bindInput();
     this._resize();
@@ -150,37 +172,57 @@ export class Game {
   }
 
   _tryJump() {
-    if (!this.player?.groundedCloud) return;
-
+    if (!this.player) return;
+    const upgrade = 1 + this.jumpLevel * JUMP_LEVEL_STEP;
     const cloud = this.player.groundedCloud;
-    if (cloud.broken) return;
 
-    if (Math.abs(this.player.vx) < 0.01) {
-      if (this.startFromLeft) {
-        this.player.vx = -this.player.baseSpeed;
-        this.player.facing = -1;
-        this.startFromLeft = false;
-      } else {
-        this.player.vx = this.player.facing * this.player.baseSpeed;
+    if (cloud) {
+      if (cloud.broken) return;
+
+      if (Math.abs(this.player.vx) < 0.01) {
+        if (this.startFromLeft) {
+          this.player.vx = -this.player.baseSpeed;
+          this.player.facing = -1;
+          this.startFromLeft = false;
+        } else {
+          this.player.vx = this.player.facing * this.player.baseSpeed;
+        }
       }
+
+      const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
+      this.player.bounce(JUMP_FORCE * jumpMult * upgrade);
+      playJumpSound();
+      this.charge = 0;
+      this.callbacks.onCharge?.(0, false);
+      this.airJumpsLeft = this.doubleJumpLevel;
+
+      if (cloud.type === CLOUD_TYPES.BREAKING) {
+        cloud.broken = true;
+      }
+      return;
     }
 
-    const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
-    const upgrade = 1 + this.jumpLevel * JUMP_LEVEL_STEP;
-    this.player.bounce(JUMP_FORCE * jumpMult * upgrade);
-    playJumpSound();
-    this.charge = 0;
-    this.callbacks.onCharge?.(0, false);
-
-    if (cloud.type === CLOUD_TYPES.BREAKING) {
-      cloud.broken = true;
+    // 공중 더블 점프
+    if (this.airJumpsLeft > 0) {
+      this.airJumpsLeft -= 1;
+      if (Math.abs(this.player.vx) < 0.01) {
+        this.player.vx = this.player.facing * this.player.baseSpeed;
+      }
+      this.player.bounce(JUMP_FORCE * upgrade * DOUBLE_JUMP_FORCE_MULT);
+      playJumpSound();
+      this._spawnParticles(this.player.x, this.player.y + this.player.height * 0.3, '#dff3ff', 8);
     }
   }
 
+  _cloudScale() {
+    return this.effects.bigcloud > 0 ? BIGCLOUD_SCALE : 1;
+  }
+
   _isPlayerOnCloud(cloud) {
+    const half = (cloud.width * this._cloudScale()) / 2;
     return (
-      this.player.right > cloud.x - cloud.width / 2 + CLOUD_COLLISION_INSET &&
-      this.player.left < cloud.x + cloud.width / 2 - CLOUD_COLLISION_INSET
+      this.player.right > cloud.x - half + CLOUD_COLLISION_INSET &&
+      this.player.left < cloud.x + half - CLOUD_COLLISION_INSET
     );
   }
 
@@ -195,6 +237,7 @@ export class Game {
     this.player.groundedCloud = cloud;
     this.player.onGround = true;
     this.charge = 0;
+    this.airJumpsLeft = this.doubleJumpLevel;
     this.callbacks.onCharge?.(0, this.input.holding);
   }
 
@@ -205,6 +248,7 @@ export class Game {
     this.player.vx = 0;
     this.player.vy = 0;
     this.player.groundedCloud = this.startCloud;
+    this.airJumpsLeft = this.doubleJumpLevel;
   }
 
   start() {
@@ -214,15 +258,29 @@ export class Game {
     this.highestY = 0;
 
     this.orbs = [];
+    this.particles = [];
     this.gauge = 0;
     this.rawClimb = 0;
     this.frame = 0;
+    this.coins = 0;
+    this.airJumpsLeft = 0;
     this.shield = false;
     this.jumpLevel = 0;
+    this.doubleJumpLevel = 0;
     this.magnetLevel = 0;
     this.scoreLevel = 0;
-    this.effects = { scoreX2: 0 };
-    this.callbacks.onGauge?.(0);
+    this.orbValueLevel = 0;
+    this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0 };
+
+    // 상점에서 산 영구 업그레이드 적용
+    const meta = this.callbacks.getStartBonuses?.() ?? {};
+    this.jumpLevel = meta.jumpLevel ?? 0;
+    this.scoreLevel = meta.scoreLevel ?? 0;
+    this.shield = !!meta.shield;
+    this.gauge = Math.min(GAUGE_MAX, meta.gaugeFill ?? 0);
+
+    this.callbacks.onGauge?.(this.gauge / GAUGE_MAX);
+    this.callbacks.onCoins?.(0);
     this.callbacks.onEffects?.(this.getEffects());
 
     const startY = this.worldHeight - START_Y_OFFSET;
@@ -281,7 +339,8 @@ export class Game {
       if (Math.random() < ORB_SPAWN_CHANCE) {
         const ox = ORB_RADIUS * 2 + Math.random() * (this.worldWidth - ORB_RADIUS * 4);
         const oy = y + gap * (0.4 + Math.random() * 0.3);
-        this.orbs.push(new Orb(ox, oy));
+        const type = Math.random() < ORB_RAINBOW_CHANCE ? 'rainbow' : 'normal';
+        this.orbs.push(new Orb(ox, oy, type));
       }
     }
 
@@ -379,19 +438,26 @@ export class Game {
       return;
     }
 
+    const ts = this.effects.slowmo > 0 ? SLOWMO_FACTOR : 1;
+
     for (const cloud of this.clouds) {
-      cloud.update(this.worldWidth);
+      cloud.update(this.worldWidth, ts);
     }
 
     if (this.player.groundedCloud) {
       this._updateGrounded();
     } else {
-      this.player.update(GRAVITY, this.worldWidth);
+      this.player.update(GRAVITY, this.worldWidth, ts);
+      // 깃털: 낙하 속도 제한
+      if (this.effects.feather > 0 && this.player.vy > FEATHER_MAX_FALL) {
+        this.player.vy = FEATHER_MAX_FALL;
+      }
       this._checkLanding();
     }
 
     this._spawnClouds();
     this._updateOrbs();
+    this._updateParticles();
     this._tickEffects();
     this._updateCamera();
     this._syncPlayerChargeAnim();
@@ -428,25 +494,73 @@ export class Game {
 
       if (dist < pickDist + orb.r) {
         orb.collected = true;
-        this._collectOrb();
+        this._collectOrb(orb);
       }
     }
     this.orbs = this.orbs.filter((o) => !o.collected);
   }
 
-  _collectOrb() {
-    this.gauge = Math.min(GAUGE_MAX, this.gauge + ORB_GAUGE_FILL);
+  _collectOrb(orb) {
+    const rainbow = orb.type === 'rainbow';
+
+    // 코인 적립
+    this.coins += rainbow ? COIN_PER_RAINBOW : COIN_PER_ORB;
+    this.callbacks.onCoins?.(this.coins);
+
+    // 게이지 충전 (레인보우는 즉시 가득)
+    if (rainbow) {
+      this.gauge = GAUGE_MAX;
+      playRainbowSound();
+      this._spawnParticles(orb.x, orb.y, 'rainbow', 18);
+    } else {
+      const fill = ORB_GAUGE_FILL * (1 + this.orbValueLevel * ORB_VALUE_STEP);
+      this.gauge = Math.min(GAUGE_MAX, this.gauge + fill);
+      playCollectSound();
+      this._spawnParticles(orb.x, orb.y, '#ffd24a', 8);
+    }
     this.callbacks.onGauge?.(this.gauge / GAUGE_MAX);
+
     if (this.gauge >= GAUGE_MAX) {
       this._triggerReward();
     }
   }
 
-  _tickEffects() {
-    if (this.effects.scoreX2 > 0) {
-      this.effects.scoreX2 -= 1;
-      if (this.effects.scoreX2 === 0) this.callbacks.onEffects?.(this.getEffects());
+  _spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (1 + Math.random() * 3) * GAME_SCALE;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        life: 1,
+        decay: 0.03 + Math.random() * 0.03,
+        size: (2 + Math.random() * 2) * GAME_SCALE,
+        color: color === 'rainbow' ? `hsl(${Math.random() * 360},95%,60%)` : color,
+      });
     }
+  }
+
+  _updateParticles() {
+    for (const p of this.particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15 * GAME_SCALE;
+      p.life -= p.decay;
+    }
+    this.particles = this.particles.filter((p) => p.life > 0);
+  }
+
+  _tickEffects() {
+    let changed = false;
+    for (const key of ['scoreX2', 'slowmo', 'bigcloud', 'feather']) {
+      if (this.effects[key] > 0) {
+        this.effects[key] -= 1;
+        if (this.effects[key] === 0) changed = true;
+      }
+    }
+    if (changed) this.callbacks.onEffects?.(this.getEffects());
   }
 
   // 게이지가 가득 차면 게임을 멈추고 보상 선택을 띄운다.
@@ -461,18 +575,21 @@ export class Game {
   chooseReward(id) {
     if (this.state !== 'reward') return;
 
-    if (id === 'shield') {
-      this.shield = true;
-    } else if (id === 'scoreX2') {
-      this.effects.scoreX2 = REWARD_DURATION;
-    } else if (id === 'magnet') {
-      this.magnetLevel += 1; // 영구 누적
-    } else if (id === 'jump') {
-      this.jumpLevel += 1; // 영구 누적
-    } else if (id === 'scoreMul') {
-      this.scoreLevel += 1; // 영구 누적
+    switch (id) {
+      case 'shield': this.shield = true; break;
+      case 'scoreX2': this.effects.scoreX2 = REWARD_DURATION; break;
+      case 'slowmo': this.effects.slowmo = SLOWMO_DURATION; break;
+      case 'bigcloud': this.effects.bigcloud = BIGCLOUD_DURATION; break;
+      case 'feather': this.effects.feather = FEATHER_DURATION; break;
+      case 'magnet': this.magnetLevel += 1; break; // 영구 누적
+      case 'jump': this.jumpLevel += 1; break; // 영구 누적
+      case 'doubleJump': this.doubleJumpLevel += 1; break; // 영구 누적
+      case 'scoreMul': this.scoreLevel += 1; break; // 영구 누적
+      case 'orbValue': this.orbValueLevel += 1; break; // 영구 누적
+      default: break;
     }
 
+    playRewardSound();
     this.gauge = 0;
     this.callbacks.onGauge?.(0);
     this.callbacks.onEffects?.(this.getEffects());
@@ -506,16 +623,27 @@ export class Game {
     return {
       shield: this.shield,
       scoreX2: this.effects.scoreX2 > 0,
+      slowmo: this.effects.slowmo > 0,
+      bigcloud: this.effects.bigcloud > 0,
+      feather: this.effects.feather > 0,
       jumpLevel: this.jumpLevel,
+      doubleJumpLevel: this.doubleJumpLevel,
       magnetLevel: this.magnetLevel,
       scoreLevel: this.scoreLevel,
+      orbValueLevel: this.orbValueLevel,
     };
+  }
+
+  getCoins() {
+    return this.coins;
   }
 
   _gameOver() {
     this.state = 'gameover';
+    const earned = this.coins;
+    const totalCoins = addCoins(earned); // 메타 저장에 누적
     const isNewRecord = saveBestScore(this.score);
-    this.callbacks.onGameOver?.(this.score, isNewRecord);
+    this.callbacks.onGameOver?.(this.score, isNewRecord, earned, totalCoins);
   }
 
   // 고도에 따라 하늘 색을 낮→노을→황혼→밤→우주로 보간한다.
@@ -693,6 +821,19 @@ export class Game {
     }
   }
 
+  _drawParticles() {
+    const ctx = this.ctx;
+    for (const p of this.particles) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y - this.cameraY, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   _drawDecorCloud(ctx, x, y, r, alpha = 1) {
     ctx.save();
     ctx.globalAlpha = 0.25 * alpha;
@@ -722,14 +863,17 @@ export class Game {
   _draw() {
     this._drawBackground();
 
+    const cloudScale = this._cloudScale();
     const sorted = [...this.clouds].sort((a, b) => a.y - b.y);
     for (const cloud of sorted) {
-      cloud.draw(this.ctx, this.cameraY);
+      cloud.draw(this.ctx, this.cameraY, cloudScale);
     }
 
     for (const orb of this.orbs) {
       orb.draw(this.ctx, this.cameraY, this.frame);
     }
+
+    this._drawParticles();
 
     this.player.draw(this.ctx, this.cameraY);
 

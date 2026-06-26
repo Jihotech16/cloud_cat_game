@@ -3,6 +3,14 @@ import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
+import {
+  getCoins,
+  getStartBonuses,
+  UPGRADES,
+  getUpgradeLevel,
+  nextCost,
+  buyUpgrade,
+} from './meta.js';
 
 const app = document.getElementById('app');
 const desktopGate = document.getElementById('desktop-gate');
@@ -28,9 +36,26 @@ const btnShare = document.getElementById('btn-share');
 
 const gaugeFill = document.getElementById('gauge-fill');
 const effectsEl = document.getElementById('effects');
+const coinHud = document.getElementById('coin-count');
 const rewardScreen = document.getElementById('reward-screen');
 const rewardCards = document.getElementById('reward-cards');
 
+const gameoverCoinsEl = document.getElementById('gameover-coins');
+const menuCoinsEl = document.getElementById('menu-coins');
+const btnShop = document.getElementById('btn-shop');
+const btnShopGameover = document.getElementById('btn-shop-gameover');
+const shopScreen = document.getElementById('shop-screen');
+const shopList = document.getElementById('shop-list');
+const shopCoinsEl = document.getElementById('shop-coins');
+const btnShopClose = document.getElementById('btn-shop-close');
+
+const EFFECT_BADGES = [
+  ['jumpLevel', (n) => `🚀×${n}`],
+  ['doubleJumpLevel', (n) => `🪽×${n}`],
+  ['magnetLevel', (n) => `🧲×${n}`],
+  ['orbValueLevel', (n) => `💎×${n}`],
+  ['scoreLevel', (n) => `📈×${n}`],
+];
 
 let game = null;
 let lastScore = 0;
@@ -57,14 +82,64 @@ function updateGauge(ratio) {
 
 function updateEffects(effects = {}) {
   const badges = [];
-  if (effects.jumpLevel > 0) badges.push(`🚀×${effects.jumpLevel}`);
-  if (effects.magnetLevel > 0) badges.push(`🧲×${effects.magnetLevel}`);
-  if (effects.scoreLevel > 0) badges.push(`📈×${effects.scoreLevel}`);
+  for (const [key, fmt] of EFFECT_BADGES) {
+    if (effects[key] > 0) badges.push(fmt(effects[key]));
+  }
   if (effects.scoreX2) badges.push('✨×2');
+  if (effects.slowmo) badges.push('🐢');
+  if (effects.bigcloud) badges.push('☁️');
+  if (effects.feather) badges.push('🪶');
   if (effects.shield) badges.push('🛡️');
   effectsEl.innerHTML = badges
     .map((b) => `<span class="effect-badge">${b}</span>`)
     .join('');
+}
+
+function updateCoinHud(coins) {
+  if (coinHud) coinHud.textContent = coins;
+}
+
+function renderShop() {
+  const coins = getCoins();
+  shopCoinsEl.textContent = coins;
+  menuCoinsEl.textContent = coins;
+  shopList.innerHTML = '';
+  for (const up of UPGRADES) {
+    const level = getUpgradeLevel(up.id);
+    const cost = nextCost(up.id);
+    const maxed = cost === null;
+    const affordable = !maxed && coins >= cost;
+
+    const row = document.createElement('div');
+    row.className = 'shop-item';
+    row.innerHTML = `
+      <span class="shop-icon">${up.icon}</span>
+      <span class="shop-info">
+        <span class="shop-label">${up.label} <em>Lv.${level}/${up.max}</em></span>
+        <span class="shop-desc">${up.desc}</span>
+      </span>
+      <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
+        ${maxed ? 'MAX' : `🪙 ${cost}`}
+      </button>
+    `;
+    if (!maxed && affordable) {
+      row.querySelector('.shop-buy').addEventListener('click', () => {
+        const res = buyUpgrade(up.id);
+        if (res.ok) renderShop();
+      });
+    }
+    shopList.appendChild(row);
+  }
+}
+
+function openShop() {
+  renderShop();
+  shopScreen.classList.remove('hidden');
+}
+
+function closeShop() {
+  shopScreen.classList.add('hidden');
+  if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
 }
 
 function showRewardChoices(choices) {
@@ -105,13 +180,20 @@ function ensureGame() {
     onReward(choices) {
       showRewardChoices(choices);
     },
-    onGameOver(score, isNewRecord) {
+    onCoins(coins) {
+      updateCoinHud(coins);
+    },
+    getStartBonuses() {
+      return getStartBonuses();
+    },
+    onGameOver(score, isNewRecord, earned = 0) {
       hud.classList.add('hidden');
       chargeBar.classList.add('hidden');
       chargeBar.classList.remove('visible');
       gameoverScreen.classList.remove('hidden');
       finalScoreEl.textContent = score;
       newRecordEl.classList.toggle('hidden', !isNewRecord);
+      gameoverCoinsEl.textContent = earned;
       lastScore = score;
       lastIsNewRecord = isNewRecord;
       btnShare.textContent = '📤 결과 공유하기';
@@ -148,6 +230,7 @@ function startGame() {
   scoreEl.textContent = '0';
   updateGauge(0);
   updateEffects({});
+  updateCoinHud(0);
   game.start();
 }
 
@@ -158,6 +241,10 @@ window.addEventListener('orientationchange', () => {
 
 btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
+
+btnShop?.addEventListener('click', openShop);
+btnShopGameover?.addEventListener('click', openShop);
+btnShopClose?.addEventListener('click', closeShop);
 
 btnShare.addEventListener('click', async () => {
   btnShare.disabled = true;
@@ -175,6 +262,7 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 async function boot() {
   initNative();
+  if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
   await initScores();
   updateLayout();
 }
