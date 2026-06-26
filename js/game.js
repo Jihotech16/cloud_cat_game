@@ -111,6 +111,20 @@ export class Game {
       scale: Math.random() * 0.6 + 0.4,
       speed: Math.random() * 0.15 + 0.05,
     }));
+    this.shootingStars = Array.from({ length: 3 }, () => this._newShootingStar());
+  }
+
+  _newShootingStar() {
+    return {
+      x: Math.random() * this.worldWidth,
+      y: Math.random() * this.worldHeight * 0.5,
+      len: (60 + Math.random() * 70) * GAME_SCALE,
+      speed: (4 + Math.random() * 3) * GAME_SCALE,
+      angle: Math.PI * 0.22 + Math.random() * 0.12,
+      life: 0,
+      maxLife: 26 + Math.random() * 26,
+      wait: 30 + Math.random() * 220,
+    };
   }
 
   _tryJump() {
@@ -341,36 +355,184 @@ export class Game {
     this.callbacks.onGameOver?.(this.score, isNewRecord);
   }
 
+  // 고도에 따라 하늘 색을 낮→노을→황혼→밤→우주로 보간한다.
+  _skyGradient(altitude, h) {
+    const STOPS = [
+      { a: 0.0, top: '#6ec6ff', bot: '#b8e6ff' }, // 낮 맑은 하늘
+      { a: 0.28, top: '#ff8e6e', bot: '#ffd6a6' }, // 노을
+      { a: 0.5, top: '#6a4aa0', bot: '#ff7ea6' }, // 보랏빛 황혼
+      { a: 0.72, top: '#16235e', bot: '#3a2170' }, // 밤하늘
+      { a: 1.0, top: '#03030f', bot: '#0c0a26' }, // 우주
+    ];
+    let i = 0;
+    while (i < STOPS.length - 2 && altitude > STOPS[i + 1].a) i++;
+    const lo = STOPS[i];
+    const hi = STOPS[i + 1];
+    const t = Math.min(1, Math.max(0, (altitude - lo.a) / (hi.a - lo.a)));
+    const g = this.ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, this._lerpColor(lo.top, hi.top, t));
+    g.addColorStop(1, this._lerpColor(lo.bot, hi.bot, t));
+    return g;
+  }
+
+  // start 이전엔 0, end 이후엔 1로 부드럽게 증가
+  _fadeIn(t, start, end) {
+    return Math.min(1, Math.max(0, (t - start) / (end - start)));
+  }
+
   _drawBackground() {
     const ctx = this.ctx;
     const h = this.worldHeight;
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    const w = this.worldWidth;
     const altitude = Math.min(this.score / 800, 1);
-    gradient.addColorStop(0, this._lerpColor('#6ec6ff', '#1a237e', altitude));
-    gradient.addColorStop(1, this._lerpColor('#b8e6ff', '#4a148c', altitude * 0.7));
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.worldWidth, h);
 
-    for (const star of this.stars) {
-      const sy = ((star.y - this.cameraY * 0.3) % (h * 3) + h * 3) % (h * 3);
-      if (altitude < 0.3) continue;
-      ctx.fillStyle = `rgba(255,255,255,${star.alpha * altitude})`;
-      ctx.beginPath();
-      ctx.arc(star.x, sy, star.size, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.fillStyle = this._skyGradient(altitude, h);
+    ctx.fillRect(0, 0, w, h);
+
+    // 해: 지상~노을 구간, 고도가 오르면 아래로 지면서 노을 연출
+    const sunA = 1 - this._fadeIn(altitude, 0.06, 0.36);
+    if (sunA > 0) {
+      this._drawSun(ctx, w * 0.74, h * (0.2 + altitude * 0.9), 36 * GAME_SCALE, sunA);
     }
 
-    for (const dec of this.cloudDecor) {
-      dec.y += dec.speed;
-      if (dec.y > h + 40) dec.y = -40;
-      this._drawDecorCloud(ctx, dec.x, dec.y, dec.scale * 30 * GAME_SCALE);
+    // 달: 황혼부터 떠올라 밤·우주까지
+    const moonA = this._fadeIn(altitude, 0.5, 0.72);
+    if (moonA > 0) {
+      this._drawMoon(ctx, w * 0.72, h * 0.2, 24 * GAME_SCALE, moonA);
+    }
+
+    // 별: 황혼부터 서서히 짙어짐
+    const starA = this._fadeIn(altitude, 0.34, 0.7);
+    if (starA > 0) {
+      for (const star of this.stars) {
+        const sy = ((star.y - this.cameraY * 0.3) % (h * 3) + h * 3) % (h * 3);
+        ctx.fillStyle = `rgba(255,255,255,${star.alpha * starA})`;
+        ctx.beginPath();
+        ctx.arc(star.x, sy, star.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 별똥별: 밤·우주에서 가끔 가로지름
+    if (altitude > 0.55) {
+      this._drawShootingStars(ctx, altitude);
+    }
+
+    // 토성형 행성: 우주 구간
+    const planetA = this._fadeIn(altitude, 0.78, 0.96);
+    if (planetA > 0) {
+      this._drawPlanet(ctx, w * 0.24, h * 0.26, 20 * GAME_SCALE, planetA);
+    }
+
+    // 떠다니는 구름: 고도가 오르면 옅어지다 사라짐
+    const cloudA = Math.max(0, 1 - altitude / 0.5);
+    if (cloudA > 0) {
+      for (const dec of this.cloudDecor) {
+        dec.y += dec.speed;
+        if (dec.y > h + 40) dec.y = -40;
+        this._drawDecorCloud(ctx, dec.x, dec.y, dec.scale * 30 * GAME_SCALE, cloudA);
+      }
     }
   }
 
-  _drawDecorCloud(ctx, x, y, r) {
+  _drawSun(ctx, x, y, r, alpha) {
     ctx.save();
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = alpha;
+    const glow = ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 2.6);
+    glow.addColorStop(0, 'rgba(255,243,196,0.95)');
+    glow.addColorStop(1, 'rgba(255,196,120,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff3c4';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawMoon(ctx, x, y, r, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const glow = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 2.2);
+    glow.addColorStop(0, 'rgba(226,232,255,0.45)');
+    glow.addColorStop(1, 'rgba(226,232,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#eef1ff';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(193,202,232,0.6)';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.32, y - r * 0.18, r * 0.18, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.26, y + r * 0.3, r * 0.12, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.12, y - r * 0.36, r * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawPlanet(ctx, x, y, r, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#d98c5f';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,221,184,0.3)';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(242,213,174,0.85)';
+    ctx.lineWidth = r * 0.16;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.8, r * 0.55, -0.4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _drawShootingStars(ctx, altitude) {
+    const visible = Math.min(1, (altitude - 0.55) / 0.2);
+    for (const s of this.shootingStars) {
+      if (s.wait > 0) {
+        s.wait -= 1;
+        continue;
+      }
+      s.life += 1;
+      s.x += Math.cos(s.angle) * s.speed;
+      s.y += Math.sin(s.angle) * s.speed;
+
+      const a = Math.sin((s.life / s.maxLife) * Math.PI) * visible;
+      if (a > 0) {
+        const tailX = s.x - Math.cos(s.angle) * s.len;
+        const tailY = s.y - Math.sin(s.angle) * s.len;
+        const grad = ctx.createLinearGradient(s.x, s.y, tailX, tailY);
+        grad.addColorStop(0, `rgba(255,255,255,${a})`);
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.save();
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 2 * GAME_SCALE;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(tailX, tailY);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (s.life >= s.maxLife || s.x > this.worldWidth + 60 || s.y > this.worldHeight + 60) {
+        Object.assign(s, this._newShootingStar());
+        s.wait = 90 + Math.random() * 260;
+      }
+    }
+  }
+
+  _drawDecorCloud(ctx, x, y, r, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = 0.25 * alpha;
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
