@@ -1,0 +1,11 @@
+# 의존성 / 빌드 산출물
+node_modules/
+www/
+
+# Capacitor iOS 네이티브 프로젝트는 로컬에서 `npx cap add ios`로 생성
+# (CocoaPods/Xcode가 필요하므로 리포에 포함하지 않음)
+ios/
+
+# 잡파일
+.DS_Store
+*.log

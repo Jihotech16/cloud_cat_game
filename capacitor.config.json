@@ -1,0 +1,13 @@
+{
+  "appId": "com.jihotech.cloudcatjump",
+  "appName": "Cloud Cat Jump",
+  "webDir": "www",
+  "backgroundColor": "#6ec6ff",
+  "android": {
+    "backgroundColor": "#6ec6ff"
+  },
+  "ios": {
+    "backgroundColor": "#6ec6ff",
+    "contentInset": "always"
+  }
+}
