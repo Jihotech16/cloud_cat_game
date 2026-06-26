@@ -6,11 +6,16 @@ import {
 
 const JUMP_READY_FRAME_SIZE = 128;
 const JUMP_READY_FRAME_COUNT = 3;
+const JUMPING_FRAME_SIZE = 128;
+const JUMPING_FRAME_COUNT = 4;
+const JUMPING_FRAME_DURATION = 7;
 
 let catImage = null;
 let catImageReady = false;
 let jumpReadyImage = null;
 let jumpReadyImageReady = false;
+let jumpingImage = null;
+let jumpingImageReady = false;
 
 export function loadCatSprite() {
   if (catImage) return catImage;
@@ -30,6 +35,16 @@ export function loadJumpReadySprite() {
     jumpReadyImageReady = true;
   };
   return jumpReadyImage;
+}
+
+export function loadJumpingSprite() {
+  if (jumpingImage) return jumpingImage;
+  jumpingImage = new Image();
+  jumpingImage.src = 'assets/cat_jumping.png';
+  jumpingImage.onload = () => {
+    jumpingImageReady = true;
+  };
+  return jumpingImage;
 }
 
 export function isCatSpriteReady() {
@@ -53,6 +68,7 @@ export class Player {
     this.baseSpeed = PLAYER_BASE_SPEED;
     this.charging = false;
     this.chargeLevel = 0;
+    this.airTime = 0;
   }
 
   get left() {
@@ -92,6 +108,7 @@ export class Player {
     this.vy += gravity;
     this.x += this.vx;
     this.y += this.vy;
+    this.airTime += 1;
 
     this.applyWallBounce(worldWidth);
 
@@ -104,12 +121,18 @@ export class Player {
     this.groundedCloud = null;
     this.charging = false;
     this.chargeLevel = 0;
+    this.airTime = 0;
   }
 
   _getReadyFrame() {
     if (this.chargeLevel < 0.34) return 0;
     if (this.chargeLevel < 0.67) return 1;
     return 2;
+  }
+
+  _getJumpingFrame() {
+    const frame = Math.floor(this.airTime / JUMPING_FRAME_DURATION);
+    return Math.min(JUMPING_FRAME_COUNT - 1, frame);
   }
 
   draw(ctx, cameraY) {
@@ -119,15 +142,25 @@ export class Player {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(this.x, screenY);
-    if (this.vx > 0) ctx.scale(-1, 1);
+    const faceRight = this.vx !== 0 ? this.vx > 0 : this.facing > 0;
+    if (faceRight) ctx.scale(-1, 1);
 
     const useReady = this.charging && jumpReadyImageReady;
+    const useJumping = !this.groundedCloud && !useReady && jumpingImageReady;
     if (useReady) {
       const frame = this._getReadyFrame();
       const sx = frame * JUMP_READY_FRAME_SIZE;
       ctx.drawImage(
         jumpReadyImage,
         sx, 0, JUMP_READY_FRAME_SIZE, JUMP_READY_FRAME_SIZE,
+        -size / 2, -size / 2, size, size,
+      );
+    } else if (useJumping) {
+      const frame = this._getJumpingFrame();
+      const sx = frame * JUMPING_FRAME_SIZE;
+      ctx.drawImage(
+        jumpingImage,
+        sx, 0, JUMPING_FRAME_SIZE, JUMPING_FRAME_SIZE,
         -size / 2, -size / 2, size, size,
       );
     } else if (catImageReady) {
@@ -145,3 +178,4 @@ export class Player {
 
 loadCatSprite();
 loadJumpReadySprite();
+loadJumpingSprite();

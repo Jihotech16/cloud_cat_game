@@ -249,14 +249,25 @@ body {
 }
 
 .cat-preview {
-  font-size: 3.5rem;
-  margin: 8px 0 16px;
-  animation: bounce 1.2s ease-in-out infinite;
+  width: 100%;
+  max-width: 272px;
+  margin: 8px auto 16px;
+  border-radius: 16px;
+  overflow: hidden;
+  animation: gentleFloat 2.4s ease-in-out infinite;
 }
 
-@keyframes bounce {
+.cat-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+@keyframes gentleFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  50% { transform: translateY(-6px); }
 }
 
 .controls {

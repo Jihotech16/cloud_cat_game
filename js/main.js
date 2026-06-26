@@ -1,5 +1,6 @@
 import { Game } from './game.js';
 import { isMobileDevice, isPortrait } from './device.js';
+import { initScores } from './score.js';
 
 const app = document.getElementById('app');
 const desktopGate = document.getElementById('desktop-gate');
@@ -82,7 +83,6 @@ function startGame() {
   game.start();
 }
 
-updateLayout();
 window.addEventListener('resize', updateLayout);
 window.addEventListener('orientationchange', () => {
   setTimeout(updateLayout, 150);
@@ -92,3 +92,10 @@ btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
 
 document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+async function boot() {
+  await initScores();
+  updateLayout();
+}
+
+boot();

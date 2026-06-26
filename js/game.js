@@ -1,6 +1,7 @@
 import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
 import { getBestScore, saveBestScore } from './score.js';
+import { playJumpSound } from './audio.js';
 import {
   GRAVITY,
   JUMP_FORCE,
@@ -130,6 +131,7 @@ export class Game {
 
     const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
     this.player.bounce(JUMP_FORCE * jumpMult);
+    playJumpSound();
     this.charge = 0;
     this.callbacks.onCharge?.(0, false);
 
@@ -146,6 +148,9 @@ export class Game {
   }
 
   _landOnCloud(cloud) {
+    if (Math.abs(this.player.vx) > 0.01) {
+      this.player.facing = this.player.vx > 0 ? 1 : -1;
+    }
     this.player.alignFeetTo(cloud.top);
     this.player.vy = 0;
     this.player.vx = 0;
