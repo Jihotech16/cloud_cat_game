@@ -40,6 +40,7 @@ export const ORB_MAGNET_SPEED = 6.5 * GAME_SCALE;
 // 영구 누적 업그레이드(보상으로 레벨업)
 export const JUMP_LEVEL_STEP = 0.2; // 점프 보상 1회당 점프력 배율 +0.2
 export const MAGNET_RANGE_STEP = 80 * GAME_SCALE; // 자석 보상 1회당 끌어당김 범위 증가
+export const SCORE_LEVEL_STEP = 0.25; // 점수 배율 보상 1회당 점수 획득량 +25%
 
 export const REWARD_DURATION = 8 * 60; // 점수 2배 지속(프레임, 약 8초)
 export const REWARD_SCORE_MULT = 2;

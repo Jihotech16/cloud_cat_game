@@ -29,6 +29,7 @@ import {
   ORB_MAGNET_SPEED,
   JUMP_LEVEL_STEP,
   MAGNET_RANGE_STEP,
+  SCORE_LEVEL_STEP,
   REWARD_DURATION,
   REWARD_SCORE_MULT,
 } from './config.js';
@@ -62,6 +63,7 @@ export class Game {
     this.shield = false;
     this.jumpLevel = 0;
     this.magnetLevel = 0;
+    this.scoreLevel = 0;
     this.effects = { scoreX2: 0 };
 
     this._bindInput();
@@ -218,6 +220,7 @@ export class Game {
     this.shield = false;
     this.jumpLevel = 0;
     this.magnetLevel = 0;
+    this.scoreLevel = 0;
     this.effects = { scoreX2: 0 };
     this.callbacks.onGauge?.(0);
     this.callbacks.onEffects?.(this.getEffects());
@@ -349,8 +352,9 @@ export class Game {
     if (climbed > this.rawClimb) {
       const delta = climbed - this.rawClimb;
       this.rawClimb = climbed;
-      const mult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
-      this.score += delta * mult;
+      const permMult = 1 + this.scoreLevel * SCORE_LEVEL_STEP;
+      const burstMult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
+      this.score += Math.round(delta * permMult * burstMult);
       this.callbacks.onScore?.(this.score);
     }
   }
@@ -465,6 +469,8 @@ export class Game {
       this.magnetLevel += 1; // 영구 누적
     } else if (id === 'jump') {
       this.jumpLevel += 1; // 영구 누적
+    } else if (id === 'scoreMul') {
+      this.scoreLevel += 1; // 영구 누적
     }
 
     this.gauge = 0;
@@ -502,6 +508,7 @@ export class Game {
       scoreX2: this.effects.scoreX2 > 0,
       jumpLevel: this.jumpLevel,
       magnetLevel: this.magnetLevel,
+      scoreLevel: this.scoreLevel,
     };
   }
 

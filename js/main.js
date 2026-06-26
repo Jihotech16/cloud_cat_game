@@ -59,6 +59,7 @@ function updateEffects(effects = {}) {
   const badges = [];
   if (effects.jumpLevel > 0) badges.push(`🚀×${effects.jumpLevel}`);
   if (effects.magnetLevel > 0) badges.push(`🧲×${effects.magnetLevel}`);
+  if (effects.scoreLevel > 0) badges.push(`📈×${effects.scoreLevel}`);
   if (effects.scoreX2) badges.push('✨×2');
   if (effects.shield) badges.push('🛡️');
   effectsEl.innerHTML = badges

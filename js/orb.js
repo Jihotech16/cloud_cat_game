@@ -51,6 +51,7 @@ export class Orb {
 export const REWARDS = [
   { id: 'jump', icon: '🚀', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)' },
   { id: 'magnet', icon: '🧲', label: '자석 ⬆', desc: '오브 끌어당김 범위가 늘어나요 (중첩)' },
+  { id: 'scoreMul', icon: '📈', label: '점수 배율 ⬆', desc: '점수 획득량이 영구적으로 늘어요 (중첩)' },
   { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요' },
   { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요' },
 ];
