@@ -76,6 +76,7 @@ export async function initScores() {
   const local = readLocalBest();
   cachedBest = local;
 
+  // 개인 최고기록 동기화
   try {
     const [remote, global] = await Promise.all([
       fetchRemoteBest(),
@@ -90,6 +91,15 @@ export async function initScores() {
     }
   } catch (err) {
     console.warn('Firebase score sync skipped:', err);
+  }
+
+  // 전체 최고기록 조회 (실패해도 개인 기록에는 영향 없음)
+  cachedGlobalBest = cachedBest;
+  try {
+    const global = await fetchGlobalBest();
+    cachedGlobalBest = Math.max(global, cachedBest);
+  } catch (err) {
+    console.warn('Firebase global best skipped (전체 노드 읽기 권한 확인 필요):', err);
   }
 }
 
