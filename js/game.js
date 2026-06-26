@@ -59,6 +59,7 @@ export class Game {
     this.callbacks = callbacks;
 
     this.state = 'idle';
+    this.mode = 'classic';
     this.startCloud = null;
     this.worldWidth = 0;
     this.worldHeight = 0;
@@ -251,7 +252,8 @@ export class Game {
     this.airJumpsLeft = this.doubleJumpLevel;
   }
 
-  start() {
+  start(mode = 'classic') {
+    this.mode = mode;
     this.state = 'ready';
     this.score = 0;
     this.cameraY = 0;
@@ -272,12 +274,14 @@ export class Game {
     this.orbValueLevel = 0;
     this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0 };
 
-    // 상점에서 산 영구 업그레이드 적용
-    const meta = this.callbacks.getStartBonuses?.() ?? {};
-    this.jumpLevel = meta.jumpLevel ?? 0;
-    this.scoreLevel = meta.scoreLevel ?? 0;
-    this.shield = !!meta.shield;
-    this.gauge = Math.min(GAUGE_MAX, meta.gaugeFill ?? 0);
+    // 어드벤처 모드에서만 상점 영구 업그레이드 적용
+    if (this.mode === 'adventure') {
+      const meta = this.callbacks.getStartBonuses?.() ?? {};
+      this.jumpLevel = meta.jumpLevel ?? 0;
+      this.scoreLevel = meta.scoreLevel ?? 0;
+      this.shield = !!meta.shield;
+      this.gauge = Math.min(GAUGE_MAX, meta.gaugeFill ?? 0);
+    }
 
     this.callbacks.onGauge?.(this.gauge / GAUGE_MAX);
     this.callbacks.onCoins?.(0);
@@ -335,8 +339,8 @@ export class Game {
       this.clouds.push(new Cloud(x, y, type, randomCloudWidth()));
       this.highestSpawnedY = y;
 
-      // 구름 사이 점프 경로에 오브를 가끔 띄운다.
-      if (Math.random() < ORB_SPAWN_CHANCE) {
+      // 구름 사이 점프 경로에 오브를 가끔 띄운다. (어드벤처 모드 전용)
+      if (this.mode === 'adventure' && Math.random() < ORB_SPAWN_CHANCE) {
         const ox = ORB_RADIUS * 2 + Math.random() * (this.worldWidth - ORB_RADIUS * 4);
         const oy = y + gap * (0.4 + Math.random() * 0.3);
         const type = Math.random() < ORB_RAINBOW_CHANCE ? 'rainbow' : 'normal';
@@ -640,9 +644,9 @@ export class Game {
 
   _gameOver() {
     this.state = 'gameover';
-    const earned = this.coins;
-    const totalCoins = addCoins(earned); // 메타 저장에 누적
-    const isNewRecord = saveBestScore(this.score);
+    const earned = this.mode === 'adventure' ? this.coins : 0;
+    const totalCoins = earned > 0 ? addCoins(earned) : 0; // 메타 저장에 누적
+    const isNewRecord = saveBestScore(this.mode, this.score);
     this.callbacks.onGameOver?.(this.score, isNewRecord, earned, totalCoins);
   }
 
@@ -904,6 +908,6 @@ export class Game {
   }
 
   getBestScore() {
-    return getBestScore();
+    return getBestScore(this.mode);
   }
 }

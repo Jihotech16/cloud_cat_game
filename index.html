@@ -82,6 +82,11 @@
           <span class="touch-hint">👆 꾹 눌렀다 떼면 점프</span>
           <span class="touch-hint sub">오래 누를수록 더 높이 · 벽에 부딪히면 방향 전환</span>
         </p>
+        <div class="mode-select" role="group" aria-label="모드 선택">
+          <button class="mode-btn active" data-mode="classic">🐱 일반 모드</button>
+          <button class="mode-btn" data-mode="adventure">⭐ 어드벤처 모드</button>
+        </div>
+        <p id="mode-hint" class="mode-hint">순수 점프 실력에 도전하는 기본 모드</p>
         <button id="btn-start" class="btn-primary">게임 시작</button>
         <button id="btn-shop" class="btn-secondary">🛒 상점 (🪙 <span id="menu-coins">0</span>)</button>
         <p class="best-record">내 최고 기록: <strong id="menu-best">0</strong>m</p>

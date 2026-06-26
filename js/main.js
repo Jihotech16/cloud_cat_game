@@ -1,6 +1,6 @@
 import { Game } from './game.js';
 import { isMobileDevice, isPortrait } from './device.js';
-import { initScores, getGlobalBest } from './score.js';
+import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
 import {
@@ -49,6 +49,9 @@ const shopList = document.getElementById('shop-list');
 const shopCoinsEl = document.getElementById('shop-coins');
 const btnShopClose = document.getElementById('btn-shop-close');
 
+const modeButtons = document.querySelectorAll('.mode-btn');
+const modeHint = document.getElementById('mode-hint');
+
 const EFFECT_BADGES = [
   ['jumpLevel', (n) => `🚀×${n}`],
   ['doubleJumpLevel', (n) => `🪽×${n}`],
@@ -57,7 +60,13 @@ const EFFECT_BADGES = [
   ['scoreLevel', (n) => `📈×${n}`],
 ];
 
+const MODE_HINTS = {
+  classic: '순수 점프 실력에 도전하는 기본 모드',
+  adventure: '오브를 모아 보상을 받고 상점을 이용하는 모드',
+};
+
 let game = null;
+let selectedMode = 'classic';
 let lastScore = 0;
 let lastIsNewRecord = false;
 
@@ -66,13 +75,25 @@ function updateChargeBar(charge, holding) {
   chargeBar.classList.toggle('visible', holding);
 }
 
-function updateBestDisplays(best) {
-  bestScoreEl.textContent = best;
-  menuBestEl.textContent = best;
+function updateHudRecords(mode) {
+  bestScoreEl.textContent = getBestScore(mode);
+  globalBestEl.textContent = getGlobalBest(mode);
+}
 
-  const global = getGlobalBest();
-  globalBestEl.textContent = global;
-  menuGlobalBestEl.textContent = global;
+function refreshMenuRecords() {
+  menuBestEl.textContent = getBestScore(selectedMode);
+  menuGlobalBestEl.textContent = getGlobalBest(selectedMode);
+}
+
+function setMode(mode) {
+  selectedMode = mode;
+  modeButtons.forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  if (modeHint) modeHint.textContent = MODE_HINTS[mode] ?? '';
+  // 어드벤처 전용 UI(상점)는 해당 모드에서만 노출
+  btnShop?.classList.toggle('hidden', mode !== 'adventure');
+  refreshMenuRecords();
 }
 
 function updateGauge(ratio) {
@@ -197,11 +218,10 @@ function ensureGame() {
       lastScore = score;
       lastIsNewRecord = isNewRecord;
       btnShare.textContent = '📤 결과 공유하기';
-      updateBestDisplays(game.getBestScore());
+      updateHudRecords(game.mode);
+      refreshMenuRecords();
     },
   });
-
-  updateBestDisplays(game.getBestScore());
 }
 
 function updateLayout() {
@@ -231,7 +251,10 @@ function startGame() {
   updateGauge(0);
   updateEffects({});
   updateCoinHud(0);
-  game.start();
+  // 어드벤처 전용 HUD(게이지/코인/효과) 표시 제어
+  app.classList.toggle('mode-adventure', selectedMode === 'adventure');
+  updateHudRecords(selectedMode);
+  game.start(selectedMode);
 }
 
 window.addEventListener('resize', updateLayout);
@@ -241,6 +264,10 @@ window.addEventListener('orientationchange', () => {
 
 btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
+
+modeButtons.forEach((btn) => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
 
 btnShop?.addEventListener('click', openShop);
 btnShopGameover?.addEventListener('click', openShop);
@@ -263,7 +290,9 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 async function boot() {
   initNative();
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
+  setMode(selectedMode);
   await initScores();
+  setMode(selectedMode); // 점수 로드 후 기록 갱신
   updateLayout();
 }
 
