@@ -1,6 +1,7 @@
 import { Game } from './game.js';
 import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getGlobalBest } from './score.js';
+import { initNative } from './native.js';
 
 const app = document.getElementById('app');
 const desktopGate = document.getElementById('desktop-gate');
@@ -100,6 +101,7 @@ btnRetry.addEventListener('click', startGame);
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 async function boot() {
+  initNative();
   await initScores();
   updateLayout();
 }

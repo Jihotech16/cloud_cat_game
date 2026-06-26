@@ -78,12 +78,8 @@ export async function initScores() {
 
   // 개인 최고기록 동기화
   try {
-    const [remote, global] = await Promise.all([
-      fetchRemoteBest(),
-      fetchGlobalBest(),
-    ]);
+    const remote = await fetchRemoteBest();
     cachedBest = Math.max(local, remote);
-    cachedGlobalBest = Math.max(global, cachedBest);
     writeLocalBest(cachedBest);
 
     if (remote < cachedBest) {
