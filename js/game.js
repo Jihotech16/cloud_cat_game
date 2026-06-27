@@ -1,6 +1,6 @@
 import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
-import { Orb, pickRewardChoices } from './orb.js';
+import { Orb, pickRewardChoices, REWARDS } from './orb.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
 import {
@@ -48,6 +48,14 @@ import {
   COIN_REWARD_AMOUNT,
   REROLL_BASE_COST,
   SKIP_COIN_REWARD,
+  SYN_JUMP_FORCE_MULT,
+  SYN_SHOCKWAVE_RADIUS,
+  SYN_ORB_FILL_MULT,
+  SYN_ORB_DOUBLE_CHANCE,
+  SYN_SCORE_MULT,
+  SYN_SCORE_AUTOGROW_FRAMES,
+  SYN_FALL_BONUS,
+  SYN_SHIELD_REGEN_FRAMES,
   SLOWMO_DURATION,
   SLOWMO_FACTOR,
   BIGCLOUD_DURATION,
@@ -99,6 +107,9 @@ export class Game {
     this.orbValueLevel = 0;
     this.chargeRateLevel = 0;
     this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0, rocket: 0 };
+    this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
+    this.taken = new Set();
+    this.synergy = this._emptySynergy();
 
     this._bindInput();
     this._resize();
@@ -185,7 +196,7 @@ export class Game {
 
   _tryJump() {
     if (!this.player) return;
-    const upgrade = 1 + this.jumpLevel * JUMP_LEVEL_STEP;
+    const upgrade = (1 + this.jumpLevel * JUMP_LEVEL_STEP) * this.synergy.jumpForceMult;
     const cloud = this.player.groundedCloud;
 
     if (cloud) {
@@ -234,6 +245,45 @@ export class Game {
     return CHARGE_RATE * (1 + this.chargeRateLevel * CHARGE_RATE_STEP);
   }
 
+  _emptySynergy() {
+    return {
+      jumpForceMult: 1,
+      shockwave: false,
+      orbFillMult: 1,
+      orbDoubleChance: 0,
+      scoreMult: 1,
+      scoreAutoGrow: false,
+      fallBonus: 0,
+      shieldRegen: false,
+    };
+  }
+
+  // 계열 보유 수에 따라 세트 시너지를 다시 계산한다.
+  _recomputeSynergy() {
+    const c = this.tagCount;
+    const s = this._emptySynergy();
+    if (c.jump >= 2) s.jumpForceMult = SYN_JUMP_FORCE_MULT;
+    if (c.jump >= 4) s.shockwave = true;
+    if (c.orb >= 2) s.orbFillMult = SYN_ORB_FILL_MULT;
+    if (c.orb >= 4) s.orbDoubleChance = SYN_ORB_DOUBLE_CHANCE;
+    if (c.score >= 2) s.scoreMult = SYN_SCORE_MULT;
+    if (c.score >= 4) s.scoreAutoGrow = true;
+    if (c.survival >= 2) s.fallBonus = this.worldHeight * SYN_FALL_BONUS;
+    if (c.survival >= 4) s.shieldRegen = true;
+    this.synergy = s;
+    this.callbacks.onSynergy?.(this.getSynergyState());
+  }
+
+  // HUD 표시용 계열 상태 { jump:{count,tier}, ... }
+  getSynergyState() {
+    const out = {};
+    for (const tag of ['jump', 'orb', 'score', 'survival']) {
+      const count = this.tagCount[tag];
+      out[tag] = { count, tier: count >= 4 ? 4 : count >= 2 ? 2 : 0 };
+    }
+    return out;
+  }
+
   _isPlayerOnCloud(cloud) {
     const half = (cloud.width * this._cloudScale()) / 2;
     return (
@@ -255,6 +305,30 @@ export class Game {
     this.charge = 0;
     this.airJumpsLeft = this.doubleJumpLevel;
     this.callbacks.onCharge?.(0, this.input.holding);
+
+    if (this.synergy.shockwave) {
+      this._shockwaveAbsorb();
+    }
+  }
+
+  // 점프 4세트: 착지 시 주변 오브를 빨아들인다.
+  _shockwaveAbsorb() {
+    const px = this.player.x;
+    const py = this.player.y;
+    const r = SYN_SHOCKWAVE_RADIUS;
+    let absorbed = false;
+    for (const orb of this.orbs) {
+      if (orb.collected) continue;
+      if (Math.hypot(px - orb.x, py - orb.y) <= r) {
+        orb.collected = true;
+        this._collectOrb(orb);
+        absorbed = true;
+      }
+    }
+    if (absorbed) {
+      this.orbs = this.orbs.filter((o) => !o.collected);
+      this._spawnParticles(px, py, '#bfe9ff', 12);
+    }
   }
 
   _snapToStartCloud() {
@@ -292,6 +366,9 @@ export class Game {
     this.orbValueLevel = 0;
     this.chargeRateLevel = 0;
     this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0, rocket: 0 };
+    this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
+    this.taken = new Set();
+    this.synergy = this._emptySynergy();
 
     // 어드벤처 모드에서만 상점 영구 업그레이드 적용
     if (this.mode === 'adventure') {
@@ -305,6 +382,7 @@ export class Game {
     this.callbacks.onGauge?.(this.gauge / this.gaugeNeeded);
     this.callbacks.onCoins?.(0);
     this.callbacks.onEffects?.(this.getEffects());
+    this.callbacks.onSynergy?.(this.getSynergyState());
 
     const startY = this.worldHeight - START_Y_OFFSET;
     this.startCloud = new Cloud(
@@ -440,8 +518,10 @@ export class Game {
     if (climbed > this.rawClimb) {
       const delta = climbed - this.rawClimb;
       this.rawClimb = climbed;
-      const permMult = 1 + this.scoreLevel * SCORE_LEVEL_STEP;
-      const burstMult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
+      const permMult = (1 + this.scoreLevel * SCORE_LEVEL_STEP) * this.synergy.scoreMult;
+      let burstMult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
+      // 시그니처 페어: 점수배율+로켓 → 로켓 중 점수 추가 2배
+      if (this.effects.rocket > 0 && this.taken.has('scoreMul')) burstMult *= 2;
       this.score += Math.round(delta * permMult * burstMult);
       this.callbacks.onScore?.(this.score);
     }
@@ -500,10 +580,12 @@ export class Game {
     this._updateOrbs();
     this._updateParticles();
     this._tickEffects();
+    this._updateSynergyTimers();
     this._updateCamera();
     this._syncPlayerChargeAnim();
 
-    if (this.player.y - this.cameraY > this.worldHeight + GAME_OVER_MARGIN) {
+    const overLine = this.worldHeight + GAME_OVER_MARGIN + this.synergy.fallBonus;
+    if (this.player.y - this.cameraY > overLine) {
       if (this.shield) {
         this.shield = false;
         this._revive();
@@ -511,6 +593,17 @@ export class Game {
       } else {
         this._gameOver();
       }
+    }
+  }
+
+  // 시간 기반 세트 효과: 점수 자동 상승 / 보호막 자동 재생
+  _updateSynergyTimers() {
+    if (this.synergy.scoreAutoGrow && this.frame % SYN_SCORE_AUTOGROW_FRAMES === 0) {
+      this.scoreLevel += 1;
+    }
+    if (this.synergy.shieldRegen && !this.shield && this.frame % SYN_SHIELD_REGEN_FRAMES === 0) {
+      this.shield = true;
+      this.callbacks.onEffects?.(this.getEffects());
     }
   }
 
@@ -544,8 +637,10 @@ export class Game {
   _collectOrb(orb) {
     const rainbow = orb.type === 'rainbow';
 
-    // 코인 적립
-    this.coins += rainbow ? COIN_PER_RAINBOW : COIN_PER_ORB;
+    // 코인 적립 (시그니처 페어: 자석+오브가치 → 코인 2배)
+    let coinGain = rainbow ? COIN_PER_RAINBOW : COIN_PER_ORB;
+    if (this.taken.has('magnet') && this.taken.has('orbValue')) coinGain *= 2;
+    this.coins += coinGain;
     this.callbacks.onCoins?.(this.coins);
 
     // 게이지 충전 (레인보우는 즉시 가득)
@@ -554,7 +649,11 @@ export class Game {
       playRainbowSound();
       this._spawnParticles(orb.x, orb.y, 'rainbow', 18);
     } else {
-      const fill = ORB_GAUGE_FILL * (1 + this.orbValueLevel * ORB_VALUE_STEP);
+      let fill = ORB_GAUGE_FILL * (1 + this.orbValueLevel * ORB_VALUE_STEP);
+      fill *= this.synergy.orbFillMult; // 오브 2세트
+      if (this.synergy.orbDoubleChance > 0 && Math.random() < this.synergy.orbDoubleChance) {
+        fill *= 2; // 오브 4세트: 가끔 2배
+      }
       this.gauge = Math.min(this.gaugeNeeded, this.gauge + fill);
       playCollectSound();
       this._spawnParticles(orb.x, orb.y, '#ffd24a', 8);
@@ -698,6 +797,16 @@ export class Game {
         this.callbacks.onCoins?.(this.coins);
         break;
       default: break;
+    }
+
+    // 계열 태그 누적 → 세트 시너지 갱신
+    const def = REWARDS.find((r) => r.id === id);
+    if (def) {
+      this.taken.add(id);
+      for (const tag of def.tags ?? []) {
+        this.tagCount[tag] = (this.tagCount[tag] ?? 0) + 1;
+      }
+      this._recomputeSynergy();
     }
 
     playRewardSound();

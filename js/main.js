@@ -3,7 +3,7 @@ import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
-import { TIERS } from './orb.js';
+import { TIERS, TAGS, SYNERGIES } from './orb.js';
 import {
   getCoins,
   getStartBonuses,
@@ -37,6 +37,7 @@ const btnShare = document.getElementById('btn-share');
 
 const gaugeFill = document.getElementById('gauge-fill');
 const effectsEl = document.getElementById('effects');
+const synergyEl = document.getElementById('synergy');
 const coinHud = document.getElementById('coin-count');
 const rewardScreen = document.getElementById('reward-screen');
 const rewardCards = document.getElementById('reward-cards');
@@ -125,6 +126,22 @@ function updateCoinHud(coins) {
   if (coinHud) coinHud.textContent = coins;
 }
 
+function updateSynergy(state = {}) {
+  if (!synergyEl) return;
+  const badges = [];
+  for (const tag of ['jump', 'orb', 'score', 'survival']) {
+    const s = state[tag];
+    if (!s || s.count <= 0) continue;
+    const meta = TAGS[tag];
+    const star = s.tier >= 4 ? '★' : '';
+    const title = s.tier > 0 ? SYNERGIES[tag]?.[s.tier] ?? '' : '';
+    badges.push(
+      `<span class="syn-badge${s.tier > 0 ? ' active' : ''}" style="--syn:${meta.color}" title="${title}">${meta.emoji}${s.count}${star}</span>`,
+    );
+  }
+  synergyEl.innerHTML = badges.join('');
+}
+
 function renderShop() {
   const coins = getCoins();
   shopCoinsEl.textContent = coins;
@@ -177,10 +194,13 @@ function showRewardChoices(choices, info = {}) {
     const levelChip = reward.level != null
       ? `<span class="reward-level">Lv.${reward.level}→${reward.level + 1}</span>`
       : '';
+    const tagChips = (reward.tags ?? [])
+      .map((t) => `<span class="reward-tag" style="--syn:${TAGS[t]?.color}">${TAGS[t]?.emoji} ${TAGS[t]?.label}</span>`)
+      .join('');
     card.innerHTML = `
       <span class="reward-icon">${reward.icon}</span>
       <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
-      <span class="reward-desc">${reward.desc}</span>
+      <span class="reward-desc">${reward.desc} ${tagChips}</span>
     `;
     card.addEventListener('click', () => {
       rewardScreen.classList.add('hidden');
@@ -216,6 +236,9 @@ function ensureGame() {
     },
     onEffects(effects) {
       updateEffects(effects);
+    },
+    onSynergy(state) {
+      updateSynergy(state);
     },
     onReward(choices, info) {
       showRewardChoices(choices, info);
@@ -269,6 +292,7 @@ function startGame() {
   scoreEl.textContent = '0';
   updateGauge(0);
   updateEffects({});
+  updateSynergy({});
   updateCoinHud(0);
   // 어드벤처 전용 HUD(게이지/코인/효과) 표시 제어
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');

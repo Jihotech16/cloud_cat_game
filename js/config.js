@@ -63,6 +63,16 @@ export const COIN_REWARD_AMOUNT = 30;
 export const REROLL_BASE_COST = 12; // 리롤 비용(리롤할수록 증가)
 export const SKIP_COIN_REWARD = 8; // 스킵 시 받는 코인
 
+// 세트 시너지
+export const SYN_JUMP_FORCE_MULT = 1.15; // 점프 2세트: 점프력 +15%
+export const SYN_SHOCKWAVE_RADIUS = 130 * GAME_SCALE; // 점프 4세트: 착지 충격파 반경
+export const SYN_ORB_FILL_MULT = 1.25; // 오브 2세트: 게이지 +25%
+export const SYN_ORB_DOUBLE_CHANCE = 0.3; // 오브 4세트: 2배 확률
+export const SYN_SCORE_MULT = 1.2; // 점수 2세트: 점수 +20%
+export const SYN_SCORE_AUTOGROW_FRAMES = 720; // 점수 4세트: N프레임마다 점수배율 +1
+export const SYN_FALL_BONUS = 0.28; // 생존 2세트: 추락 여유(×화면높이)
+export const SYN_SHIELD_REGEN_FRAMES = 900; // 생존 4세트: N프레임마다 보호막 재생
+
 // 일시 효과(프레임)
 export const SLOWMO_DURATION = 6 * 60;
 export const SLOWMO_FACTOR = 0.5;

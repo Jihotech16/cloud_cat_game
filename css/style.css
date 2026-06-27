@@ -176,6 +176,29 @@ body {
   50% { box-shadow: 0 0 10px 3px rgba(255, 200, 60, 0.95); }
 }
 
+.synergy {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.syn-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #8a97a0;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(150, 160, 170, 0.4);
+  border-radius: 11px;
+  padding: 2px 8px;
+  box-shadow: var(--shadow);
+}
+
+.syn-badge.active {
+  color: var(--syn);
+  border-color: var(--syn);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--syn) 45%, transparent);
+}
+
 .effects {
   display: flex;
   gap: 6px;
@@ -391,6 +414,17 @@ body {
   background: rgba(45, 125, 70, 0.14);
   border-radius: 8px;
   vertical-align: middle;
+}
+
+.reward-tag {
+  display: inline-block;
+  margin: 2px 4px 0 0;
+  padding: 1px 7px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--syn);
+  background: color-mix(in srgb, var(--syn) 14%, transparent);
+  border-radius: 8px;
 }
 
 .reward-actions {
