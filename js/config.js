@@ -4,11 +4,11 @@ export const CLOUD_SCALE = 1;
 export const GAME_SPEED = 0.72;
 
 export const GRAVITY = 0.42 * GAME_SCALE * GAME_SPEED;
-export const JUMP_FORCE = 9 * GAME_SCALE * GAME_SPEED;
+export const JUMP_FORCE = 7.5 * GAME_SCALE * GAME_SPEED;
 export const CHARGE_RATE = 0.028 * GAME_SPEED;
 export const CHARGE_JUMP_BONUS = 0.75;
-export const CLOUD_GAP_MIN = 50 * GAME_SCALE;
-export const CLOUD_GAP_MAX = 85 * GAME_SCALE;
+export const CLOUD_GAP_MIN = 40 * GAME_SCALE;
+export const CLOUD_GAP_MAX = 66 * GAME_SCALE;
 export const SPAWN_LOOKAHEAD = 1.2;
 
 export const START_CLOUD_WIDTH = Math.round(109 * CLOUD_SCALE);
@@ -30,10 +30,11 @@ export const CLOUD_DISPLAY_WIDTH = Math.round(109 * CLOUD_SCALE);
 export const CLOUD_MOVE_SPEED = 1.2 * GAME_SCALE * GAME_SPEED;
 
 // 오브 & 게이지 & 보상
-export const ORB_RADIUS = 9 * GAME_SCALE; // 작게
+export const ORB_RADIUS = 5 * GAME_SCALE; // 작게
 export const ORB_SPAWN_GAP = 54 * GAME_SCALE; // 오브 세로 간격(맵에 골고루 분포)
-export const ORB_GAUGE_FILL = 9; // 오브 1개당 게이지 충전량(%) — 작은 오브 다수
-export const GAUGE_MAX = 100;
+export const ORB_GAUGE_FILL = 9; // 오브 1개당 게이지 충전량
+export const GAUGE_MAX = 100; // 첫 레벨에 필요한 게이지(기준값)
+export const GAUGE_LEVEL_STEP = 0.35; // 보상 레벨이 오를 때마다 필요 게이지 +35%
 export const ORB_PICKUP_PADDING = 16 * GAME_SCALE; // 수집 판정 여유
 export const ORB_MAGNET_SPEED = 6.5 * GAME_SCALE;
 
