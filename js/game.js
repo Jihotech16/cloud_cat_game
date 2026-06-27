@@ -40,8 +40,12 @@ import {
   SCORE_LEVEL_STEP,
   ORB_VALUE_STEP,
   DOUBLE_JUMP_FORCE_MULT,
+  CHARGE_RATE_STEP,
   REWARD_DURATION,
   REWARD_SCORE_MULT,
+  ROCKET_DURATION,
+  ROCKET_SPEED,
+  COIN_REWARD_AMOUNT,
   SLOWMO_DURATION,
   SLOWMO_FACTOR,
   BIGCLOUD_DURATION,
@@ -90,7 +94,8 @@ export class Game {
     this.magnetLevel = 0;
     this.scoreLevel = 0;
     this.orbValueLevel = 0;
-    this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0 };
+    this.chargeRateLevel = 0;
+    this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0, rocket: 0 };
 
     this._bindInput();
     this._resize();
@@ -222,6 +227,10 @@ export class Game {
     return this.effects.bigcloud > 0 ? BIGCLOUD_SCALE : 1;
   }
 
+  _chargeRate() {
+    return CHARGE_RATE * (1 + this.chargeRateLevel * CHARGE_RATE_STEP);
+  }
+
   _isPlayerOnCloud(cloud) {
     const half = (cloud.width * this._cloudScale()) / 2;
     return (
@@ -277,7 +286,8 @@ export class Game {
     this.magnetLevel = 0;
     this.scoreLevel = 0;
     this.orbValueLevel = 0;
-    this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0 };
+    this.chargeRateLevel = 0;
+    this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0, rocket: 0 };
 
     // 어드벤처 모드에서만 상점 영구 업그레이드 적용
     if (this.mode === 'adventure') {
@@ -411,7 +421,7 @@ export class Game {
     }
 
     if (this.input.holding) {
-      this.charge = Math.min(1, this.charge + CHARGE_RATE);
+      this.charge = Math.min(1, this.charge + this._chargeRate());
       this.callbacks.onCharge?.(this.charge, true);
     }
   }
@@ -446,7 +456,7 @@ export class Game {
     if (this.state === 'ready') {
       this._snapToStartCloud();
       if (this.input.holding) {
-        this.charge = Math.min(1, this.charge + CHARGE_RATE);
+        this.charge = Math.min(1, this.charge + this._chargeRate());
         this.callbacks.onCharge?.(this.charge, true);
       }
       this._syncPlayerChargeAnim();
@@ -459,7 +469,18 @@ export class Game {
       cloud.update(this.worldWidth, ts);
     }
 
-    if (this.player.groundedCloud) {
+    if (this.effects.rocket > 0) {
+      // 로켓 부스트: 중력 무시하고 위로 쭉 상승
+      this.player.groundedCloud = null;
+      this.player.onGround = false;
+      this.player.vx = 0;
+      this.player.vy = -ROCKET_SPEED;
+      this.player.y -= ROCKET_SPEED;
+      this.player.jumpPeakVy = ROCKET_SPEED; // 상승 애니메이션 유지
+      if (this.frame % 2 === 0) {
+        this._spawnParticles(this.player.x, this.player.y + this.player.height * 0.45, '#ff8a3d', 5);
+      }
+    } else if (this.player.groundedCloud) {
       this._updateGrounded();
     } else {
       this.player.update(GRAVITY, this.worldWidth, ts);
@@ -570,10 +591,17 @@ export class Game {
 
   _tickEffects() {
     let changed = false;
-    for (const key of ['scoreX2', 'slowmo', 'bigcloud', 'feather']) {
+    for (const key of ['scoreX2', 'slowmo', 'bigcloud', 'feather', 'rocket']) {
       if (this.effects[key] > 0) {
         this.effects[key] -= 1;
-        if (this.effects[key] === 0) changed = true;
+        if (this.effects[key] === 0) {
+          changed = true;
+          // 로켓 종료 시 부드럽게 낙하로 전환
+          if (key === 'rocket' && this.player) {
+            this.player.vy = 0;
+            this.player.jumpPeakVy = JUMP_FORCE;
+          }
+        }
       }
     }
     if (changed) this.callbacks.onEffects?.(this.getEffects());
@@ -602,6 +630,12 @@ export class Game {
       case 'doubleJump': this.doubleJumpLevel += 1; break; // 영구 누적
       case 'scoreMul': this.scoreLevel += 1; break; // 영구 누적
       case 'orbValue': this.orbValueLevel += 1; break; // 영구 누적
+      case 'charge': this.chargeRateLevel += 1; break; // 영구 누적
+      case 'rocket': this.effects.rocket = ROCKET_DURATION; break;
+      case 'coinBonus':
+        this.coins += COIN_REWARD_AMOUNT;
+        this.callbacks.onCoins?.(this.coins);
+        break;
       default: break;
     }
 
@@ -645,11 +679,13 @@ export class Game {
       slowmo: this.effects.slowmo > 0,
       bigcloud: this.effects.bigcloud > 0,
       feather: this.effects.feather > 0,
+      rocket: this.effects.rocket > 0,
       jumpLevel: this.jumpLevel,
       doubleJumpLevel: this.doubleJumpLevel,
       magnetLevel: this.magnetLevel,
       scoreLevel: this.scoreLevel,
       orbValueLevel: this.orbValueLevel,
+      chargeRateLevel: this.chargeRateLevel,
     };
   }
 
