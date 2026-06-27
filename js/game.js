@@ -32,6 +32,7 @@ import {
   ORB_RAINBOW_CHANCE,
   ORB_GAUGE_FILL,
   GAUGE_MAX,
+  GAUGE_LEVEL_STEP,
   ORB_PICKUP_PADDING,
   ORB_MAGNET_SPEED,
   JUMP_LEVEL_STEP,
@@ -77,6 +78,8 @@ export class Game {
     this.orbs = [];
     this.particles = [];
     this.gauge = 0;
+    this.gaugeNeeded = GAUGE_MAX;
+    this.rewardCount = 0;
     this.rawClimb = 0;
     this.frame = 0;
     this.coins = 0;
@@ -262,6 +265,8 @@ export class Game {
     this.orbs = [];
     this.particles = [];
     this.gauge = 0;
+    this.gaugeNeeded = GAUGE_MAX;
+    this.rewardCount = 0;
     this.rawClimb = 0;
     this.frame = 0;
     this.coins = 0;
@@ -280,10 +285,10 @@ export class Game {
       this.jumpLevel = meta.jumpLevel ?? 0;
       this.scoreLevel = meta.scoreLevel ?? 0;
       this.shield = !!meta.shield;
-      this.gauge = Math.min(GAUGE_MAX, meta.gaugeFill ?? 0);
+      this.gauge = Math.min(this.gaugeNeeded, meta.gaugeFill ?? 0);
     }
 
-    this.callbacks.onGauge?.(this.gauge / GAUGE_MAX);
+    this.callbacks.onGauge?.(this.gauge / this.gaugeNeeded);
     this.callbacks.onCoins?.(0);
     this.callbacks.onEffects?.(this.getEffects());
 
@@ -520,18 +525,18 @@ export class Game {
 
     // 게이지 충전 (레인보우는 즉시 가득)
     if (rainbow) {
-      this.gauge = GAUGE_MAX;
+      this.gauge = this.gaugeNeeded;
       playRainbowSound();
       this._spawnParticles(orb.x, orb.y, 'rainbow', 18);
     } else {
       const fill = ORB_GAUGE_FILL * (1 + this.orbValueLevel * ORB_VALUE_STEP);
-      this.gauge = Math.min(GAUGE_MAX, this.gauge + fill);
+      this.gauge = Math.min(this.gaugeNeeded, this.gauge + fill);
       playCollectSound();
       this._spawnParticles(orb.x, orb.y, '#ffd24a', 8);
     }
-    this.callbacks.onGauge?.(this.gauge / GAUGE_MAX);
+    this.callbacks.onGauge?.(this.gauge / this.gaugeNeeded);
 
-    if (this.gauge >= GAUGE_MAX) {
+    if (this.gauge >= this.gaugeNeeded) {
       this._triggerReward();
     }
   }
@@ -601,6 +606,9 @@ export class Game {
     }
 
     playRewardSound();
+    // 레벨이 오를수록 다음 보상에 필요한 게이지를 키운다.
+    this.rewardCount += 1;
+    this.gaugeNeeded = GAUGE_MAX * (1 + this.rewardCount * GAUGE_LEVEL_STEP);
     this.gauge = 0;
     this.callbacks.onGauge?.(0);
     this.callbacks.onEffects?.(this.getEffects());
@@ -627,7 +635,7 @@ export class Game {
   }
 
   getGauge() {
-    return this.gauge / GAUGE_MAX;
+    return this.gauge / this.gaugeNeeded;
   }
 
   getEffects() {
@@ -832,6 +840,38 @@ export class Game {
     }
   }
 
+  // 보호막 보유 시 캐릭터 주위에 보호막 거품을 그린다.
+  _drawShield() {
+    const ctx = this.ctx;
+    const x = this.player.x;
+    const y = this.player.y - this.cameraY;
+    const r = this.player.width * 0.62;
+    const pulse = 0.9 + 0.1 * Math.sin(this.frame * 0.15);
+
+    ctx.save();
+    // 채워진 거품
+    const grad = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * pulse);
+    grad.addColorStop(0, 'rgba(120, 220, 255, 0.05)');
+    grad.addColorStop(0.8, 'rgba(120, 220, 255, 0.18)');
+    grad.addColorStop(1, 'rgba(90, 200, 255, 0.35)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, r * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    // 테두리 링
+    ctx.strokeStyle = 'rgba(150, 230, 255, 0.85)';
+    ctx.lineWidth = 2 * GAME_SCALE;
+    ctx.beginPath();
+    ctx.arc(x, y, r * pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    // 하이라이트 반짝임
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.4, y - r * 0.45, r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   _drawParticles() {
     const ctx = this.ctx;
     for (const p of this.particles) {
@@ -887,6 +927,10 @@ export class Game {
     this._drawParticles();
 
     this.player.draw(this.ctx, this.cameraY);
+
+    if (this.shield) {
+      this._drawShield();
+    }
 
     if (this.state === 'ready') {
       this._drawReadyHint();
