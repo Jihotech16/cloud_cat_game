@@ -30,14 +30,14 @@ export const CLOUD_DISPLAY_WIDTH = Math.round(109 * CLOUD_SCALE);
 export const CLOUD_MOVE_SPEED = 1.2 * GAME_SCALE * GAME_SPEED;
 
 // 오브 & 게이지 & 보상
-export const ORB_RADIUS = 13 * GAME_SCALE;
-export const ORB_SPAWN_CHANCE = 0.45; // 구름 1개 스폰당 오브 동반 확률
-export const ORB_GAUGE_FILL = 20; // 오브 1개당 게이지 충전량(%)
+export const ORB_RADIUS = 9 * GAME_SCALE; // 작게
+export const ORB_SPAWN_GAP = 54 * GAME_SCALE; // 오브 세로 간격(맵에 골고루 분포)
+export const ORB_GAUGE_FILL = 9; // 오브 1개당 게이지 충전량(%) — 작은 오브 다수
 export const GAUGE_MAX = 100;
-export const ORB_PICKUP_PADDING = 18 * GAME_SCALE; // 수집 판정 여유
+export const ORB_PICKUP_PADDING = 16 * GAME_SCALE; // 수집 판정 여유
 export const ORB_MAGNET_SPEED = 6.5 * GAME_SCALE;
 
-export const ORB_RAINBOW_CHANCE = 0.12; // 오브가 레인보우일 확률
+export const ORB_RAINBOW_CHANCE = 0.06; // 오브가 레인보우일 확률(특별하게 유지)
 
 // 영구 누적 업그레이드(보상으로 레벨업)
 export const JUMP_LEVEL_STEP = 0.2; // 점프 보상 1회당 점프력 배율 +0.2
