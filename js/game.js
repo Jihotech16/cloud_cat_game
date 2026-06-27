@@ -413,6 +413,7 @@ export class Game {
 
     this.highestSpawnedY = this.clouds.reduce((min, c) => (c.y < min ? c.y : min), startY);
     this.highestOrbY = startY;
+    this._spawnOrbs(); // 시작 화면(대기 상태)부터 오브가 보이도록 미리 생성
 
     this._initDecor();
     this.input = { holding: false };
