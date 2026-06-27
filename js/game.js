@@ -46,6 +46,8 @@ import {
   ROCKET_DURATION,
   ROCKET_SPEED,
   COIN_REWARD_AMOUNT,
+  REROLL_BASE_COST,
+  SKIP_COIN_REWARD,
   SLOWMO_DURATION,
   SLOWMO_FACTOR,
   BIGCLOUD_DURATION,
@@ -84,6 +86,7 @@ export class Game {
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
     this.rewardCount = 0;
+    this.rerollCount = 0;
     this.rawClimb = 0;
     this.frame = 0;
     this.coins = 0;
@@ -276,6 +279,7 @@ export class Game {
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
     this.rewardCount = 0;
+    this.rerollCount = 0;
     this.rawClimb = 0;
     this.frame = 0;
     this.coins = 0;
@@ -607,12 +611,69 @@ export class Game {
     if (changed) this.callbacks.onEffects?.(this.getEffects());
   }
 
+  // 고도 진행도(0~1) — 등급 확률에 사용. 우주(score 800)에서 최대.
+  _rewardProgress() {
+    return Math.min(1, this.score / 800);
+  }
+
+  // 영구 누적 보상의 현재 레벨(아니면 null).
+  _rewardLevel(id) {
+    switch (id) {
+      case 'jump': return this.jumpLevel;
+      case 'doubleJump': return this.doubleJumpLevel;
+      case 'magnet': return this.magnetLevel;
+      case 'scoreMul': return this.scoreLevel;
+      case 'orbValue': return this.orbValueLevel;
+      case 'charge': return this.chargeRateLevel;
+      default: return null;
+    }
+  }
+
+  _rerollCost() {
+    return REROLL_BASE_COST * (this.rerollCount + 1);
+  }
+
+  // 현재 선택지를 만들어 콜백으로 전달(리롤 시 재호출).
+  _emitRewardChoices() {
+    const choices = pickRewardChoices(3, this._rewardProgress()).map((r) => ({
+      ...r,
+      level: this._rewardLevel(r.id),
+    }));
+    this.callbacks.onReward?.(choices, {
+      coins: this.coins,
+      rerollCost: this._rerollCost(),
+      skipReward: SKIP_COIN_REWARD,
+    });
+  }
+
   // 게이지가 가득 차면 게임을 멈추고 보상 선택을 띄운다.
   _triggerReward() {
     this.state = 'reward';
+    this.rerollCount = 0;
     if (this._loopId) cancelAnimationFrame(this._loopId);
-    const choices = pickRewardChoices(3);
-    this.callbacks.onReward?.(choices);
+    this._emitRewardChoices();
+  }
+
+  // 코인을 내고 선택지를 다시 뽑는다.
+  rerollReward() {
+    if (this.state !== 'reward') return;
+    const cost = this._rerollCost();
+    if (this.coins < cost) return;
+    this.coins -= cost;
+    this.rerollCount += 1;
+    this.callbacks.onCoins?.(this.coins);
+    this._emitRewardChoices();
+  }
+
+  // 보상을 받지 않고 코인을 얻으며 재개(레벨업·게이지 성장 없음).
+  skipReward() {
+    if (this.state !== 'reward') return;
+    this.coins += SKIP_COIN_REWARD;
+    this.callbacks.onCoins?.(this.coins);
+    this.gauge = 0;
+    this.callbacks.onGauge?.(0);
+    this.state = 'playing';
+    this._loop();
   }
 
   // main.js가 카드 선택 후 호출한다.

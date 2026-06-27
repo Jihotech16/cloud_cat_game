@@ -80,12 +80,20 @@ export class Orb {
   }
 }
 
-// 보상 등급(레어도). 등장 가중치와 카드 색이 등급에 따라 달라진다.
+// 보상 등급(레어도). 카드 색과 등장 가중치가 등급에 따라 달라진다.
+// w0=고도 0%일 때 가중치, w1=고도 100%일 때 가중치 → 높이 오를수록 상위 등급↑
 export const TIERS = {
-  common: { label: '일반', weight: 3 },
-  rare: { label: '레어', weight: 1.3 },
-  epic: { label: '에픽', weight: 0.5 },
+  common: { label: '일반', w0: 3.0, w1: 1.5 },
+  rare: { label: '레어', w0: 1.3, w1: 2.0 },
+  epic: { label: '에픽', w0: 0.5, w1: 1.0 },
 };
+
+function tierWeight(tier, progress) {
+  const t = TIERS[tier];
+  if (!t) return 1;
+  const p = Math.min(1, Math.max(0, progress));
+  return t.w0 + (t.w1 - t.w0) * p;
+}
 
 // 보상 정의. 게이지가 가득 차면 이 중 3개가 등급 가중치로 제시된다.
 export const REWARDS = [
@@ -104,12 +112,12 @@ export const REWARDS = [
   { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요', tier: 'epic' },
 ];
 
-// 등급 가중치로 중복 없이 n개의 보상을 고른다.
-export function pickRewardChoices(n = 3) {
+// 등급 가중치(고도 진행도 반영)로 중복 없이 n개의 보상을 고른다.
+export function pickRewardChoices(n = 3, progress = 0) {
   const pool = REWARDS.map((r) => ({ ...r }));
   const chosen = [];
   while (chosen.length < n && pool.length) {
-    const weights = pool.map((r) => TIERS[r.tier]?.weight ?? 1);
+    const weights = pool.map((r) => tierWeight(r.tier, progress));
     const total = weights.reduce((a, b) => a + b, 0);
     let roll = Math.random() * total;
     let idx = 0;
