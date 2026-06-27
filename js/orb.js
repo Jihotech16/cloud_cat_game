@@ -10,6 +10,16 @@ if (typeof Image !== 'undefined') {
   orbImg.src = 'assets/orb.png';
 }
 
+// 무지개 오브 스프라이트(있으면 사용).
+let rainbowImg = null;
+let rainbowImgReady = false;
+if (typeof Image !== 'undefined') {
+  rainbowImg = new Image();
+  rainbowImg.onload = () => { rainbowImgReady = true; };
+  rainbowImg.onerror = () => { rainbowImgReady = false; };
+  rainbowImg.src = 'assets/orb-rainbow.png';
+}
+
 // 청록 픽셀아트 구슬 스프라이트(저해상도 → 확대 시 픽셀 느낌). 한 번만 생성해 캐시.
 let pixelOrb = null;
 function getPixelOrb() {
@@ -106,6 +116,15 @@ export class Orb {
   }
 
   _drawRainbow(ctx, x, y, r, frame, pulse) {
+    if (rainbowImgReady) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      const size = r * 4.4 * pulse;
+      ctx.drawImage(rainbowImg, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
+      ctx.restore();
+      return;
+    }
+
     const hue = (frame * 4) % 360;
     ctx.save();
     // 무지개 글로우
