@@ -47,8 +47,17 @@ export const SCORE_LEVEL_STEP = 0.25; // 점수 배율 보상 1회당 점수 획
 export const ORB_VALUE_STEP = 0.4; // 오브 가치 보상 1회당 충전량 +40%
 export const DOUBLE_JUMP_FORCE_MULT = 0.9; // 공중 점프 위력(지상 대비)
 
+export const CHARGE_RATE_STEP = 0.35; // 차지 가속 보상 1회당 충전 속도 +35%
+
 export const REWARD_DURATION = 8 * 60; // 점수 2배 지속(프레임, 약 8초)
 export const REWARD_SCORE_MULT = 2;
+
+// 로켓 부스트(위로 쭉 상승)
+export const ROCKET_DURATION = 66; // 약 1.1초
+export const ROCKET_SPEED = 13 * GAME_SCALE; // 프레임당 상승량
+
+// 코인 획득 보상
+export const COIN_REWARD_AMOUNT = 30;
 
 // 일시 효과(프레임)
 export const SLOWMO_DURATION = 6 * 60;

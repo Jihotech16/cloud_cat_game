@@ -80,26 +80,42 @@ export class Orb {
   }
 }
 
-// 보상 정의. 게이지가 가득 차면 이 중 3개가 무작위로 제시된다.
+// 보상 등급(레어도). 등장 가중치와 카드 색이 등급에 따라 달라진다.
+export const TIERS = {
+  common: { label: '일반', weight: 3 },
+  rare: { label: '레어', weight: 1.3 },
+  epic: { label: '에픽', weight: 0.5 },
+};
+
+// 보상 정의. 게이지가 가득 차면 이 중 3개가 등급 가중치로 제시된다.
 export const REWARDS = [
-  { id: 'jump', icon: '🚀', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)' },
-  { id: 'doubleJump', icon: '🪽', label: '더블 점프 ⬆', desc: '공중에서 한 번 더 점프해요 (중첩)' },
-  { id: 'magnet', icon: '🧲', label: '자석 ⬆', desc: '오브 끌어당김 범위가 늘어나요 (중첩)' },
-  { id: 'orbValue', icon: '💎', label: '오브 가치 ⬆', desc: '오브당 게이지 충전량이 늘어요 (중첩)' },
-  { id: 'scoreMul', icon: '📈', label: '점수 배율 ⬆', desc: '점수 획득량이 영구적으로 늘어요 (중첩)' },
-  { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요' },
-  { id: 'slowmo', icon: '🐢', label: '슬로우 모션', desc: '한동안 시간이 느려져 조종이 쉬워요' },
-  { id: 'bigcloud', icon: '☁️', label: '큰 발판', desc: '한동안 구름이 커져 착지가 쉬워요' },
-  { id: 'feather', icon: '🪶', label: '깃털', desc: '한동안 천천히 떨어져요' },
-  { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요' },
+  { id: 'jump', icon: '⬆️', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)', tier: 'common' },
+  { id: 'charge', icon: '⚡', label: '차지 가속 ⬆', desc: '점프 충전(꾹 누르기) 속도가 빨라져요 (중첩)', tier: 'common' },
+  { id: 'orbValue', icon: '💎', label: '오브 가치 ⬆', desc: '오브당 게이지 충전량이 늘어요 (중첩)', tier: 'common' },
+  { id: 'feather', icon: '🪶', label: '깃털', desc: '한동안 천천히 떨어져요', tier: 'common' },
+  { id: 'slowmo', icon: '🐢', label: '슬로우 모션', desc: '한동안 시간이 느려져 조종이 쉬워요', tier: 'common' },
+  { id: 'bigcloud', icon: '☁️', label: '큰 발판', desc: '한동안 구름이 커져 착지가 쉬워요', tier: 'common' },
+  { id: 'coinBonus', icon: '🪙', label: '코인 획득', desc: '코인을 한 번에 받아요', tier: 'common' },
+  { id: 'magnet', icon: '🧲', label: '자석 ⬆', desc: '오브 끌어당김 범위가 늘어나요 (중첩)', tier: 'rare' },
+  { id: 'doubleJump', icon: '🪽', label: '더블 점프 ⬆', desc: '공중에서 한 번 더 점프해요 (중첩)', tier: 'rare' },
+  { id: 'scoreMul', icon: '📈', label: '점수 배율 ⬆', desc: '점수 획득량이 영구적으로 늘어요 (중첩)', tier: 'rare' },
+  { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요', tier: 'rare' },
+  { id: 'rocket', icon: '🚀', label: '로켓 부스트', desc: '잠깐 위로 쭉 솟아올라요!', tier: 'epic' },
+  { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요', tier: 'epic' },
 ];
 
-// 무작위로 n개의 보상을 고른다.
+// 등급 가중치로 중복 없이 n개의 보상을 고른다.
 export function pickRewardChoices(n = 3) {
-  const pool = [...REWARDS];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+  const pool = REWARDS.map((r) => ({ ...r }));
+  const chosen = [];
+  while (chosen.length < n && pool.length) {
+    const weights = pool.map((r) => TIERS[r.tier]?.weight ?? 1);
+    const total = weights.reduce((a, b) => a + b, 0);
+    let roll = Math.random() * total;
+    let idx = 0;
+    while (idx < pool.length - 1 && (roll -= weights[idx]) > 0) idx += 1;
+    chosen.push(pool[idx]);
+    pool.splice(idx, 1);
   }
-  return pool.slice(0, Math.min(n, pool.length));
+  return chosen;
 }

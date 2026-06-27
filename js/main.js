@@ -3,6 +3,7 @@ import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
+import { TIERS } from './orb.js';
 import {
   getCoins,
   getStartBonuses,
@@ -58,6 +59,7 @@ const EFFECT_BADGES = [
   ['magnetLevel', (n) => `🧲×${n}`],
   ['orbValueLevel', (n) => `💎×${n}`],
   ['scoreLevel', (n) => `📈×${n}`],
+  ['chargeRateLevel', (n) => `⚡×${n}`],
 ];
 
 const MODE_HINTS = {
@@ -110,6 +112,7 @@ function updateEffects(effects = {}) {
   if (effects.slowmo) badges.push('🐢');
   if (effects.bigcloud) badges.push('☁️');
   if (effects.feather) badges.push('🪶');
+  if (effects.rocket) badges.push('🚀');
   if (effects.shield) badges.push('🛡️');
   effectsEl.innerHTML = badges
     .map((b) => `<span class="effect-badge">${b}</span>`)
@@ -167,10 +170,11 @@ function showRewardChoices(choices) {
   rewardCards.innerHTML = '';
   for (const reward of choices) {
     const card = document.createElement('button');
-    card.className = 'reward-card';
+    card.className = `reward-card reward-card--${reward.tier}`;
+    const tierLabel = TIERS[reward.tier]?.label ?? '';
     card.innerHTML = `
       <span class="reward-icon">${reward.icon}</span>
-      <span class="reward-label">${reward.label}</span>
+      <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span></span>
       <span class="reward-desc">${reward.desc}</span>
     `;
     card.addEventListener('click', () => {

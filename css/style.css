@@ -370,6 +370,40 @@ body {
   font-weight: 700;
 }
 
+.reward-tier {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 1px 7px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 8px;
+  vertical-align: middle;
+}
+
+/* 등급별 카드 색 */
+.reward-card--common {
+  border-color: rgba(154, 167, 176, 0.55);
+  background: rgba(154, 167, 176, 0.1);
+}
+.reward-card--common .reward-tier { background: #9aa7b0; }
+
+.reward-card--rare {
+  border-color: #4a90e2;
+  background: rgba(74, 144, 226, 0.1);
+  box-shadow: 0 0 9px rgba(74, 144, 226, 0.28);
+}
+.reward-card--rare .reward-label { color: #2f6fc0; }
+.reward-card--rare .reward-tier { background: #4a90e2; }
+
+.reward-card--epic {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.1);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+}
+.reward-card--epic .reward-label { color: #8b3fd6; }
+.reward-card--epic .reward-tier { background: #a855f7; }
+
 .reward-desc {
   font-size: 0.82rem;
   color: #636e72;
