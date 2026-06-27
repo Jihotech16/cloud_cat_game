@@ -95,22 +95,38 @@ function tierWeight(tier, progress) {
   return t.w0 + (t.w1 - t.w0) * p;
 }
 
+// 보상 계열(태그). 같은 계열을 모으면 세트 시너지가 발동한다.
+export const TAGS = {
+  jump: { emoji: '🦘', label: '점프', color: '#4a90e2' },
+  orb: { emoji: '🔮', label: '오브', color: '#16a766' },
+  score: { emoji: '📈', label: '점수', color: '#e8638a' },
+  survival: { emoji: '🛡️', label: '생존', color: '#f5a623' },
+};
+
 // 보상 정의. 게이지가 가득 차면 이 중 3개가 등급 가중치로 제시된다.
 export const REWARDS = [
-  { id: 'jump', icon: '⬆️', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)', tier: 'common' },
-  { id: 'charge', icon: '⚡', label: '차지 가속 ⬆', desc: '점프 충전(꾹 누르기) 속도가 빨라져요 (중첩)', tier: 'common' },
-  { id: 'orbValue', icon: '💎', label: '오브 가치 ⬆', desc: '오브당 게이지 충전량이 늘어요 (중첩)', tier: 'common' },
-  { id: 'feather', icon: '🪶', label: '깃털', desc: '한동안 천천히 떨어져요', tier: 'common' },
-  { id: 'slowmo', icon: '🐢', label: '슬로우 모션', desc: '한동안 시간이 느려져 조종이 쉬워요', tier: 'common' },
-  { id: 'bigcloud', icon: '☁️', label: '큰 발판', desc: '한동안 구름이 커져 착지가 쉬워요', tier: 'common' },
-  { id: 'coinBonus', icon: '🪙', label: '코인 획득', desc: '코인을 한 번에 받아요', tier: 'common' },
-  { id: 'magnet', icon: '🧲', label: '자석 ⬆', desc: '오브 끌어당김 범위가 늘어나요 (중첩)', tier: 'rare' },
-  { id: 'doubleJump', icon: '🪽', label: '더블 점프 ⬆', desc: '공중에서 한 번 더 점프해요 (중첩)', tier: 'rare' },
-  { id: 'scoreMul', icon: '📈', label: '점수 배율 ⬆', desc: '점수 획득량이 영구적으로 늘어요 (중첩)', tier: 'rare' },
-  { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요', tier: 'rare' },
-  { id: 'rocket', icon: '🚀', label: '로켓 부스트', desc: '잠깐 위로 쭉 솟아올라요!', tier: 'epic' },
-  { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요', tier: 'epic' },
+  { id: 'jump', icon: '⬆️', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)', tier: 'common', tags: ['jump'] },
+  { id: 'charge', icon: '⚡', label: '차지 가속 ⬆', desc: '점프 충전(꾹 누르기) 속도가 빨라져요 (중첩)', tier: 'common', tags: ['jump'] },
+  { id: 'orbValue', icon: '💎', label: '오브 가치 ⬆', desc: '오브당 게이지 충전량이 늘어요 (중첩)', tier: 'common', tags: ['orb'] },
+  { id: 'feather', icon: '🪶', label: '깃털', desc: '한동안 천천히 떨어져요', tier: 'common', tags: ['jump', 'survival'] },
+  { id: 'slowmo', icon: '🐢', label: '슬로우 모션', desc: '한동안 시간이 느려져 조종이 쉬워요', tier: 'common', tags: ['survival'] },
+  { id: 'bigcloud', icon: '☁️', label: '큰 발판', desc: '한동안 구름이 커져 착지가 쉬워요', tier: 'common', tags: ['survival'] },
+  { id: 'coinBonus', icon: '🪙', label: '코인 획득', desc: '코인을 한 번에 받아요', tier: 'common', tags: [] },
+  { id: 'magnet', icon: '🧲', label: '자석 ⬆', desc: '오브 끌어당김 범위가 늘어나요 (중첩)', tier: 'rare', tags: ['orb'] },
+  { id: 'doubleJump', icon: '🪽', label: '더블 점프 ⬆', desc: '공중에서 한 번 더 점프해요 (중첩)', tier: 'rare', tags: ['jump'] },
+  { id: 'scoreMul', icon: '📈', label: '점수 배율 ⬆', desc: '점수 획득량이 영구적으로 늘어요 (중첩)', tier: 'rare', tags: ['score'] },
+  { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요', tier: 'rare', tags: ['score'] },
+  { id: 'rocket', icon: '🚀', label: '로켓 부스트', desc: '잠깐 위로 쭉 솟아올라요!', tier: 'epic', tags: ['score'] },
+  { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요', tier: 'epic', tags: ['survival'] },
 ];
+
+// 세트 시너지 정의(임계 개수 → 효과 설명). HUD/툴팁 표시에 사용.
+export const SYNERGIES = {
+  jump: { 2: '점프력 +15%', 4: '착지 충격파(주변 오브 흡수)' },
+  orb: { 2: '게이지 충전 +25%', 4: '오브가 가끔 2배로 터짐' },
+  score: { 2: '점수 +20%', 4: '점수 배율 자동 상승' },
+  survival: { 2: '추락 여유 ↑', 4: '보호막 자동 재생' },
+};
 
 // 등급 가중치(고도 진행도 반영)로 중복 없이 n개의 보상을 고른다.
 export function pickRewardChoices(n = 3, progress = 0) {
