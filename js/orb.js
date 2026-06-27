@@ -1,5 +1,45 @@
 import { ORB_RADIUS } from './config.js';
 
+// 선택 사항: assets/orb.png 가 있으면 그 스프라이트를 쓰고, 없으면 픽셀아트로 재현.
+let orbImg = null;
+let orbImgReady = false;
+if (typeof Image !== 'undefined') {
+  orbImg = new Image();
+  orbImg.onload = () => { orbImgReady = true; };
+  orbImg.onerror = () => { orbImgReady = false; };
+  orbImg.src = 'assets/orb.png';
+}
+
+// 청록 픽셀아트 구슬 스프라이트(저해상도 → 확대 시 픽셀 느낌). 한 번만 생성해 캐시.
+let pixelOrb = null;
+function getPixelOrb() {
+  if (pixelOrb || typeof document === 'undefined') return pixelOrb;
+  const S = 18;
+  const cv = document.createElement('canvas');
+  cv.width = S; cv.height = S;
+  const x = cv.getContext('2d');
+  const cx = S / 2 - 0.5;
+  const cy = S / 2 - 0.5;
+  const disc = (r, color, ox = 0, oy = 0) => {
+    x.fillStyle = color;
+    x.beginPath();
+    x.arc(cx + ox, cy + oy, r, 0, Math.PI * 2);
+    x.fill();
+  };
+  disc(8.4, '#0b5560');                 // 어두운 외곽 링
+  disc(6.8, '#15a9bd');                 // 진한 청록 본체
+  disc(5.2, '#3ad6e6', -0.6, -0.6);     // 밝은 면
+  disc(3.0, '#9af0f6', -1.2, -1.4);     // 하이라이트 영역
+  // 중앙 흰 십자 반짝
+  x.fillStyle = '#ffffff';
+  x.fillRect(Math.round(cx - 0.5), Math.round(cy - 2.5), 2, 5);
+  x.fillRect(Math.round(cx - 2.5), Math.round(cy - 0.5), 5, 2);
+  // 좌상단 작은 점 하이라이트
+  x.fillRect(Math.round(cx - 3.5), Math.round(cy - 3.5), 1, 1);
+  pixelOrb = cv;
+  return pixelOrb;
+}
+
 // 점프 경로에 떠 있는 동그란 수집 아이템.
 // type: 'normal' | 'rainbow'(가끔 등장, 게이지 즉시 가득)
 export class Orb {
@@ -26,28 +66,43 @@ export class Orb {
     }
 
     ctx.save();
-    const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.1 * pulse);
-    glow.addColorStop(0, 'rgba(255,236,150,0.85)');
-    glow.addColorStop(1, 'rgba(255,210,90,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, r * 2.1 * pulse, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.imageSmoothingEnabled = false;
 
-    const body = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.2, x, y, r);
-    body.addColorStop(0, '#fff7d6');
-    body.addColorStop(0.5, '#ffd24a');
-    body.addColorStop(1, '#f5a623');
-    ctx.fillStyle = body;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.beginPath();
-    ctx.arc(x - r * 0.32, y - r * 0.32, r * 0.22, 0, Math.PI * 2);
-    ctx.fill();
+    if (orbImgReady) {
+      // 제공된 스프라이트(반짝이 포함) 사용
+      const size = r * 4.6 * pulse;
+      ctx.drawImage(orbImg, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
+    } else {
+      // 픽셀아트 구슬 + 반짝이 직접 그리기
+      const sprite = getPixelOrb();
+      const size = r * 2.7;
+      if (sprite) {
+        ctx.drawImage(sprite, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
+      }
+      this._drawSparkles(ctx, x, y, r, frame);
+    }
     ctx.restore();
+  }
+
+  // 청록 십자 반짝이를 주위에 그린다(픽셀 느낌, 깜빡임).
+  _drawSparkles(ctx, x, y, r, frame) {
+    const pts = [
+      { ox: 1.5, oy: -1.7, ph: 0 },
+      { ox: -1.7, oy: 1.4, ph: 2.1 },
+      { ox: 1.7, oy: 1.6, ph: 4.0 },
+    ];
+    ctx.fillStyle = '#aef6fb';
+    for (const s of pts) {
+      const tw = Math.sin(frame * 0.12 + this.phase + s.ph);
+      if (tw < 0.2) continue;
+      const a = (tw - 0.2) / 0.8;
+      const sx = Math.round(x + s.ox * r);
+      const sy = Math.round(y + s.oy * r);
+      const len = Math.max(1, Math.round(r * 0.45 * a));
+      const w = Math.max(1, Math.round(r * 0.16));
+      ctx.fillRect(sx - len, sy - (w >> 1), len * 2, w);
+      ctx.fillRect(sx - (w >> 1), sy - len, w, len * 2);
+    }
   }
 
   _drawRainbow(ctx, x, y, r, frame, pulse) {
