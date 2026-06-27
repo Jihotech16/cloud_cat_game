@@ -47,18 +47,28 @@
     </div>
 
     <div id="hud" class="hud hidden">
-      <div class="score-box">
-        <span class="label">점수</span>
-        <span id="score">0</span>
+      <div class="score-row">
+        <div class="score-box">
+          <span class="label">점수</span>
+          <span id="score">0</span>
+        </div>
+        <div class="score-box best">
+          <span class="label">최고</span>
+          <span id="best-score">0</span>
+        </div>
+        <div class="score-box global">
+          <span class="label">전체</span>
+          <span id="global-best">0</span>
+        </div>
       </div>
-      <div class="score-box best">
-        <span class="label">최고</span>
-        <span id="best-score">0</span>
+      <div class="gauge">
+        <span class="gauge-icon" aria-hidden="true">⭐</span>
+        <div class="gauge-track">
+          <div id="gauge-fill" class="gauge-fill"></div>
+        </div>
+        <span class="coin-hud">🪙 <span id="coin-count">0</span></span>
       </div>
-      <div class="score-box global">
-        <span class="label">전체</span>
-        <span id="global-best">0</span>
-      </div>
+      <div id="effects" class="effects"></div>
     </div>
 
     <div id="start-screen" class="overlay">
@@ -72,7 +82,13 @@
           <span class="touch-hint">👆 꾹 눌렀다 떼면 점프</span>
           <span class="touch-hint sub">오래 누를수록 더 높이 · 벽에 부딪히면 방향 전환</span>
         </p>
+        <div class="mode-select" role="group" aria-label="모드 선택">
+          <button class="mode-btn active" data-mode="classic">🐱 일반 모드</button>
+          <button class="mode-btn" data-mode="adventure">⭐ 어드벤처 모드</button>
+        </div>
+        <p id="mode-hint" class="mode-hint">순수 점프 실력에 도전하는 기본 모드</p>
         <button id="btn-start" class="btn-primary">게임 시작</button>
+        <button id="btn-shop" class="btn-secondary">🛒 상점 (🪙 <span id="menu-coins">0</span>)</button>
         <p class="best-record">내 최고 기록: <strong id="menu-best">0</strong>m</p>
         <p class="best-record global-record">전체 최고 기록: <strong id="menu-global-best">0</strong>m</p>
         <p class="install-hint">홈 화면에 추가하면 앱처럼 플레이할 수 있어요</p>
@@ -89,8 +105,27 @@
           <p class="unit">m</p>
         </div>
         <p id="new-record" class="new-record hidden">🎉 새 최고 기록!</p>
+        <p class="coin-earned">🪙 코인 <strong id="gameover-coins">0</strong> 획득!</p>
         <button id="btn-retry" class="btn-primary">다시 도전</button>
         <button id="btn-share" class="btn-secondary">📤 결과 공유하기</button>
+        <button id="btn-shop-gameover" class="btn-secondary">🛒 상점</button>
+      </div>
+    </div>
+
+    <div id="reward-screen" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title">⭐ 보상 획득!</h2>
+        <p class="subtitle">하나를 골라 능력을 얻으세요</p>
+        <div id="reward-cards" class="reward-cards"></div>
+      </div>
+    </div>
+
+    <div id="shop-screen" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title">🛒 상점</h2>
+        <p class="subtitle">보유 코인: 🪙 <strong id="shop-coins">0</strong></p>
+        <div id="shop-list" class="shop-list"></div>
+        <button id="btn-shop-close" class="btn-primary">닫기</button>
       </div>
     </div>
   </div>

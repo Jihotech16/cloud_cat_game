@@ -4,7 +4,7 @@ export const CLOUD_SCALE = 1;
 export const GAME_SPEED = 0.72;
 
 export const GRAVITY = 0.42 * GAME_SCALE * GAME_SPEED;
-export const JUMP_FORCE = 11.5 * GAME_SCALE * GAME_SPEED;
+export const JUMP_FORCE = 9 * GAME_SCALE * GAME_SPEED;
 export const CHARGE_RATE = 0.028 * GAME_SPEED;
 export const CHARGE_JUMP_BONUS = 0.75;
 export const CLOUD_GAP_MIN = 50 * GAME_SCALE;
@@ -28,3 +28,35 @@ export const PLAYER_BASE_SPEED = 4.2 * GAME_SCALE * GAME_SPEED;
 
 export const CLOUD_DISPLAY_WIDTH = Math.round(109 * CLOUD_SCALE);
 export const CLOUD_MOVE_SPEED = 1.2 * GAME_SCALE * GAME_SPEED;
+
+// 오브 & 게이지 & 보상
+export const ORB_RADIUS = 13 * GAME_SCALE;
+export const ORB_SPAWN_CHANCE = 0.45; // 구름 1개 스폰당 오브 동반 확률
+export const ORB_GAUGE_FILL = 20; // 오브 1개당 게이지 충전량(%)
+export const GAUGE_MAX = 100;
+export const ORB_PICKUP_PADDING = 18 * GAME_SCALE; // 수집 판정 여유
+export const ORB_MAGNET_SPEED = 6.5 * GAME_SCALE;
+
+export const ORB_RAINBOW_CHANCE = 0.12; // 오브가 레인보우일 확률
+
+// 영구 누적 업그레이드(보상으로 레벨업)
+export const JUMP_LEVEL_STEP = 0.2; // 점프 보상 1회당 점프력 배율 +0.2
+export const MAGNET_RANGE_STEP = 80 * GAME_SCALE; // 자석 보상 1회당 끌어당김 범위 증가
+export const SCORE_LEVEL_STEP = 0.25; // 점수 배율 보상 1회당 점수 획득량 +25%
+export const ORB_VALUE_STEP = 0.4; // 오브 가치 보상 1회당 충전량 +40%
+export const DOUBLE_JUMP_FORCE_MULT = 0.9; // 공중 점프 위력(지상 대비)
+
+export const REWARD_DURATION = 8 * 60; // 점수 2배 지속(프레임, 약 8초)
+export const REWARD_SCORE_MULT = 2;
+
+// 일시 효과(프레임)
+export const SLOWMO_DURATION = 6 * 60;
+export const SLOWMO_FACTOR = 0.5;
+export const BIGCLOUD_DURATION = 8 * 60;
+export const BIGCLOUD_SCALE = 1.5;
+export const FEATHER_DURATION = 6 * 60;
+export const FEATHER_MAX_FALL = 4 * GAME_SCALE; // 깃털 시 최대 낙하 속도
+
+// 코인 (메타 성장)
+export const COIN_PER_ORB = 1;
+export const COIN_PER_RAINBOW = 5;

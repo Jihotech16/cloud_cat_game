@@ -41,9 +41,9 @@ export class Cloud {
     this.breakTimer = 0;
   }
 
-  update(worldWidth) {
+  update(worldWidth, timeScale = 1) {
     if (this.type === CLOUD_TYPES.MOVING) {
-      this.x += this.vx;
+      this.x += this.vx * timeScale;
       const margin = this.width / 2;
       if (this.x < margin) {
         this.x = margin;
@@ -64,13 +64,13 @@ export class Cloud {
     return spriteTop + this.drawHeight * PLATFORM_FROM_TOP;
   }
 
-  draw(ctx, cameraY) {
+  draw(ctx, cameraY, scale = 1) {
     if (this.broken && this.breakTimer > 20) return;
 
     const screenY = this.y - cameraY;
     const alpha = this.broken ? Math.max(0, 1 - this.breakTimer / 20) : 1;
-    const w = this.width;
-    const h = this.drawHeight;
+    const w = this.width * scale;
+    const h = this.drawHeight * scale;
     const dx = this.x - w / 2;
     const dy = screenY - h / 2;
 

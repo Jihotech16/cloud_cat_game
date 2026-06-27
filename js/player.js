@@ -103,10 +103,10 @@ export class Player {
     }
   }
 
-  update(gravity, worldWidth) {
-    this.vy += gravity;
-    this.x += this.vx;
-    this.y += this.vy;
+  update(gravity, worldWidth, timeScale = 1) {
+    this.vy += gravity * timeScale;
+    this.x += this.vx * timeScale;
+    this.y += this.vy * timeScale;
 
     this.applyWallBounce(worldWidth);
 
