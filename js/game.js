@@ -28,7 +28,7 @@ import {
   GAME_OVER_MARGIN,
   GAME_SCALE,
   ORB_RADIUS,
-  ORB_SPAWN_CHANCE,
+  ORB_SPAWN_GAP,
   ORB_RAINBOW_CHANCE,
   ORB_GAUGE_FILL,
   GAUGE_MAX,
@@ -315,6 +315,7 @@ export class Game {
     }
 
     this.highestSpawnedY = this.clouds.reduce((min, c) => (c.y < min ? c.y : min), startY);
+    this.highestOrbY = startY;
 
     this._initDecor();
     this.input = { holding: false };
@@ -338,19 +339,24 @@ export class Game {
       const type = pickCloudType(this.score);
       this.clouds.push(new Cloud(x, y, type, randomCloudWidth()));
       this.highestSpawnedY = y;
-
-      // 구름 사이 점프 경로에 오브를 가끔 띄운다. (어드벤처 모드 전용)
-      if (this.mode === 'adventure' && Math.random() < ORB_SPAWN_CHANCE) {
-        const ox = ORB_RADIUS * 2 + Math.random() * (this.worldWidth - ORB_RADIUS * 4);
-        const oy = y + gap * (0.4 + Math.random() * 0.3);
-        const type = Math.random() < ORB_RAINBOW_CHANCE ? 'rainbow' : 'normal';
-        this.orbs.push(new Orb(ox, oy, type));
-      }
     }
 
     const cullBelow = this.cameraY + this.worldHeight + CULL_BELOW_PADDING;
     this.clouds = this.clouds.filter((c) => c.y < cullBelow);
     this.orbs = this.orbs.filter((o) => !o.collected && o.y < cullBelow);
+  }
+
+  // 오브를 맵 전체에 일정한 세로 간격으로 골고루 뿌린다. (어드벤처 모드 전용)
+  _spawnOrbs() {
+    if (this.mode !== 'adventure') return;
+    const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
+
+    while (this.highestOrbY > spawnAbove) {
+      this.highestOrbY -= ORB_SPAWN_GAP * (0.75 + Math.random() * 0.5);
+      const x = ORB_RADIUS * 2 + Math.random() * (this.worldWidth - ORB_RADIUS * 4);
+      const type = Math.random() < ORB_RAINBOW_CHANCE ? 'rainbow' : 'normal';
+      this.orbs.push(new Orb(x, this.highestOrbY, type));
+    }
   }
 
   _checkLanding() {
@@ -460,6 +466,7 @@ export class Game {
     }
 
     this._spawnClouds();
+    this._spawnOrbs();
     this._updateOrbs();
     this._updateParticles();
     this._tickEffects();
