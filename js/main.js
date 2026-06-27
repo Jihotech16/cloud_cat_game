@@ -40,6 +40,8 @@ const effectsEl = document.getElementById('effects');
 const coinHud = document.getElementById('coin-count');
 const rewardScreen = document.getElementById('reward-screen');
 const rewardCards = document.getElementById('reward-cards');
+const btnReroll = document.getElementById('btn-reroll');
+const btnSkip = document.getElementById('btn-skip');
 
 const gameoverCoinsEl = document.getElementById('gameover-coins');
 const menuCoinsEl = document.getElementById('menu-coins');
@@ -166,15 +168,18 @@ function closeShop() {
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
 }
 
-function showRewardChoices(choices) {
+function showRewardChoices(choices, info = {}) {
   rewardCards.innerHTML = '';
   for (const reward of choices) {
     const card = document.createElement('button');
     card.className = `reward-card reward-card--${reward.tier}`;
     const tierLabel = TIERS[reward.tier]?.label ?? '';
+    const levelChip = reward.level != null
+      ? `<span class="reward-level">Lv.${reward.level}→${reward.level + 1}</span>`
+      : '';
     card.innerHTML = `
       <span class="reward-icon">${reward.icon}</span>
-      <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span></span>
+      <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
       <span class="reward-desc">${reward.desc}</span>
     `;
     card.addEventListener('click', () => {
@@ -183,6 +188,16 @@ function showRewardChoices(choices) {
     });
     rewardCards.appendChild(card);
   }
+
+  if (btnReroll) {
+    const cost = info.rerollCost ?? 0;
+    btnReroll.textContent = `🔄 다시 뽑기 (🪙 ${cost})`;
+    btnReroll.disabled = (info.coins ?? 0) < cost;
+  }
+  if (btnSkip) {
+    btnSkip.textContent = `⏭️ 건너뛰기 (+🪙 ${info.skipReward ?? 0})`;
+  }
+
   rewardScreen.classList.remove('hidden');
 }
 
@@ -202,8 +217,8 @@ function ensureGame() {
     onEffects(effects) {
       updateEffects(effects);
     },
-    onReward(choices) {
-      showRewardChoices(choices);
+    onReward(choices, info) {
+      showRewardChoices(choices, info);
     },
     onCoins(coins) {
       updateCoinHud(coins);
@@ -276,6 +291,12 @@ modeButtons.forEach((btn) => {
 btnShop?.addEventListener('click', openShop);
 btnShopGameover?.addEventListener('click', openShop);
 btnShopClose?.addEventListener('click', closeShop);
+
+btnReroll?.addEventListener('click', () => game?.rerollReward());
+btnSkip?.addEventListener('click', () => {
+  rewardScreen.classList.add('hidden');
+  game?.skipReward();
+});
 
 btnShare.addEventListener('click', async () => {
   btnShare.disabled = true;

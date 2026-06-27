@@ -59,6 +59,10 @@ export const ROCKET_SPEED = 13 * GAME_SCALE; // 프레임당 상승량
 // 코인 획득 보상
 export const COIN_REWARD_AMOUNT = 30;
 
+// 보상 리롤 / 스킵
+export const REROLL_BASE_COST = 12; // 리롤 비용(리롤할수록 증가)
+export const SKIP_COIN_REWARD = 8; // 스킵 시 받는 코인
+
 // 일시 효과(프레임)
 export const SLOWMO_DURATION = 6 * 60;
 export const SLOWMO_FACTOR = 0.5;
