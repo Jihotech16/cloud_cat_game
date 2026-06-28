@@ -15,6 +15,19 @@ const PLATFORM_FROM_TOP = 0.32;
 let cloudImage = null;
 let cloudImageReady = false;
 
+// 부스트 구름 전용 스프라이트(있으면 사용)
+let boostImage = null;
+let boostImageReady = false;
+if (typeof Image !== 'undefined') {
+  boostImage = new Image();
+  boostImage.onload = () => { boostImageReady = true; };
+  boostImage.onerror = () => { boostImageReady = false; };
+  boostImage.src = 'assets/cloud-boost.png';
+}
+// 발판(구름 윗면)이 스프라이트 높이의 어디쯤인지(위에서부터 비율) — 정렬용
+const BOOST_SPRITE_PLATFRAC = 0.47;
+const BOOST_SPRITE_WSCALE = 1.15;
+
 export function loadCloudSprite() {
   if (cloudImage) return cloudImage;
   cloudImage = new Image();
@@ -79,7 +92,23 @@ export class Cloud {
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    if (cloudImageReady) {
+    const dim = altitude > 0.05
+      ? `brightness(${(1 - 0.32 * altitude).toFixed(2)}) saturate(${(1 - 0.2 * altitude).toFixed(2)})`
+      : '';
+
+    if (this.type === CLOUD_TYPES.BOOST && boostImageReady) {
+      // 전용 부스트 스프라이트(구름+화살표 포함)
+      const aspect = boostImage.naturalHeight / boostImage.naturalWidth;
+      const dispW = w * BOOST_SPRITE_WSCALE;
+      const dispH = dispW * aspect;
+      const platScreen = screenY - this.drawHeight * scale * 0.18; // 발판(구름 윗면) 화면 y
+      const sdx = this.x - dispW / 2;
+      const sdy = platScreen - dispH * BOOST_SPRITE_PLATFRAC;
+      ctx.imageSmoothingEnabled = false;
+      ctx.filter = dim || 'none';
+      ctx.drawImage(boostImage, sdx, sdy, dispW, dispH);
+      ctx.filter = 'none';
+    } else if (cloudImageReady) {
       const filters = {
         [CLOUD_TYPES.NORMAL]: '',
         [CLOUD_TYPES.MOVING]: 'brightness(1.08) saturate(0.85) hue-rotate(185deg)',
@@ -87,23 +116,19 @@ export class Cloud {
         [CLOUD_TYPES.BOUNCE]: 'drop-shadow(0 0 5px rgba(255,95,168,0.95)) saturate(1.3)',
         [CLOUD_TYPES.BOOST]: 'drop-shadow(0 0 6px rgba(120,220,255,0.95)) brightness(1.05)',
       };
-      // 고도가 오르면 구름도 어둑하게(밤·우주 분위기)
       let filter = filters[this.type] ?? '';
-      if (altitude > 0.05) {
-        const dim = `brightness(${(1 - 0.32 * altitude).toFixed(2)}) saturate(${(1 - 0.2 * altitude).toFixed(2)})`;
-        filter = filter ? `${filter} ${dim}` : dim;
-      }
+      if (dim) filter = filter ? `${filter} ${dim}` : dim;
       ctx.filter = filter || 'none';
       ctx.drawImage(cloudImage, dx, dy, w, h);
       ctx.filter = 'none';
+
+      if (this.type === CLOUD_TYPES.BOUNCE) {
+        this._drawBounceMark(ctx, this.x, screenY, w);
+      } else if (this.type === CLOUD_TYPES.BOOST) {
+        this._drawBoostMark(ctx, this.x, screenY, w, frame);
+      }
     } else {
       this._drawFallback(ctx, screenY, w, h);
-    }
-
-    if (this.type === CLOUD_TYPES.BOUNCE) {
-      this._drawBounceMark(ctx, this.x, screenY, w);
-    } else if (this.type === CLOUD_TYPES.BOOST) {
-      this._drawBoostMark(ctx, this.x, screenY, w, frame);
     }
 
     ctx.restore();
