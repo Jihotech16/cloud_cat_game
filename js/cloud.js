@@ -4,6 +4,7 @@ export const CLOUD_TYPES = {
   NORMAL: 'normal',
   MOVING: 'moving',
   BREAKING: 'breaking',
+  BOUNCE: 'bounce',
 };
 
 const SPRITE_W = 109;
@@ -64,7 +65,7 @@ export class Cloud {
     return spriteTop + this.drawHeight * PLATFORM_FROM_TOP;
   }
 
-  draw(ctx, cameraY, scale = 1) {
+  draw(ctx, cameraY, scale = 1, altitude = 0) {
     if (this.broken && this.breakTimer > 20) return;
 
     const screenY = this.y - cameraY;
@@ -79,17 +80,48 @@ export class Cloud {
 
     if (cloudImageReady) {
       const filters = {
-        [CLOUD_TYPES.NORMAL]: 'none',
+        [CLOUD_TYPES.NORMAL]: '',
         [CLOUD_TYPES.MOVING]: 'brightness(1.08) saturate(0.85) hue-rotate(185deg)',
         [CLOUD_TYPES.BREAKING]: 'sepia(0.35) brightness(1.12) saturate(1.2)',
+        [CLOUD_TYPES.BOUNCE]: 'drop-shadow(0 0 5px rgba(255,95,168,0.95)) saturate(1.3)',
       };
-      ctx.filter = filters[this.type];
+      // 고도가 오르면 구름도 어둑하게(밤·우주 분위기)
+      let filter = filters[this.type] ?? '';
+      if (altitude > 0.05) {
+        const dim = `brightness(${(1 - 0.32 * altitude).toFixed(2)}) saturate(${(1 - 0.2 * altitude).toFixed(2)})`;
+        filter = filter ? `${filter} ${dim}` : dim;
+      }
+      ctx.filter = filter || 'none';
       ctx.drawImage(cloudImage, dx, dy, w, h);
       ctx.filter = 'none';
     } else {
       this._drawFallback(ctx, screenY, w, h);
     }
 
+    if (this.type === CLOUD_TYPES.BOUNCE) {
+      this._drawBounceMark(ctx, this.x, screenY, w);
+    }
+
+    ctx.restore();
+  }
+
+  // 트램펄린 구름 표시: 분홍 더블 셰브론(위로 튕김)
+  _drawBounceMark(ctx, cx, screenY, w) {
+    const s = w * 0.12;
+    const topY = screenY - this.drawHeight * 0.1;
+    ctx.save();
+    ctx.strokeStyle = '#ff4fa3';
+    ctx.lineWidth = Math.max(2, w * 0.035);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 2; i++) {
+      const yy = topY - i * s * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(cx - s, yy + s * 0.45);
+      ctx.lineTo(cx, yy - s * 0.45);
+      ctx.lineTo(cx + s, yy + s * 0.45);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -105,9 +137,16 @@ export class Cloud {
 }
 
 export function pickCloudType(heightScore) {
+  // 고도가 오를수록 특수 구름 비율이 늘어 다양해진다.
+  const t = Math.min(1, heightScore / 600);
+  const pBreak = 0.05 + 0.13 * t; // 5% → 18%
+  const pBounce = 0.06 + 0.10 * t; // 6% → 16%
+  const pMove = 0.10 + 0.18 * t; // 10% → 28%
+
   const roll = Math.random();
-  if (heightScore > 300 && roll < 0.12) return CLOUD_TYPES.BREAKING;
-  if (heightScore > 150 && roll < 0.25) return CLOUD_TYPES.MOVING;
+  if (roll < pBreak) return CLOUD_TYPES.BREAKING;
+  if (roll < pBreak + pBounce) return CLOUD_TYPES.BOUNCE;
+  if (roll < pBreak + pBounce + pMove) return CLOUD_TYPES.MOVING;
   return CLOUD_TYPES.NORMAL;
 }
 

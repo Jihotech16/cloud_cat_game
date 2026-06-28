@@ -5,6 +5,7 @@ export const GAME_SPEED = 0.72;
 
 export const GRAVITY = 0.42 * GAME_SCALE * GAME_SPEED;
 export const JUMP_FORCE = 7.5 * GAME_SCALE * GAME_SPEED;
+export const BOUNCE_FORCE = JUMP_FORCE * 1.95; // 트램펄린 구름 튕김 세기
 export const CHARGE_RATE = 0.028 * GAME_SPEED;
 export const CHARGE_JUMP_BONUS = 0.75;
 export const CLOUD_GAP_MIN = 40 * GAME_SCALE;
