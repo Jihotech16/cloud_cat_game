@@ -223,7 +223,7 @@ export class Game {
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
       playJumpSound();
       if (cloudBoost > 1) {
-        this._spawnParticles(this.player.x, this.player.bottom, '#9bff7a', 8);
+        this._spawnParticles(this.player.x, this.player.bottom, '#7fdcff', 8);
       }
       this.charge = 0;
       this.callbacks.onCharge?.(0, false);
@@ -1210,7 +1210,7 @@ export class Game {
     const altitude = Math.min(this.score / 800, 1);
     const sorted = [...this.clouds].sort((a, b) => a.y - b.y);
     for (const cloud of sorted) {
-      cloud.draw(this.ctx, this.cameraY, cloudScale, altitude);
+      cloud.draw(this.ctx, this.cameraY, cloudScale, altitude, this.frame);
     }
 
     for (const orb of this.orbs) {
