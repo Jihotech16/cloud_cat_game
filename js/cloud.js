@@ -66,7 +66,7 @@ export class Cloud {
     return spriteTop + this.drawHeight * PLATFORM_FROM_TOP;
   }
 
-  draw(ctx, cameraY, scale = 1, altitude = 0) {
+  draw(ctx, cameraY, scale = 1, altitude = 0, frame = 0) {
     if (this.broken && this.breakTimer > 20) return;
 
     const screenY = this.y - cameraY;
@@ -85,7 +85,7 @@ export class Cloud {
         [CLOUD_TYPES.MOVING]: 'brightness(1.08) saturate(0.85) hue-rotate(185deg)',
         [CLOUD_TYPES.BREAKING]: 'sepia(0.35) brightness(1.12) saturate(1.2)',
         [CLOUD_TYPES.BOUNCE]: 'drop-shadow(0 0 5px rgba(255,95,168,0.95)) saturate(1.3)',
-        [CLOUD_TYPES.BOOST]: 'drop-shadow(0 0 5px rgba(120,230,90,0.95)) saturate(1.2)',
+        [CLOUD_TYPES.BOOST]: 'drop-shadow(0 0 6px rgba(120,220,255,0.95)) brightness(1.05)',
       };
       // 고도가 오르면 구름도 어둑하게(밤·우주 분위기)
       let filter = filters[this.type] ?? '';
@@ -103,28 +103,61 @@ export class Cloud {
     if (this.type === CLOUD_TYPES.BOUNCE) {
       this._drawBounceMark(ctx, this.x, screenY, w);
     } else if (this.type === CLOUD_TYPES.BOOST) {
-      this._drawBoostMark(ctx, this.x, screenY, w);
+      this._drawBoostMark(ctx, this.x, screenY, w, frame);
     }
 
     ctx.restore();
   }
 
-  // 부스트 구름 표시: 초록 위쪽 화살표 + 1.5×
-  _drawBoostMark(ctx, cx, screenY, w) {
-    const s = w * 0.13;
-    const topY = screenY - this.drawHeight * 0.12;
+  // 부스트 구름 표시: 청록(시안) 상승 화살표 3개 + 반짝이
+  _drawBoostMark(ctx, cx, screenY, w, frame = 0) {
+    const baseY = screenY - this.drawHeight * 0.18;
+    const rise = Math.sin(frame * 0.12) * w * 0.02; // 살짝 위아래 떠오름
+
+    const arrow = (ax, ay, size, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay - size);
+      ctx.lineTo(ax - size * 0.85, ay + size * 0.35);
+      ctx.lineTo(ax - size * 0.32, ay + size * 0.35);
+      ctx.lineTo(ax - size * 0.32, ay + size);
+      ctx.lineTo(ax + size * 0.32, ay + size);
+      ctx.lineTo(ax + size * 0.32, ay + size * 0.35);
+      ctx.lineTo(ax + size * 0.85, ay + size * 0.35);
+      ctx.closePath();
+      ctx.fill();
+    };
+
     ctx.save();
-    ctx.fillStyle = '#43c728';
-    ctx.beginPath();
-    ctx.moveTo(cx, topY - s);
-    ctx.lineTo(cx - s, topY + s * 0.5);
-    ctx.lineTo(cx - s * 0.4, topY + s * 0.5);
-    ctx.lineTo(cx - s * 0.4, topY + s * 1.1);
-    ctx.lineTo(cx + s * 0.4, topY + s * 1.1);
-    ctx.lineTo(cx + s * 0.4, topY + s * 0.5);
-    ctx.lineTo(cx + s, topY + s * 0.5);
-    ctx.closePath();
-    ctx.fill();
+    // 가운데 큰 화살표 + 좌우 작은 화살표
+    arrow(cx, baseY - rise, w * 0.13, '#5fd0ff');
+    arrow(cx - w * 0.2, baseY + w * 0.04 + rise, w * 0.08, '#9be6ff');
+    arrow(cx + w * 0.2, baseY + w * 0.04 - rise, w * 0.08, '#9be6ff');
+
+    // 반짝이(4각 별) — 깜빡임
+    ctx.fillStyle = '#eafcff';
+    const sparkles = [
+      { x: cx - w * 0.32, y: baseY + w * 0.02, ph: 0 },
+      { x: cx + w * 0.32, y: baseY - w * 0.02, ph: 2.0 },
+      { x: cx + w * 0.05, y: baseY - w * 0.16, ph: 4.0 },
+    ];
+    for (const sp of sparkles) {
+      const tw = Math.sin(frame * 0.18 + sp.ph);
+      if (tw < 0.1) continue;
+      const r = w * 0.035 * tw;
+      ctx.beginPath();
+      ctx.moveTo(sp.x, sp.y - r);
+      ctx.lineTo(sp.x + r * 0.32, sp.y);
+      ctx.lineTo(sp.x, sp.y + r);
+      ctx.lineTo(sp.x - r * 0.32, sp.y);
+      ctx.closePath();
+      ctx.moveTo(sp.x - r, sp.y);
+      ctx.lineTo(sp.x, sp.y - r * 0.32);
+      ctx.lineTo(sp.x + r, sp.y);
+      ctx.lineTo(sp.x, sp.y + r * 0.32);
+      ctx.closePath();
+      ctx.fill();
+    }
     ctx.restore();
   }
 
