@@ -12,6 +12,7 @@ import {
 import {
   GRAVITY,
   JUMP_FORCE,
+  BOUNCE_FORCE,
   CHARGE_RATE,
   CHARGE_JUMP_BONUS,
   CLOUD_GAP_MIN,
@@ -293,6 +294,23 @@ export class Game {
   }
 
   _landOnCloud(cloud) {
+    // 트램펄린: 밟으면 차지 없이 강하게 튕겨 올라간다.
+    if (cloud.type === CLOUD_TYPES.BOUNCE) {
+      if (Math.abs(this.player.vx) < 0.01) {
+        this.player.vx = this.player.facing * this.player.baseSpeed;
+      } else {
+        this.player.facing = this.player.vx > 0 ? 1 : -1;
+      }
+      this.player.alignFeetTo(cloud.top);
+      this.player.bounce(BOUNCE_FORCE);
+      this.airJumpsLeft = this.doubleJumpLevel;
+      playJumpSound();
+      this._spawnParticles(this.player.x, this.player.bottom, '#ff7ec2', 10);
+      this.charge = 0;
+      this.callbacks.onCharge?.(0, this.input.holding);
+      return;
+    }
+
     if (Math.abs(this.player.vx) > 0.01) {
       this.player.facing = this.player.vx > 0 ? 1 : -1;
     }
@@ -1122,9 +1140,10 @@ export class Game {
     this._drawBackground();
 
     const cloudScale = this._cloudScale();
+    const altitude = Math.min(this.score / 800, 1);
     const sorted = [...this.clouds].sort((a, b) => a.y - b.y);
     for (const cloud of sorted) {
-      cloud.draw(this.ctx, this.cameraY, cloudScale);
+      cloud.draw(this.ctx, this.cameraY, cloudScale, altitude);
     }
 
     for (const orb of this.orbs) {
