@@ -119,7 +119,7 @@ export class Orb {
     if (rainbowImgReady) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      const size = r * 4.4 * pulse;
+      const size = r * 4.4; // 크기 고정(맥동 제거)
       ctx.drawImage(rainbowImg, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
       ctx.restore();
       return;
