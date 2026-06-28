@@ -1,5 +1,15 @@
 import { HAZARD_RADIUS } from './config.js';
 
+// 전용 가시 스프라이트(있으면 사용)
+let hazardImg = null;
+let hazardImgReady = false;
+if (typeof Image !== 'undefined') {
+  hazardImg = new Image();
+  hazardImg.onload = () => { hazardImgReady = true; };
+  hazardImg.onerror = () => { hazardImgReady = false; };
+  hazardImg.src = 'assets/hazard.png';
+}
+
 // 어드벤처 모드 장애물: 좌우로 떠다니는 가시 덩어리. 닿으면 위험.
 export class Hazard {
   constructor(x, y, vx) {
@@ -28,6 +38,15 @@ export class Hazard {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rot);
+
+    if (hazardImgReady) {
+      // 전용 가시 스프라이트
+      const size = r * 3.2 * pulse;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(hazardImg, -size / 2, -size / 2, size, size);
+      ctx.restore();
+      return;
+    }
 
     // 가시
     const spikes = 8;
