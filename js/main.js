@@ -34,6 +34,7 @@ const newRecordEl = document.getElementById('new-record');
 const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
+const btnMenu = document.getElementById('btn-menu');
 
 const gaugeFill = document.getElementById('gauge-fill');
 const effectsEl = document.getElementById('effects');
@@ -300,6 +301,17 @@ function startGame() {
   game.start(selectedMode);
 }
 
+// 게임오버 → 메인 메뉴(시작 화면)로
+function goToMenu() {
+  gameoverScreen.classList.add('hidden');
+  rewardScreen.classList.add('hidden');
+  hud.classList.add('hidden');
+  chargeBar.classList.add('hidden');
+  refreshMenuRecords();
+  if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
+  startScreen.classList.remove('hidden');
+}
+
 window.addEventListener('resize', updateLayout);
 window.addEventListener('orientationchange', () => {
   setTimeout(updateLayout, 150);
@@ -307,6 +319,7 @@ window.addEventListener('orientationchange', () => {
 
 btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
+btnMenu?.addEventListener('click', goToMenu);
 
 modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
