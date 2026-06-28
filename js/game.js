@@ -1,6 +1,7 @@
 import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
 import { Orb, pickRewardChoices, REWARDS } from './orb.js';
+import { Hazard } from './hazard.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
 import {
@@ -29,6 +30,8 @@ import {
   CULL_BELOW_PADDING,
   GAME_OVER_MARGIN,
   GAME_SCALE,
+  HAZARD_SPEED,
+  HAZARD_START_SCORE,
   ORB_RADIUS,
   ORB_SPAWN_GAP,
   ORB_RAINBOW_CHANCE,
@@ -92,6 +95,7 @@ export class Game {
     this.cloudDecor = [];
 
     this.orbs = [];
+    this.hazards = [];
     this.particles = [];
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
@@ -372,6 +376,7 @@ export class Game {
     this.highestY = 0;
 
     this.orbs = [];
+    this.hazards = [];
     this.particles = [];
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
@@ -436,6 +441,7 @@ export class Game {
 
     this.highestSpawnedY = this.clouds.reduce((min, c) => (c.y < min ? c.y : min), startY);
     this.highestOrbY = startY;
+    this.highestHazardY = startY;
     this._spawnOrbs(); // 시작 화면(대기 상태)부터 오브가 보이도록 미리 생성
 
     this._initDecor();
@@ -477,6 +483,59 @@ export class Game {
       const x = ORB_RADIUS * 2 + Math.random() * (this.worldWidth - ORB_RADIUS * 4);
       const type = Math.random() < ORB_RAINBOW_CHANCE ? 'rainbow' : 'normal';
       this.orbs.push(new Orb(x, this.highestOrbY, type));
+    }
+  }
+
+  // 장애물 생성: 일정 점수부터, 고도 오를수록 촘촘하게. (어드벤처 전용)
+  _spawnHazards() {
+    if (this.mode !== 'adventure') return;
+    if (this.score < HAZARD_START_SCORE) {
+      // 등장 전엔 화면 위쪽 기준선만 따라 올린다(나중에 몰아서 안 쏟아지게).
+      this.highestHazardY = Math.min(this.highestHazardY, this.cameraY - this.worldHeight);
+      return;
+    }
+    const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
+    const t = Math.min(1, this.score / 800);
+    const gap = this.worldHeight * (0.95 - 0.5 * t); // 고도0: ~1화면, 고도1: ~0.45화면
+
+    while (this.highestHazardY > spawnAbove) {
+      this.highestHazardY -= gap * (0.7 + Math.random() * 0.6);
+      const r = this.worldWidth * 0.07;
+      const x = r + Math.random() * (this.worldWidth - r * 2);
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED));
+    }
+  }
+
+  // 장애물 이동 + 충돌 판정.
+  _updateHazards() {
+    const ts = this.effects.slowmo > 0 ? SLOWMO_FACTOR : 1;
+    const px = this.player.x;
+    const py = this.player.y;
+    const hitDist = this.player.width * 0.32;
+
+    for (const h of this.hazards) {
+      if (h.dead) continue;
+      h.update(this.worldWidth, ts);
+      if (Math.hypot(px - h.x, py - h.y) < hitDist + h.r) {
+        this._onHazardHit(h);
+        if (this.state !== 'playing') return; // 게임오버 시 중단
+      }
+    }
+    const cullBelow = this.cameraY + this.worldHeight + CULL_BELOW_PADDING;
+    this.hazards = this.hazards.filter((h) => !h.dead && h.y < cullBelow);
+  }
+
+  _onHazardHit(h) {
+    if (this.shield) {
+      this.shield = false;
+      h.dead = true;
+      this._spawnParticles(h.x, h.y, '#ffd24a', 16);
+      this.player.vy = -JUMP_FORCE * 0.8; // 살짝 튕겨 회피
+      this.player.groundedCloud = null;
+      this.callbacks.onEffects?.(this.getEffects());
+    } else {
+      this._gameOver();
     }
   }
 
@@ -601,7 +660,10 @@ export class Game {
 
     this._spawnClouds();
     this._spawnOrbs();
+    this._spawnHazards();
     this._updateOrbs();
+    this._updateHazards();
+    if (this.state !== 'playing' && this.state !== 'ready') return; // 장애물로 게임오버
     this._updateParticles();
     this._tickEffects();
     this._updateSynergyTimers();
@@ -1153,6 +1215,10 @@ export class Game {
 
     for (const orb of this.orbs) {
       orb.draw(this.ctx, this.cameraY, this.frame);
+    }
+
+    for (const hazard of this.hazards) {
+      hazard.draw(this.ctx, this.cameraY, this.frame);
     }
 
     this._drawParticles();
