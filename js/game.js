@@ -453,6 +453,13 @@ export class Game {
     this._loop();
   }
 
+  // 고도가 오를수록 구름이 아주 천천히 작아진다(1500m에서 30% 작게, 하한 유지).
+  _cloudSpawnWidth() {
+    const t = Math.min(1, this.score / 1500);
+    const factor = 1 - 0.3 * t;
+    return Math.round(randomCloudWidth() * factor);
+  }
+
   _spawnClouds() {
     const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
 
@@ -464,7 +471,7 @@ export class Game {
       y -= gap;
       const x = Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
       const type = pickCloudType(this.score);
-      this.clouds.push(new Cloud(x, y, type, randomCloudWidth()));
+      this.clouds.push(new Cloud(x, y, type, this._cloudSpawnWidth()));
       this.highestSpawnedY = y;
     }
 
