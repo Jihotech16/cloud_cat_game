@@ -13,6 +13,7 @@ import {
   GRAVITY,
   JUMP_FORCE,
   BOUNCE_FORCE,
+  BOOST_JUMP_MULT,
   CHARGE_RATE,
   CHARGE_JUMP_BONUS,
   CLOUD_GAP_MIN,
@@ -214,8 +215,12 @@ export class Game {
       }
 
       const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
-      this.player.bounce(JUMP_FORCE * jumpMult * upgrade);
+      const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
+      this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
       playJumpSound();
+      if (cloudBoost > 1) {
+        this._spawnParticles(this.player.x, this.player.bottom, '#9bff7a', 8);
+      }
       this.charge = 0;
       this.callbacks.onCharge?.(0, false);
       this.airJumpsLeft = this.doubleJumpLevel;
