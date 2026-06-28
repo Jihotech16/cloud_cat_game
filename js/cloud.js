@@ -5,6 +5,7 @@ export const CLOUD_TYPES = {
   MOVING: 'moving',
   BREAKING: 'breaking',
   BOUNCE: 'bounce',
+  BOOST: 'boost',
 };
 
 const SPRITE_W = 109;
@@ -84,6 +85,7 @@ export class Cloud {
         [CLOUD_TYPES.MOVING]: 'brightness(1.08) saturate(0.85) hue-rotate(185deg)',
         [CLOUD_TYPES.BREAKING]: 'sepia(0.35) brightness(1.12) saturate(1.2)',
         [CLOUD_TYPES.BOUNCE]: 'drop-shadow(0 0 5px rgba(255,95,168,0.95)) saturate(1.3)',
+        [CLOUD_TYPES.BOOST]: 'drop-shadow(0 0 5px rgba(120,230,90,0.95)) saturate(1.2)',
       };
       // 고도가 오르면 구름도 어둑하게(밤·우주 분위기)
       let filter = filters[this.type] ?? '';
@@ -100,8 +102,29 @@ export class Cloud {
 
     if (this.type === CLOUD_TYPES.BOUNCE) {
       this._drawBounceMark(ctx, this.x, screenY, w);
+    } else if (this.type === CLOUD_TYPES.BOOST) {
+      this._drawBoostMark(ctx, this.x, screenY, w);
     }
 
+    ctx.restore();
+  }
+
+  // 부스트 구름 표시: 초록 위쪽 화살표 + 1.5×
+  _drawBoostMark(ctx, cx, screenY, w) {
+    const s = w * 0.13;
+    const topY = screenY - this.drawHeight * 0.12;
+    ctx.save();
+    ctx.fillStyle = '#43c728';
+    ctx.beginPath();
+    ctx.moveTo(cx, topY - s);
+    ctx.lineTo(cx - s, topY + s * 0.5);
+    ctx.lineTo(cx - s * 0.4, topY + s * 0.5);
+    ctx.lineTo(cx - s * 0.4, topY + s * 1.1);
+    ctx.lineTo(cx + s * 0.4, topY + s * 1.1);
+    ctx.lineTo(cx + s * 0.4, topY + s * 0.5);
+    ctx.lineTo(cx + s, topY + s * 0.5);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 
@@ -139,14 +162,16 @@ export class Cloud {
 export function pickCloudType(heightScore) {
   // 고도가 오를수록 특수 구름 비율이 늘어 다양해진다.
   const t = Math.min(1, heightScore / 600);
-  const pBreak = 0.05 + 0.13 * t; // 5% → 18%
-  const pBounce = 0.06 + 0.10 * t; // 6% → 16%
-  const pMove = 0.10 + 0.18 * t; // 10% → 28%
+  const pBreak = 0.05 + 0.10 * t; // 5% → 15%
+  const pBounce = 0.05 + 0.08 * t; // 5% → 13%
+  const pBoost = 0.05 + 0.08 * t; // 5% → 13%
+  const pMove = 0.10 + 0.15 * t; // 10% → 25%
 
   const roll = Math.random();
   if (roll < pBreak) return CLOUD_TYPES.BREAKING;
   if (roll < pBreak + pBounce) return CLOUD_TYPES.BOUNCE;
-  if (roll < pBreak + pBounce + pMove) return CLOUD_TYPES.MOVING;
+  if (roll < pBreak + pBounce + pBoost) return CLOUD_TYPES.BOOST;
+  if (roll < pBreak + pBounce + pBoost + pMove) return CLOUD_TYPES.MOVING;
   return CLOUD_TYPES.NORMAL;
 }
 
