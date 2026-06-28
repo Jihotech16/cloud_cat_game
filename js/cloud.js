@@ -15,18 +15,21 @@ const PLATFORM_FROM_TOP = 0.32;
 let cloudImage = null;
 let cloudImageReady = false;
 
-// 부스트 구름 전용 스프라이트(있으면 사용)
-let boostImage = null;
-let boostImageReady = false;
-if (typeof Image !== 'undefined') {
-  boostImage = new Image();
-  boostImage.onload = () => { boostImageReady = true; };
-  boostImage.onerror = () => { boostImageReady = false; };
-  boostImage.src = 'assets/cloud-boost.png';
+// 특수 구름 전용 스프라이트(있으면 사용). platFrac=발판이 스프라이트 높이의 어디쯤(위→아래 비율)
+function loadCloudVariant(src, platFrac, wScale) {
+  const v = { img: null, ready: false, platFrac, wScale };
+  if (typeof Image !== 'undefined') {
+    v.img = new Image();
+    v.img.onload = () => { v.ready = true; };
+    v.img.onerror = () => { v.ready = false; };
+    v.img.src = src;
+  }
+  return v;
 }
-// 발판(구름 윗면)이 스프라이트 높이의 어디쯤인지(위에서부터 비율) — 정렬용
-const BOOST_SPRITE_PLATFRAC = 0.47;
-const BOOST_SPRITE_WSCALE = 1.15;
+const VARIANT_SPRITES = {
+  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost.png', 0.47, 1.15),
+  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce.png', 0.58, 1.15),
+};
 
 export function loadCloudSprite() {
   if (cloudImage) return cloudImage;
@@ -96,17 +99,18 @@ export class Cloud {
       ? `brightness(${(1 - 0.32 * altitude).toFixed(2)}) saturate(${(1 - 0.2 * altitude).toFixed(2)})`
       : '';
 
-    if (this.type === CLOUD_TYPES.BOOST && boostImageReady) {
-      // 전용 부스트 스프라이트(구름+화살표 포함)
-      const aspect = boostImage.naturalHeight / boostImage.naturalWidth;
-      const dispW = w * BOOST_SPRITE_WSCALE;
+    const variant = VARIANT_SPRITES[this.type];
+    if (variant && variant.ready) {
+      // 전용 스프라이트(구름 + 이펙트 포함)
+      const aspect = variant.img.naturalHeight / variant.img.naturalWidth;
+      const dispW = w * variant.wScale;
       const dispH = dispW * aspect;
       const platScreen = screenY - this.drawHeight * scale * 0.18; // 발판(구름 윗면) 화면 y
       const sdx = this.x - dispW / 2;
-      const sdy = platScreen - dispH * BOOST_SPRITE_PLATFRAC;
+      const sdy = platScreen - dispH * variant.platFrac;
       ctx.imageSmoothingEnabled = false;
       ctx.filter = dim || 'none';
-      ctx.drawImage(boostImage, sdx, sdy, dispW, dispH);
+      ctx.drawImage(variant.img, sdx, sdy, dispW, dispH);
       ctx.filter = 'none';
     } else if (cloudImageReady) {
       const filters = {
