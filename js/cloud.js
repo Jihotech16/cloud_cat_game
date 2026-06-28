@@ -222,12 +222,12 @@ export class Cloud {
 }
 
 export function pickCloudType(heightScore) {
-  // 고도가 오를수록 특수 구름 비율이 늘어 다양해진다.
-  const t = Math.min(1, heightScore / 600);
-  const pBreak = 0.05 + 0.10 * t; // 5% → 15%
-  const pBounce = 0.05 + 0.08 * t; // 5% → 13%
-  const pBoost = 0.05 + 0.08 * t; // 5% → 13%
-  const pMove = 0.10 + 0.15 * t; // 10% → 25%
+  // 초반(약 50m)은 잔잔하게, 고도가 오를수록 특수 구름이 늘어 다양해진다.
+  const t = Math.min(1, Math.max(0, (heightScore - 50) / 550));
+  const pBreak = 0.11 * t; // 부서짐: 초반 0% → 11% (가장 방해되므로 늦게 등장)
+  const pMove = 0.04 + 0.16 * t; // 이동: 4% → 20%
+  const pBounce = 0.04 + 0.07 * t; // 트램펄린(도움): 4% → 11%
+  const pBoost = 0.04 + 0.07 * t; // 부스트(도움): 4% → 11%
 
   const roll = Math.random();
   if (roll < pBreak) return CLOUD_TYPES.BREAKING;
