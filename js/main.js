@@ -173,10 +173,14 @@ function renderShop() {
     const maxed = cost === null;
     const affordable = !maxed && coins >= cost;
 
+    const iconHtml = up.icon.endsWith('.png')
+      ? `<img class="shop-icon" src="${up.icon}" alt="">`
+      : `<span class="shop-icon">${up.icon}</span>`;
+
     const row = document.createElement('div');
     row.className = 'shop-item';
     row.innerHTML = `
-      <span class="shop-icon">${up.icon}</span>
+      ${iconHtml}
       <span class="shop-info">
         <span class="shop-label">${up.label} <em>Lv.${level}/${up.max}</em></span>
         <span class="shop-desc">${up.desc}</span>

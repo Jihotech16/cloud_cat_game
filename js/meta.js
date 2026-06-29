@@ -7,7 +7,7 @@ const UPG_KEY = 'cloudCat_upgrades';
 export const UPGRADES = [
   { id: 'startJump', icon: '🚀', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2 },
   { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2 },
-  { id: 'startGauge', icon: '⭐', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2 },
+  { id: 'startGauge', icon: 'assets/star.png', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2 },
   { id: 'startShield', icon: '🛡️', label: '시작 보호막', desc: '매 판 보호막을 갖고 시작', max: 1, cost: () => 1500 },
 ];
 

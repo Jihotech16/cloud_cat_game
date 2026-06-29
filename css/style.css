@@ -150,6 +150,15 @@ body {
   line-height: 1;
 }
 
+/* 픽셀 별 아이콘(이미지) — 게이지 HUD */
+img.gauge-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
 .gauge-track {
   flex: 1;
   height: 10px;
@@ -316,6 +325,14 @@ body {
 .shop-icon {
   font-size: 1.7rem;
   line-height: 1;
+}
+
+img.shop-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
 }
 
 .shop-info {
