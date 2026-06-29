@@ -9,6 +9,9 @@ export const BOUNCE_FORCE = JUMP_FORCE * 1.95; // 트램펄린 구름 튕김 세
 export const BOOST_JUMP_MULT = 1.5; // 부스트 구름: 점프 시 점프력 1.5배
 export const CHARGE_RATE = 0.015 * GAME_SPEED;
 export const CHARGE_JUMP_BONUS = 0.75;
+// 점프 파워 최대 충전량(0~1). 처음엔 낮게 제한하고 보상으로 늘린다.
+export const CHARGE_CAP_BASE = 0.4; // 시작 시 모을 수 있는 최대치(40%)
+export const CHARGE_CAP_STEP = 0.15; // '최대치 ⬆' 보상 1회당 +15% (최대 100%)
 export const CLOUD_GAP_MIN = 40 * GAME_SCALE;
 export const CLOUD_GAP_MAX = 66 * GAME_SCALE;
 export const SPAWN_LOOKAHEAD = 1.2;
