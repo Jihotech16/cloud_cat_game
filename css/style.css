@@ -335,6 +335,14 @@ img.shop-icon {
   flex-shrink: 0;
 }
 
+/* 인라인 코인 아이콘(텍스트 중간에 들어가는 🪙 대체) */
+.coin-ico {
+  height: 1.05em;
+  width: auto;
+  vertical-align: -0.18em;
+  image-rendering: pixelated;
+}
+
 .shop-info {
   display: flex;
   flex-direction: column;

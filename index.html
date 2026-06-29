@@ -66,7 +66,7 @@
         <div class="gauge-track">
           <div id="gauge-fill" class="gauge-fill"></div>
         </div>
-        <span class="coin-hud">🪙 <span id="coin-count">0</span></span>
+        <span class="coin-hud"><img class="coin-ico" src="assets/coin.png" alt=""> <span id="coin-count">0</span></span>
       </div>
       <div id="synergy" class="synergy"></div>
       <div id="effects" class="effects"></div>
@@ -89,7 +89,7 @@
         </div>
         <p id="mode-hint" class="mode-hint">순수 점프 실력에 도전하는 기본 모드</p>
         <button id="btn-start" class="btn-primary">게임 시작</button>
-        <button id="btn-shop" class="btn-secondary">🛒 상점 (🪙 <span id="menu-coins">0</span>)</button>
+        <button id="btn-shop" class="btn-secondary">🛒 상점 (<img class="coin-ico" src="assets/coin.png" alt=""> <span id="menu-coins">0</span>)</button>
         <p class="best-record">내 최고 기록: <strong id="menu-best">0</strong>m</p>
         <p class="best-record global-record">전체 최고 기록: <strong id="menu-global-best">0</strong>m</p>
         <p class="install-hint">홈 화면에 추가하면 앱처럼 플레이할 수 있어요</p>
@@ -106,7 +106,7 @@
           <p class="unit">m</p>
         </div>
         <p id="new-record" class="new-record hidden">🎉 새 최고 기록!</p>
-        <p class="coin-earned">🪙 코인 <strong id="gameover-coins">0</strong> 획득!</p>
+        <p class="coin-earned"><img class="coin-ico" src="assets/coin.png" alt=""> 코인 <strong id="gameover-coins">0</strong> 획득!</p>
         <button id="btn-retry" class="btn-primary">다시 도전</button>
         <button id="btn-reward-coins" class="btn-reward hidden">🎬 광고 보고 코인 2배</button>
         <button id="btn-share" class="btn-secondary btn-with-icon"><img class="btn-icon" src="assets/share.png" alt=""><span id="share-label">결과 공유하기</span></button>
@@ -132,7 +132,7 @@
     <div id="shop-screen" class="overlay hidden">
       <div class="panel">
         <h2 class="title">🛒 상점</h2>
-        <p class="subtitle">보유 코인: 🪙 <strong id="shop-coins">0</strong></p>
+        <p class="subtitle">보유 코인: <img class="coin-ico" src="assets/coin.png" alt=""> <strong id="shop-coins">0</strong></p>
         <div id="shop-list" class="shop-list"></div>
         <button id="btn-shop-close" class="btn-primary">닫기</button>
       </div>
