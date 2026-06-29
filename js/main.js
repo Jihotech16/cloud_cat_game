@@ -3,6 +3,15 @@ import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
+import {
+  initAds,
+  adsAvailable,
+  showBanner,
+  hideBanner,
+  showInterstitial,
+  showRewardedAd,
+} from './ads.js';
+import { addCoins } from './meta.js';
 import { TIERS, TAGS, SYNERGIES } from './orb.js';
 import {
   getCoins,
@@ -35,6 +44,7 @@ const newRecordEl = document.getElementById('new-record');
 const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
+const btnRewardCoins = document.getElementById('btn-reward-coins');
 const btnMenu = document.getElementById('btn-menu');
 
 const gaugeFill = document.getElementById('gauge-fill');
@@ -76,6 +86,9 @@ let game = null;
 let selectedMode = 'classic';
 let lastScore = 0;
 let lastIsNewRecord = false;
+let lastEarned = 0; // 이번 판에 획득한 코인(보상형 광고 2배에 사용)
+let gameOverCount = 0; // 전면 광고 빈도 제어용
+const INTERSTITIAL_EVERY = 3; // N판마다 전면 광고 1회
 
 function updateChargeBar(charge, holding) {
   // 트랙 길이 = 현재 모을 수 있는 최대치(상한). 보상으로 상한이 오르면 바가 길어진다.
@@ -266,9 +279,22 @@ function ensureGame() {
       gameoverCoinsEl.textContent = earned;
       lastScore = score;
       lastIsNewRecord = isNewRecord;
+      lastEarned = earned;
       btnShare.textContent = '📤 결과 공유하기';
       updateHudRecords(game.mode);
       refreshMenuRecords();
+
+      // 보상형 광고: 코인을 번 어드벤처 모드에서만 '코인 2배' 버튼 노출(네이티브 한정)
+      setupRewardCoinsButton(earned);
+
+      // 메뉴 화면이므로 배너 다시 노출
+      showBanner();
+
+      // 전면 광고: N판마다 1회(첫 판 제외)
+      gameOverCount += 1;
+      if (gameOverCount % INTERSTITIAL_EVERY === 0) {
+        showInterstitial();
+      }
     },
   });
 }
@@ -304,7 +330,37 @@ function startGame() {
   // 어드벤처 전용 HUD(게이지/코인/효과) 표시 제어
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');
   updateHudRecords(selectedMode);
+  hideBanner(); // 플레이 중에는 배너 숨김
   game.start(selectedMode);
+}
+
+// 보상형 광고로 코인 2배 받기 버튼 준비.
+// 코인을 번 어드벤처 모드 + 네이티브(광고 가능) 환경에서만 노출한다.
+function setupRewardCoinsButton(earned) {
+  if (!btnRewardCoins) return;
+  const eligible = adsAvailable() && earned > 0;
+  btnRewardCoins.classList.toggle('hidden', !eligible);
+  if (!eligible) return;
+  btnRewardCoins.disabled = false;
+  btnRewardCoins.textContent = '🎬 광고 보고 코인 2배';
+}
+
+async function onRewardCoinsClick() {
+  if (!btnRewardCoins || btnRewardCoins.disabled || lastEarned <= 0) return;
+  btnRewardCoins.disabled = true;
+  btnRewardCoins.textContent = '광고 불러오는 중…';
+  const rewarded = await showRewardedAd();
+  if (rewarded) {
+    addCoins(lastEarned); // 같은 양만큼 한 번 더 지급 → 2배
+    gameoverCoinsEl.textContent = lastEarned * 2;
+    if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
+    btnRewardCoins.textContent = '✅ 코인 2배 획득!';
+    lastEarned = 0; // 중복 수령 방지
+  } else {
+    // 시청 취소/실패 → 다시 시도 가능
+    btnRewardCoins.disabled = false;
+    btnRewardCoins.textContent = '🎬 광고 보고 코인 2배';
+  }
 }
 
 // 게임오버 → 메인 메뉴(시작 화면)로
@@ -316,6 +372,7 @@ function goToMenu() {
   refreshMenuRecords();
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
   startScreen.classList.remove('hidden');
+  showBanner(); // 메인 메뉴에서 배너 노출
 }
 
 window.addEventListener('resize', updateLayout);
@@ -326,6 +383,7 @@ window.addEventListener('orientationchange', () => {
 btnStart.addEventListener('click', startGame);
 btnRetry.addEventListener('click', startGame);
 btnMenu?.addEventListener('click', goToMenu);
+btnRewardCoins?.addEventListener('click', onRewardCoinsClick);
 
 modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
@@ -357,6 +415,8 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 async function boot() {
   initNative();
+  await initAds();
+  showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
   setMode(selectedMode);
   await initScores();

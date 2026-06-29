@@ -697,6 +697,39 @@ body {
   opacity: 0.6;
 }
 
+/* 보상형 광고 버튼(코인 2배) — 눈에 띄는 황금빛 */
+.btn-reward {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px 24px;
+  font-family: inherit;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #6b4b00;
+  background: linear-gradient(135deg, #ffe08a, #ffb347);
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(255, 179, 71, 0.45);
+  transition: transform 0.1s, box-shadow 0.1s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.btn-reward:active {
+  transform: scale(0.97);
+}
+
+.btn-reward:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-reward.hidden {
+  display: none;
+}
+
 .best-record {
   margin-top: 14px;
   font-size: 0.9rem;
