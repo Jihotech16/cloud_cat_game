@@ -17,6 +17,7 @@ import {
   BOOST_JUMP_MULT,
   CHARGE_RATE,
   CHARGE_JUMP_BONUS,
+  JUMP_MIN_MULT,
   CHARGE_CAP_BASE,
   CHARGE_CAP_STEP,
   CHARGE_EASE_MIN,
@@ -222,7 +223,7 @@ export class Game {
         }
       }
 
-      const jumpMult = 1 + this.charge * CHARGE_JUMP_BONUS;
+      const jumpMult = JUMP_MIN_MULT + this.charge * CHARGE_JUMP_BONUS;
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
       playJumpSound();
