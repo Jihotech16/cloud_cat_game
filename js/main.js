@@ -44,6 +44,7 @@ const newRecordEl = document.getElementById('new-record');
 const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
+const shareLabel = document.getElementById('share-label');
 const btnRewardCoins = document.getElementById('btn-reward-coins');
 const btnMenu = document.getElementById('btn-menu');
 
@@ -284,7 +285,7 @@ function ensureGame() {
       lastScore = score;
       lastIsNewRecord = isNewRecord;
       lastEarned = earned;
-      btnShare.textContent = '📤 결과 공유하기';
+      if (shareLabel) shareLabel.textContent = '결과 공유하기';
       updateHudRecords(game.mode);
       refreshMenuRecords();
 
@@ -406,10 +407,10 @@ btnSkip?.addEventListener('click', () => {
 btnShare.addEventListener('click', async () => {
   btnShare.disabled = true;
   const result = await shareResult(lastScore, lastIsNewRecord);
-  if (result === 'copied') {
-    btnShare.textContent = '✅ 결과를 복사했어요!';
+  if (result === 'copied' && shareLabel) {
+    shareLabel.textContent = '✅ 결과를 복사했어요!';
     setTimeout(() => {
-      btnShare.textContent = '📤 결과 공유하기';
+      shareLabel.textContent = '결과 공유하기';
     }, 2000);
   }
   btnShare.disabled = false;
