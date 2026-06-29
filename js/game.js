@@ -448,6 +448,7 @@ export class Game {
     this.player.alignFeetTo(this.startCloud.top);
     this.player.vx = 0;
     this.player.vy = 0;
+    this.player.facing = -1; // 첫 점프는 왼쪽으로 가므로 시작부터 왼쪽을 보게
     this.startFromLeft = true;
     this._snapToStartCloud();
 
