@@ -19,6 +19,7 @@ import {
   CHARGE_JUMP_BONUS,
   CHARGE_CAP_BASE,
   CHARGE_CAP_STEP,
+  CHARGE_EASE_MIN,
   CLOUD_GAP_MIN,
   CLOUD_GAP_MAX,
   SPAWN_LOOKAHEAD,
@@ -256,6 +257,15 @@ export class Game {
 
   _chargeRate() {
     return CHARGE_RATE * (1 + this.chargeRateLevel * CHARGE_RATE_STEP);
+  }
+
+  // 프레임당 실제 충전 증가량. 시작은 천천히, 채울수록 빨라지는 ease-in.
+  // → 살짝 눌렀을 때 게이지가 거의 안 차서 작은 점프를 미세하게 조절할 수 있다.
+  _chargeIncrement() {
+    const max = this._chargeMax();
+    const t = max > 0 ? this.charge / max : 0;
+    const ease = CHARGE_EASE_MIN + (1 - CHARGE_EASE_MIN) * t;
+    return this._chargeRate() * ease;
   }
 
   // 현재 모을 수 있는 최대 점프 파워(0~1). 보상으로 상한이 올라간다.
@@ -602,7 +612,7 @@ export class Game {
     }
 
     if (this.input.holding) {
-      this.charge = Math.min(this._chargeMax(), this.charge + this._chargeRate());
+      this.charge = Math.min(this._chargeMax(), this.charge + this._chargeIncrement());
       this.callbacks.onCharge?.(this.charge, true);
     }
   }
@@ -639,7 +649,7 @@ export class Game {
     if (this.state === 'ready') {
       this._snapToStartCloud();
       if (this.input.holding) {
-        this.charge = Math.min(this._chargeMax(), this.charge + this._chargeRate());
+        this.charge = Math.min(this._chargeMax(), this.charge + this._chargeIncrement());
         this.callbacks.onCharge?.(this.charge, true);
       }
       this._syncPlayerChargeAnim();
