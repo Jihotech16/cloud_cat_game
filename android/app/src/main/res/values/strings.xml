@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Cloud Cat Jump</string>
-    <string name="title_activity_main">Cloud Cat Jump</string>
+    <string name="app_name">Poing: Cloud Jump</string>
+    <string name="title_activity_main">Poing: Cloud Jump</string>
     <string name="package_name">com.jihotech.cloudcatjump</string>
     <string name="custom_url_scheme">com.jihotech.cloudcatjump</string>
 </resources>

@@ -34,10 +34,10 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- AdMob 앱 ID. ⚠️ 출시 시 실제 앱 ID 로 교체할 것(현재는 구글 테스트 ID). -->
+        <!-- AdMob 안드로이드 앱 ID (Poing: Cloud Jump) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-2605477058500539~5873006293" />
     </application>
 
     <!-- Permissions -->

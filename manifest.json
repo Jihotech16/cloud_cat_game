@@ -1,6 +1,6 @@
 {
-  "name": "Cloud Cat Jump",
-  "short_name": "Cloud Cat",
+  "name": "Poing: Cloud Jump",
+  "short_name": "Poing",
   "description": "구름 위를 뛰어올라 최고 점수에 도전하는 고양이 점프 게임",
   "start_url": "./",
   "display": "standalone",

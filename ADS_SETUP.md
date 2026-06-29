@@ -39,9 +39,11 @@ npm run open:android   # 안드로이드 스튜디오에서 실행/테스트
    ```
 
 ### ✅ 현재 적용 상태 (Poing: Cloud Jump)
-- **iOS 배너**: 실제 ID `ca-app-pub-2605477058500539/1069226002` 적용 완료
+- **iOS 배너**: `ca-app-pub-2605477058500539/1069226002` 적용 완료
 - **iOS 앱 ID**: `ca-app-pub-2605477058500539~3996817843` → **Info.plist 에 직접 추가 필요(위 3번)**
-- iOS 전면/보상형, Android 전체: 아직 테스트 ID (발급되면 `REAL_IDS` 에 채우면 됨)
+- **Android 배너**: `ca-app-pub-2605477058500539/7686605244` 적용 완료
+- **Android 앱 ID**: `ca-app-pub-2605477058500539~5873006293` → AndroidManifest.xml 적용 완료
+- iOS·Android 전면/보상형: 아직 테스트 ID (발급되면 `REAL_IDS` 에 채우면 됨)
 - `IS_TESTING = true` 라 실제 단위 ID 라도 **테스트 광고**가 떠서 계정 위험 없음. 출시 시 `false`.
 
 ## 4. 동의(UMP) / iOS ATT
