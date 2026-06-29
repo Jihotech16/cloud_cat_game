@@ -576,6 +576,13 @@ body {
   display: none;
 }
 
+/* 시작 화면: 업로드한 픽셀 하늘 배경 */
+#start-screen {
+  background: #b9c2d6 url('../assets/sky-bg.png') center / cover no-repeat;
+  image-rendering: pixelated;
+  backdrop-filter: none;
+}
+
 .panel {
   background: var(--panel-bg);
   border-radius: 24px;
