@@ -75,6 +75,16 @@ import {
   COIN_PER_RAINBOW,
 } from './config.js';
 
+// 낮은 고도에서 깔리는 픽셀 하늘 배경(있으면 사용, 고도가 오르면 동적 하늘로 전환).
+let skyBgImg = null;
+let skyBgReady = false;
+if (typeof Image !== 'undefined') {
+  skyBgImg = new Image();
+  skyBgImg.onload = () => { skyBgReady = true; };
+  skyBgImg.onerror = () => { skyBgReady = false; };
+  skyBgImg.src = 'assets/sky-bg.png';
+}
+
 export class Game {
   constructor(canvas, touchRoot, callbacks = {}) {
     this.canvas = canvas;
@@ -1022,8 +1032,19 @@ export class Game {
     ctx.fillStyle = this._skyGradient(altitude, h);
     ctx.fillRect(0, 0, w, h);
 
-    // 해: 지상~노을 구간, 고도가 오르면 아래로 지면서 노을 연출
-    const sunA = 1 - this._fadeIn(altitude, 0.06, 0.36);
+    // 낮은 고도: 업로드한 픽셀 하늘 이미지를 덮고, 오르면 동적 하늘로 페이드아웃
+    const bgA = skyBgReady ? 1 - this._fadeIn(altitude, 0.0, 0.3) : 0;
+    if (bgA > 0) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.globalAlpha = bgA;
+      ctx.drawImage(skyBgImg, 0, 0, w, h);
+      ctx.restore();
+    }
+
+    // 해: 지상~노을 구간, 고도가 오르면 아래로 지면서 노을 연출.
+    // 배경 이미지에 이미 해가 있으므로, 이미지가 보일 땐 절차적 해를 숨긴다.
+    const sunA = (1 - this._fadeIn(altitude, 0.06, 0.36)) * (1 - bgA);
     if (sunA > 0) {
       this._drawSun(ctx, w * 0.74, h * (0.2 + altitude * 0.9), 36 * GAME_SCALE, sunA);
     }
