@@ -351,6 +351,14 @@ img.shop-icon {
   image-rendering: pixelated;
 }
 
+/* 인라인 상점(카트) 아이콘(텍스트 중간에 들어가는 🛒 대체) */
+.cart-ico {
+  height: 1.25em;
+  width: auto;
+  vertical-align: -0.28em;
+  image-rendering: pixelated;
+}
+
 .shop-info {
   display: flex;
   flex-direction: column;
