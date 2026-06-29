@@ -3,6 +3,7 @@ import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
+import { playClickSound } from './audio.js';
 import {
   initAds,
   adsAvailable,
@@ -417,6 +418,11 @@ btnShare.addEventListener('click', async () => {
     }, 2000);
   }
   btnShare.disabled = false;
+});
+
+// UI 버튼 클릭음(동적으로 생성되는 보상/상점 버튼까지 위임으로 처리)
+app.addEventListener('click', (e) => {
+  if (e.target.closest('button')) playClickSound();
 });
 
 document.addEventListener('contextmenu', (e) => e.preventDefault());

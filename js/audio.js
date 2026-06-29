@@ -119,4 +119,53 @@ export function playRewardSound() {
   });
 }
 
+// 트램펄린: 크고 탄력 있는 "스프로잉"(올라갔다 살짝 출렁).
+export function playBounceSound() {
+  voice({ freq: 200, glideTo: 560, type: 'triangle', dur: 0.12, gain: 0.18, attack: 0.004, filterHz: 2400 });
+  voice({ freq: 560, glideTo: 340, type: 'triangle', t0: 0.1, dur: 0.12, gain: 0.12, filterHz: 2200 });
+}
+
+// 부스트 구름: 위로 솟는 "휘익" 휘파람.
+export function playBoostSound() {
+  voice({ freq: 320, glideTo: 1300, type: 'sawtooth', dur: 0.26, gain: 0.1, attack: 0.01, filterHz: 2600 });
+  voice({ freq: 640, glideTo: 2200, type: 'sine', t0: 0.02, dur: 0.22, gain: 0.06 });
+}
+
+// 부서지는 구름: 짧고 둔탁한 "퍽".
+export function playBreakSound() {
+  voice({ freq: 220, glideTo: 110, type: 'triangle', dur: 0.12, gain: 0.13, attack: 0.003, filterHz: 1400 });
+  voice({ freq: 160, glideTo: 90, type: 'square', dur: 0.09, gain: 0.05 });
+}
+
+// 게임오버: 풀 죽은 하강 음.
+export function playGameOverSound() {
+  const notes = [523, 440, 349, 262]; // C5 A4 F4 C4
+  notes.forEach((f, i) => {
+    voice({ freq: f, type: 'triangle', t0: i * 0.13, dur: 0.34, gain: 0.13, attack: 0.01, filterHz: 2600 });
+  });
+}
+
+// 보호막 발동(부활/방어): 안심되는 상승 "팅".
+export function playShieldSound() {
+  voice({ freq: 660, glideTo: 990, type: 'sine', dur: 0.2, gain: 0.13, attack: 0.006, filterHz: 4000 });
+  voice({ freq: 1320, type: 'sine', t0: 0.06, dur: 0.18, gain: 0.07 });
+}
+
+// 로켓 부스트: 길게 솟구치는 "슈우욱".
+export function playRocketSound() {
+  voice({ freq: 240, glideTo: 1700, type: 'sawtooth', dur: 0.45, gain: 0.11, attack: 0.02, filterHz: 2800 });
+  voice({ freq: 480, glideTo: 2600, type: 'triangle', t0: 0.03, dur: 0.4, gain: 0.06 });
+}
+
+// 장애물 충돌: 거친 "지직" 충격.
+export function playHazardSound() {
+  voice({ freq: 240, glideTo: 80, type: 'sawtooth', dur: 0.16, gain: 0.15, attack: 0.002, filterHz: 1600 });
+  voice({ freq: 180, glideTo: 70, type: 'square', dur: 0.12, gain: 0.07 });
+}
+
+// UI 버튼: 아주 짧고 부드러운 "톡".
+export function playClickSound() {
+  voice({ freq: 520, glideTo: 660, type: 'sine', dur: 0.06, gain: 0.07, attack: 0.002, filterHz: 3500 });
+}
+
 preloadSounds();

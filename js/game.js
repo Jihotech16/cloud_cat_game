@@ -9,6 +9,13 @@ import {
   playCollectSound,
   playRainbowSound,
   playRewardSound,
+  playBounceSound,
+  playBoostSound,
+  playBreakSound,
+  playGameOverSound,
+  playShieldSound,
+  playRocketSound,
+  playHazardSound,
 } from './audio.js';
 import {
   GRAVITY,
@@ -238,6 +245,7 @@ export class Game {
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
       playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
       if (cloudBoost > 1) {
+        playBoostSound();
         this._spawnParticles(this.player.x, this.player.bottom, '#7fdcff', 8);
       }
       this.charge = 0;
@@ -246,6 +254,7 @@ export class Game {
 
       if (cloud.type === CLOUD_TYPES.BREAKING) {
         cloud.broken = true;
+        playBreakSound();
       }
       return;
     }
@@ -342,7 +351,7 @@ export class Game {
       this.player.alignFeetTo(cloud.top);
       this.player.bounce(BOUNCE_FORCE);
       this.airJumpsLeft = this.doubleJumpLevel;
-      playJumpSound();
+      playBounceSound();
       this._spawnParticles(this.player.x, this.player.bottom, '#ff7ec2', 10);
       this.charge = 0;
       this.callbacks.onCharge?.(0, this.input.holding);
@@ -572,7 +581,9 @@ export class Game {
       this.player.vy = -JUMP_FORCE * 0.8; // 살짝 튕겨 회피
       this.player.groundedCloud = null;
       this.callbacks.onEffects?.(this.getEffects());
+      playShieldSound();
     } else {
+      playHazardSound();
       this._gameOver();
     }
   }
@@ -713,6 +724,7 @@ export class Game {
       if (this.shield) {
         this.shield = false;
         this._revive();
+        playShieldSound();
         this.callbacks.onEffects?.(this.getEffects());
       } else {
         this._gameOver();
@@ -917,7 +929,7 @@ export class Game {
       case 'orbValue': this.orbValueLevel += 1; break; // 영구 누적
       case 'charge': this.chargeRateLevel += 1; break; // 영구 누적
       case 'chargeCap': this.chargeCapLevel += 1; break; // 영구 누적(점프 파워 최대치 ↑)
-      case 'rocket': this.effects.rocket = ROCKET_DURATION; break;
+      case 'rocket': this.effects.rocket = ROCKET_DURATION; playRocketSound(); break;
       case 'coinBonus':
         this.coins += COIN_REWARD_AMOUNT;
         this.callbacks.onCoins?.(this.coins);
@@ -992,6 +1004,7 @@ export class Game {
 
   _gameOver() {
     this.state = 'gameover';
+    playGameOverSound();
     const earned = this.mode === 'adventure' ? this.coins : 0;
     const totalCoins = earned > 0 ? addCoins(earned) : 0; // 메타 저장에 누적
     const isNewRecord = saveBestScore(this.mode, this.score);
