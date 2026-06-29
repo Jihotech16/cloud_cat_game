@@ -440,6 +440,22 @@ img.shop-icon {
   line-height: 1;
 }
 
+img.reward-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+  align-self: center;
+}
+
+/* HUD 효과 뱃지 안 인라인 아이콘 */
+.badge-ico {
+  height: 1.05em;
+  width: auto;
+  vertical-align: -0.18em;
+  image-rendering: pixelated;
+}
+
 .reward-label {
   font-size: 1.1rem;
   color: var(--accent-dark);

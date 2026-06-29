@@ -70,7 +70,7 @@ const modeButtons = document.querySelectorAll('.mode-btn');
 const modeHint = document.getElementById('mode-hint');
 
 const EFFECT_BADGES = [
-  ['jumpLevel', (n) => `🚀×${n}`],
+  ['jumpLevel', (n) => `<img class="badge-ico" src="assets/rocket.png" alt="">×${n}`],
   ['doubleJumpLevel', (n) => `🪽×${n}`],
   ['magnetLevel', (n) => `🧲×${n}`],
   ['orbValueLevel', (n) => `💎×${n}`],
@@ -136,7 +136,7 @@ function updateEffects(effects = {}) {
   if (effects.slowmo) badges.push('🐢');
   if (effects.bigcloud) badges.push('☁️');
   if (effects.feather) badges.push('🪶');
-  if (effects.rocket) badges.push('🚀');
+  if (effects.rocket) badges.push('<img class="badge-ico" src="assets/rocket.png" alt="">');
   if (effects.shield) badges.push('🛡️');
   effectsEl.innerHTML = badges
     .map((b) => `<span class="effect-badge">${b}</span>`)
@@ -222,8 +222,11 @@ function showRewardChoices(choices, info = {}) {
     const tagChips = (reward.tags ?? [])
       .map((t) => `<span class="reward-tag" style="--syn:${TAGS[t]?.color}">${TAGS[t]?.emoji} ${TAGS[t]?.label}</span>`)
       .join('');
+    const iconHtml = reward.icon.endsWith('.png')
+      ? `<img class="reward-icon" src="${reward.icon}" alt="">`
+      : `<span class="reward-icon">${reward.icon}</span>`;
     card.innerHTML = `
-      <span class="reward-icon">${reward.icon}</span>
+      ${iconHtml}
       <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
       <span class="reward-desc">${reward.desc} ${tagChips}</span>
     `;
