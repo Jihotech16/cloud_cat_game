@@ -187,7 +187,7 @@ function renderShop() {
         <span class="shop-desc">${up.desc}</span>
       </span>
       <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? 'MAX' : `🪙 ${cost.toLocaleString()}`}
+        ${maxed ? 'MAX' : `<img class="coin-ico" src="assets/coin.png" alt=""> ${cost.toLocaleString()}`}
       </button>
     `;
     if (!maxed && affordable) {
@@ -236,11 +236,11 @@ function showRewardChoices(choices, info = {}) {
 
   if (btnReroll) {
     const cost = info.rerollCost ?? 0;
-    btnReroll.textContent = `🔄 다시 뽑기 (🪙 ${cost})`;
+    btnReroll.innerHTML = `🔄 다시 뽑기 (<img class="coin-ico" src="assets/coin.png" alt=""> ${cost})`;
     btnReroll.disabled = (info.coins ?? 0) < cost;
   }
   if (btnSkip) {
-    btnSkip.textContent = `⏭️ 건너뛰기 (+🪙 ${info.skipReward ?? 0})`;
+    btnSkip.innerHTML = `⏭️ 건너뛰기 (+<img class="coin-ico" src="assets/coin.png" alt=""> ${info.skipReward ?? 0})`;
   }
 
   rewardScreen.classList.remove('hidden');
