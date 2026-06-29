@@ -130,7 +130,7 @@ function updateEffects(effects = {}) {
 }
 
 function updateCoinHud(coins) {
-  if (coinHud) coinHud.textContent = coins;
+  if (coinHud) coinHud.textContent = coins.toLocaleString();
 }
 
 function updateSynergy(state = {}) {
@@ -151,8 +151,8 @@ function updateSynergy(state = {}) {
 
 function renderShop() {
   const coins = getCoins();
-  shopCoinsEl.textContent = coins;
-  menuCoinsEl.textContent = coins;
+  shopCoinsEl.textContent = coins.toLocaleString();
+  menuCoinsEl.textContent = coins.toLocaleString();
   shopList.innerHTML = '';
   for (const up of UPGRADES) {
     const level = getUpgradeLevel(up.id);
@@ -169,7 +169,7 @@ function renderShop() {
         <span class="shop-desc">${up.desc}</span>
       </span>
       <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? 'MAX' : `🪙 ${cost}`}
+        ${maxed ? 'MAX' : `🪙 ${cost.toLocaleString()}`}
       </button>
     `;
     if (!maxed && affordable) {
@@ -189,7 +189,7 @@ function openShop() {
 
 function closeShop() {
   shopScreen.classList.add('hidden');
-  if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
+  if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
 }
 
 function showRewardChoices(choices, info = {}) {
@@ -314,7 +314,7 @@ function goToMenu() {
   hud.classList.add('hidden');
   chargeBar.classList.add('hidden');
   refreshMenuRecords();
-  if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
+  if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
   startScreen.classList.remove('hidden');
 }
 
@@ -357,7 +357,7 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 
 async function boot() {
   initNative();
-  if (menuCoinsEl) menuCoinsEl.textContent = getCoins();
+  if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
   setMode(selectedMode);
   await initScores();
   setMode(selectedMode); // 점수 로드 후 기록 갱신
