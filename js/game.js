@@ -236,7 +236,7 @@ export class Game {
       const jumpMult = JUMP_MIN_MULT + this.charge * CHARGE_JUMP_BONUS;
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
-      playJumpSound();
+      playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
       if (cloudBoost > 1) {
         this._spawnParticles(this.player.x, this.player.bottom, '#7fdcff', 8);
       }
