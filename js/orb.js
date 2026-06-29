@@ -191,7 +191,7 @@ export const REWARDS = [
   { id: 'doubleJump', icon: '🪽', label: '더블 점프 ⬆', desc: '공중에서 한 번 더 점프해요 (중첩)', tier: 'rare', tags: ['jump'] },
   { id: 'scoreMul', icon: '📈', label: '점수 배율 ⬆', desc: '점수 획득량이 영구적으로 늘어요 (중첩)', tier: 'rare', tags: ['score'] },
   { id: 'scoreX2', icon: '✨', label: '점수 2배', desc: '한동안 점수가 2배로 쌓여요', tier: 'rare', tags: ['score'] },
-  { id: 'rocket', icon: '🚀', label: '로켓 부스트', desc: '잠깐 위로 쭉 솟아올라요!', tier: 'epic', tags: ['score'] },
+  { id: 'rocket', icon: 'assets/rocket.png', label: '로켓 부스트', desc: '잠깐 위로 쭉 솟아올라요!', tier: 'epic', tags: ['score'] },
   { id: 'shield', icon: '🛡️', label: '보호막', desc: '한 번 떨어져도 부활해요', tier: 'epic', tags: ['survival'] },
 ];
 
