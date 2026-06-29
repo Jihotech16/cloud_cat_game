@@ -721,6 +721,22 @@ img.shop-icon {
   opacity: 0.6;
 }
 
+/* 아이콘 + 텍스트 버튼(예: 공유) */
+.btn-with-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-with-icon .btn-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
 /* 보상형 광고 버튼(코인 2배) — 눈에 띄는 황금빛 */
 .btn-reward {
   display: block;
