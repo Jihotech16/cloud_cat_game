@@ -19,6 +19,7 @@ const landscapeGate = document.getElementById('landscape-gate');
 const canvas = document.getElementById('game-canvas');
 const chargeBar = document.getElementById('charge-bar');
 const chargeFill = document.getElementById('charge-fill');
+const chargeTrack = document.querySelector('.charge-track');
 const hud = document.getElementById('hud');
 const startScreen = document.getElementById('start-screen');
 const gameoverScreen = document.getElementById('gameover-screen');
@@ -77,7 +78,12 @@ let lastScore = 0;
 let lastIsNewRecord = false;
 
 function updateChargeBar(charge, holding) {
-  chargeFill.style.width = `${charge * 100}%`;
+  // 트랙 길이 = 현재 모을 수 있는 최대치(상한). 보상으로 상한이 오르면 바가 길어진다.
+  // 채움 = 현재 충전 / 상한 → 가득 모으면 트랙 끝까지 꽉 찬다.
+  const max = game && typeof game._chargeMax === 'function' ? game._chargeMax() : 1;
+  const cap = max > 0 ? max : 1;
+  if (chargeTrack) chargeTrack.style.width = `${cap * 100}%`;
+  chargeFill.style.width = `${Math.min(1, charge / cap) * 100}%`;
   chargeBar.classList.toggle('visible', holding);
 }
 
