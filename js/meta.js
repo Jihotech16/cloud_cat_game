@@ -3,11 +3,12 @@ const COINS_KEY = 'cloudCat_coins';
 const UPG_KEY = 'cloudCat_upgrades';
 
 // 상점 업그레이드 정의. cost(level)=현재 레벨에서 다음 레벨 구매 비용.
+// 능력치는 레벨 10까지, 비용은 레벨이 오를수록 제곱으로 크게 증가한다.
 export const UPGRADES = [
-  { id: 'startJump', icon: '🚀', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 5, cost: (l) => 40 * (l + 1) },
-  { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 5, cost: (l) => 50 * (l + 1) },
-  { id: 'startGauge', icon: '⭐', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 4, cost: (l) => 35 * (l + 1) },
-  { id: 'startShield', icon: '🛡️', label: '시작 보호막', desc: '매 판 보호막을 갖고 시작', max: 1, cost: () => 200 },
+  { id: 'startJump', icon: '🚀', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2 },
+  { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2 },
+  { id: 'startGauge', icon: '⭐', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2 },
+  { id: 'startShield', icon: '🛡️', label: '시작 보호막', desc: '매 판 보호막을 갖고 시작', max: 1, cost: () => 1500 },
 ];
 
 function readInt(key) {
@@ -70,7 +71,7 @@ export function getStartBonuses() {
   return {
     jumpLevel: getUpgradeLevel('startJump'),
     scoreLevel: getUpgradeLevel('startScore'),
-    gaugeFill: getUpgradeLevel('startGauge') * 15, // 레벨당 게이지 15%
+    gaugeFill: getUpgradeLevel('startGauge') * 9, // 레벨당 게이지 9% (최대 10레벨 = 90%)
     shield: getUpgradeLevel('startShield') > 0,
   };
 }
