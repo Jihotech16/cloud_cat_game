@@ -12,6 +12,9 @@ export const CHARGE_JUMP_BONUS = 0.75;
 // 점프 파워 최대 충전량(0~1). 처음엔 낮게 제한하고 보상으로 늘린다.
 export const CHARGE_CAP_BASE = 0.4; // 시작 시 모을 수 있는 최대치(40%)
 export const CHARGE_CAP_STEP = 0.15; // '최대치 ⬆' 보상 1회당 +15% (최대 100%)
+// 충전 가속 곡선: 시작은 느리게(살짝 점프 미세 조절), 채울수록 빨라짐.
+// 충전이 0일 때 기준 속도의 비율(낮을수록 초반이 더 천천히 찬다).
+export const CHARGE_EASE_MIN = 0.25;
 export const CLOUD_GAP_MIN = 40 * GAME_SCALE;
 export const CLOUD_GAP_MAX = 66 * GAME_SCALE;
 export const SPAWN_LOOKAHEAD = 1.2;
