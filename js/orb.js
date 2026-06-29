@@ -181,6 +181,7 @@ export const TAGS = {
 export const REWARDS = [
   { id: 'jump', icon: '⬆️', label: '점프 파워 ⬆', desc: '점프력이 영구적으로 올라가요 (중첩)', tier: 'common', tags: ['jump'] },
   { id: 'charge', icon: '⚡', label: '차지 가속 ⬆', desc: '점프 충전(꾹 누르기) 속도가 빨라져요 (중첩)', tier: 'common', tags: ['jump'] },
+  { id: 'chargeCap', icon: '🔋', label: '점프 파워 최대치 ⬆', desc: '점프 파워를 더 많이 모을 수 있어요 (중첩)', tier: 'common', tags: ['jump'] },
   { id: 'orbValue', icon: '💎', label: '오브 가치 ⬆', desc: '오브당 게이지 충전량이 늘어요 (중첩)', tier: 'common', tags: ['orb'] },
   { id: 'feather', icon: '🪶', label: '깃털', desc: '한동안 천천히 떨어져요', tier: 'common', tags: ['jump', 'survival'] },
   { id: 'slowmo', icon: '🐢', label: '슬로우 모션', desc: '한동안 시간이 느려져 조종이 쉬워요', tier: 'common', tags: ['survival'] },

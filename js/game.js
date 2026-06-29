@@ -17,6 +17,8 @@ import {
   BOOST_JUMP_MULT,
   CHARGE_RATE,
   CHARGE_JUMP_BONUS,
+  CHARGE_CAP_BASE,
+  CHARGE_CAP_STEP,
   CLOUD_GAP_MIN,
   CLOUD_GAP_MAX,
   SPAWN_LOOKAHEAD,
@@ -112,6 +114,7 @@ export class Game {
     this.scoreLevel = 0;
     this.orbValueLevel = 0;
     this.chargeRateLevel = 0;
+    this.chargeCapLevel = 0;
     this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0, rocket: 0 };
     this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
     this.taken = new Set();
@@ -255,6 +258,11 @@ export class Game {
     return CHARGE_RATE * (1 + this.chargeRateLevel * CHARGE_RATE_STEP);
   }
 
+  // 현재 모을 수 있는 최대 점프 파워(0~1). 보상으로 상한이 올라간다.
+  _chargeMax() {
+    return Math.min(1, CHARGE_CAP_BASE + this.chargeCapLevel * CHARGE_CAP_STEP);
+  }
+
   _emptySynergy() {
     return {
       jumpForceMult: 1,
@@ -393,6 +401,7 @@ export class Game {
     this.scoreLevel = 0;
     this.orbValueLevel = 0;
     this.chargeRateLevel = 0;
+    this.chargeCapLevel = 0;
     this.effects = { scoreX2: 0, slowmo: 0, bigcloud: 0, feather: 0, rocket: 0 };
     this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
     this.taken = new Set();
@@ -593,7 +602,7 @@ export class Game {
     }
 
     if (this.input.holding) {
-      this.charge = Math.min(1, this.charge + this._chargeRate());
+      this.charge = Math.min(this._chargeMax(), this.charge + this._chargeRate());
       this.callbacks.onCharge?.(this.charge, true);
     }
   }
@@ -630,7 +639,7 @@ export class Game {
     if (this.state === 'ready') {
       this._snapToStartCloud();
       if (this.input.holding) {
-        this.charge = Math.min(1, this.charge + this._chargeRate());
+        this.charge = Math.min(this._chargeMax(), this.charge + this._chargeRate());
         this.callbacks.onCharge?.(this.charge, true);
       }
       this._syncPlayerChargeAnim();
@@ -817,6 +826,7 @@ export class Game {
       case 'scoreMul': return this.scoreLevel;
       case 'orbValue': return this.orbValueLevel;
       case 'charge': return this.chargeRateLevel;
+      case 'chargeCap': return this.chargeCapLevel;
       default: return null;
     }
   }
@@ -884,6 +894,7 @@ export class Game {
       case 'scoreMul': this.scoreLevel += 1; break; // 영구 누적
       case 'orbValue': this.orbValueLevel += 1; break; // 영구 누적
       case 'charge': this.chargeRateLevel += 1; break; // 영구 누적
+      case 'chargeCap': this.chargeCapLevel += 1; break; // 영구 누적(점프 파워 최대치 ↑)
       case 'rocket': this.effects.rocket = ROCKET_DURATION; break;
       case 'coinBonus':
         this.coins += COIN_REWARD_AMOUNT;
@@ -949,6 +960,7 @@ export class Game {
       scoreLevel: this.scoreLevel,
       orbValueLevel: this.orbValueLevel,
       chargeRateLevel: this.chargeRateLevel,
+      chargeCapLevel: this.chargeCapLevel,
     };
   }
 
