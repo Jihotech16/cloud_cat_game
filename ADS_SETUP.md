@@ -46,7 +46,9 @@ npm run open:android   # 안드로이드 스튜디오에서 실행/테스트
 - **iOS 전면**: `ca-app-pub-2605477058500539/9620679613` 적용 완료
 - **Android 전면**: `ca-app-pub-2605477058500539/1408550044` 적용 완료
 - **Android 보상형**: `ca-app-pub-2605477058500539/2669660823` 적용 완료
-- iOS 보상형: 아직 테스트 ID (발급되면 `REAL_IDS.ios.rewarded` 에 채우면 됨)
+- **iOS 보상형**: `ca-app-pub-2605477058500539/4433755949` 적용 완료
+- ✅ iOS·Android 배너/전면/보상형 **6종 모두 실제 ID 적용 완료**
+- 남은 출시 작업: ① iOS `Info.plist` 앱 ID 추가(위 3번) ② 출시 직전 `IS_TESTING=false`
 - `IS_TESTING = true` 라 실제 단위 ID 라도 **테스트 광고**가 떠서 계정 위험 없음. 출시 시 `false`.
 
 ## 4. 동의(UMP) / iOS ATT
