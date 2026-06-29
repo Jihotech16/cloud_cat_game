@@ -24,19 +24,25 @@ npm run open:android   # 안드로이드 스튜디오에서 실행/테스트
 ## 3. 실제 ID 로 교체 (출시 전 필수)
 [AdMob 콘솔](https://admob.google.com)에서 앱 등록 후 **앱 ID** 와 **광고 단위 ID 3개**(배너/전면/보상형)를 발급받아 교체합니다.
 
-1. **`js/ads.js`**
-   - `AD_UNITS` 의 `banner / interstitial / rewarded` 를 실제 광고 단위 ID 로 교체
-   - `const IS_TESTING = true;` → `false`
+1. **`js/ads.js` — `REAL_IDS` (플랫폼별)**
+   - iOS/Android 각각의 `banner / interstitial / rewarded` 에 실제 광고 단위 ID 입력. `null` 이면 자동으로 테스트 ID 사용.
+   - `const IS_TESTING = true;` → `false` (본인 기기 테스트 중에는 true 유지 권장)
 2. **Android — `android/app/src/main/AndroidManifest.xml`**
-   - `com.google.android.gms.ads.APPLICATION_ID` 의 `android:value` 를 실제 **앱 ID** 로 교체
-3. **iOS — `ios/App/App/Info.plist`** (iOS 빌드 시)
+   - `com.google.android.gms.ads.APPLICATION_ID` 의 `android:value` 를 실제 **Android 앱 ID** 로 교체 (※ 안드로이드 앱은 AdMob 에서 별도 등록·발급 필요)
+3. **iOS — `ios/App/App/Info.plist`** (iOS 빌드 시 — iOS 프로젝트는 로컬에서 `cap add ios` 로 생성)
    ```xml
    <key>GADApplicationIdentifier</key>
-   <string>ca-app-pub-실제앱ID</string>
-   <!-- 추적 동의 안내 문구 -->
+   <string>ca-app-pub-2605477058500539~3996817843</string>
+   <!-- iOS 14.5+ 추적 동의 안내 문구 -->
    <key>NSUserTrackingUsageDescription</key>
    <string>맞춤 광고를 제공하기 위해 사용됩니다.</string>
    ```
+
+### ✅ 현재 적용 상태 (Poing: Cloud Jump)
+- **iOS 배너**: 실제 ID `ca-app-pub-2605477058500539/1069226002` 적용 완료
+- **iOS 앱 ID**: `ca-app-pub-2605477058500539~3996817843` → **Info.plist 에 직접 추가 필요(위 3번)**
+- iOS 전면/보상형, Android 전체: 아직 테스트 ID (발급되면 `REAL_IDS` 에 채우면 됨)
+- `IS_TESTING = true` 라 실제 단위 ID 라도 **테스트 광고**가 떠서 계정 위험 없음. 출시 시 `false`.
 
 ## 4. 동의(UMP) / iOS ATT
 - EU·UK 사용자 대상이면 AdMob 콘솔에서 **GDPR 동의 메시지(UMP)** 를 설정해야 합니다.
