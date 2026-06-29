@@ -5,15 +5,15 @@ const GAME_URL = 'https://jihotech16.github.io/cloud_cat_game/';
 
 function buildMessage(score, isBest) {
   const head = isBest
-    ? `☁️🐱 신기록! 구름냥 점프에서 ${score}m 등반!`
-    : `☁️🐱 구름냥 점프에서 ${score}m 등반!`;
+    ? `☁️ Poing: Cloud Jump 신기록! ${score}m 등반!`
+    : `☁️ Poing: Cloud Jump에서 ${score}m 등반!`;
   return `${head}\n나보다 높이 올라갈 수 있어? 도전해봐!`;
 }
 
 // 결과를 공유한다. 성공/공유시 true, 클립보드 복사로 대체했으면 'copied', 실패 false.
 export async function shareResult(score, isBest = false) {
   const text = buildMessage(score, isBest);
-  const title = '구름냥 점프';
+  const title = 'Poing: Cloud Jump';
 
   // 1) Capacitor 네이티브 공유
   const cap = window.Capacitor;

@@ -35,9 +35,9 @@ const REAL_IDS = {
     rewarded: null, // TODO: iOS 보상형 광고 단위 ID 발급 후 교체
   },
   android: {
-    banner: null, // TODO: Android 배너 광고 단위 ID 발급 후 교체
-    interstitial: null, // TODO
-    rewarded: null, // TODO
+    banner: 'ca-app-pub-2605477058500539/7686605244',
+    interstitial: null, // TODO: Android 전면 광고 단위 ID 발급 후 교체
+    rewarded: null, // TODO: Android 보상형 광고 단위 ID 발급 후 교체
   },
 };
 
