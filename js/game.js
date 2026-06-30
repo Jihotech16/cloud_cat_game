@@ -545,15 +545,18 @@ export class Game {
     const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
     const t = Math.min(1, this.score / 800);
     const gap = this.worldHeight * (0.95 - 0.5 * t); // 고도0: ~1화면, 고도1: ~0.45화면
-    // 가시 속도: 낮은 고도에선 느리게, 높이 오를수록 빨라진다.
-    const speedFactor = HAZARD_SPEED_MIN_FACTOR + (1 - HAZARD_SPEED_MIN_FACTOR) * t;
+    // 가시 속도: 최저는 항상 느리게 유지하고, 고도가 오르면 "상한"만 높아진다.
+    // → 각 가시마다 [느림 ~ 상한] 사이를 랜덤으로 골라, 높은 곳에서도 느린 가시가 섞인다.
+    const speedFloor = HAZARD_SPEED_MIN_FACTOR;
+    const speedCeil = HAZARD_SPEED_MIN_FACTOR + (1 - HAZARD_SPEED_MIN_FACTOR) * t;
 
     while (this.highestHazardY > spawnAbove) {
       this.highestHazardY -= gap * (0.7 + Math.random() * 0.6);
       const r = this.worldWidth * 0.07;
       const x = r + Math.random() * (this.worldWidth - r * 2);
       const dir = Math.random() < 0.5 ? 1 : -1;
-      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED * speedFactor));
+      const factor = speedFloor + Math.random() * (speedCeil - speedFloor);
+      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED * factor));
     }
   }
 
