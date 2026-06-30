@@ -204,8 +204,10 @@ export const SYNERGIES = {
 };
 
 // 등급 가중치(고도 진행도 반영)로 중복 없이 n개의 보상을 고른다.
-export function pickRewardChoices(n = 3, progress = 0) {
-  const pool = REWARDS.map((r) => ({ ...r }));
+// exclude: 제외할 보상 id 목록(예: 이미 활성화된 보호막).
+export function pickRewardChoices(n = 3, progress = 0, exclude = []) {
+  const ex = new Set(exclude);
+  const pool = REWARDS.filter((r) => !ex.has(r.id)).map((r) => ({ ...r }));
   const chosen = [];
   while (chosen.length < n && pool.length) {
     const weights = pool.map((r) => tierWeight(r.tier, progress));
