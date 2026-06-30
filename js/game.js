@@ -877,7 +877,9 @@ export class Game {
 
   // 현재 선택지를 만들어 콜백으로 전달(리롤 시 재호출).
   _emitRewardChoices() {
-    const choices = pickRewardChoices(3, this._rewardProgress()).map((r) => ({
+    // 이미 보호막이 있으면 중복 제공하지 않는다(낭비 방지).
+    const exclude = this.shield ? ['shield'] : [];
+    const choices = pickRewardChoices(3, this._rewardProgress(), exclude).map((r) => ({
       ...r,
       level: this._rewardLevel(r.id),
     }));
