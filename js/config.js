@@ -99,5 +99,6 @@ export const COIN_PER_RAINBOW = 5;
 
 // 장애물(가시) — 어드벤처 모드 전용
 export const HAZARD_RADIUS = 13 * GAME_SCALE;
-export const HAZARD_SPEED = 1.5 * GAME_SCALE * GAME_SPEED; // 좌우 드리프트
+export const HAZARD_SPEED = 1.3 * GAME_SCALE * GAME_SPEED; // 좌우 드리프트(고도 최고 기준)
+export const HAZARD_SPEED_MIN_FACTOR = 0.35; // 낮은 고도에서의 속도 비율(천천히 시작)
 export const HAZARD_START_SCORE = 60; // 이 점수부터 등장(초반은 안전)
