@@ -57,6 +57,7 @@ import {
   SCORE_LEVEL_STEP,
   ORB_VALUE_STEP,
   DOUBLE_JUMP_FORCE_MULT,
+  DOUBLE_JUMP_MAX_LEVEL,
   CHARGE_RATE_STEP,
   REWARD_DURATION,
   REWARD_SCORE_MULT,
@@ -879,6 +880,8 @@ export class Game {
   _emitRewardChoices() {
     // 이미 보호막이 있으면 중복 제공하지 않는다(낭비 방지).
     const exclude = this.shield ? ['shield'] : [];
+    // 더블 점프가 최대(3회)면 더 이상 제공하지 않는다.
+    if (this.doubleJumpLevel >= DOUBLE_JUMP_MAX_LEVEL) exclude.push('doubleJump');
     const choices = pickRewardChoices(3, this._rewardProgress(), exclude).map((r) => ({
       ...r,
       level: this._rewardLevel(r.id),
@@ -932,7 +935,7 @@ export class Game {
       case 'feather': this.effects.feather = FEATHER_DURATION; break;
       case 'magnet': this.magnetLevel += 1; break; // 영구 누적
       case 'jump': this.jumpLevel += 1; break; // 영구 누적
-      case 'doubleJump': this.doubleJumpLevel += 1; break; // 영구 누적
+      case 'doubleJump': this.doubleJumpLevel = Math.min(DOUBLE_JUMP_MAX_LEVEL, this.doubleJumpLevel + 1); break; // 최대 3회
       case 'scoreMul': this.scoreLevel += 1; break; // 영구 누적
       case 'orbValue': this.orbValueLevel += 1; break; // 영구 누적
       case 'charge': this.chargeRateLevel += 1; break; // 영구 누적
