@@ -360,9 +360,12 @@ export class Game {
       return;
     }
 
-    // 착지하면 다음 점프는 들어온 방향의 반대로 나가게 한다(지그재그로 오름).
+    // 착지 시 다음 점프 방향:
+    // - 벽에 반사됐으면 이미 방향이 바뀌었으니 그대로 둔다.
+    // - 벽에 안 부딪히고 착지했으면 반대 방향으로 전환한다(지그재그).
     if (Math.abs(this.player.vx) > 0.01) {
-      this.player.facing = this.player.vx > 0 ? -1 : 1;
+      const incoming = this.player.vx > 0 ? 1 : -1;
+      this.player.facing = this.player.wallBounced ? incoming : -incoming;
     }
     this.player.land();
     this.player.alignFeetTo(cloud.top);
