@@ -360,8 +360,9 @@ export class Game {
       return;
     }
 
+    // 착지하면 다음 점프는 들어온 방향의 반대로 나가게 한다(지그재그로 오름).
     if (Math.abs(this.player.vx) > 0.01) {
-      this.player.facing = this.player.vx > 0 ? 1 : -1;
+      this.player.facing = this.player.vx > 0 ? -1 : 1;
     }
     this.player.land();
     this.player.alignFeetTo(cloud.top);
