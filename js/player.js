@@ -68,6 +68,7 @@ export class Player {
     this.charging = false;
     this.chargeLevel = 0;
     this.jumpPeakVy = 0;
+    this.wallBounced = false; // 이번 비행 중 벽에 반사됐는지
   }
 
   get left() {
@@ -94,10 +95,12 @@ export class Player {
       this.x = half;
       this.vx = speed;
       this.facing = 1;
+      this.wallBounced = true;
     } else if (this.x > worldWidth - half) {
       this.x = worldWidth - half;
       this.vx = -speed;
       this.facing = -1;
+      this.wallBounced = true;
     } else if (this.vx !== 0) {
       this.facing = this.vx > 0 ? 1 : -1;
     }
@@ -120,6 +123,7 @@ export class Player {
     this.charging = false;
     this.chargeLevel = 0;
     this.jumpPeakVy = jumpForce;
+    this.wallBounced = false; // 새 비행 시작 — 벽 반사 기록 초기화
   }
 
   land() {
