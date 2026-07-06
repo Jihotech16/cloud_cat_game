@@ -5,7 +5,9 @@
 빌드 시 `www/`로 복사한 뒤 네이티브 프로젝트에 주입합니다.
 
 - **App ID**: `com.jihotech.cloudcatjump`
-- **App Name**: `Cloud Cat Jump`
+- **App Name**: `Poing: Cloud Jump`
+
+> 📱 **아이폰 네이티브 앱**은 AdMob·서명·출시까지 단계별로 정리한 **`IOS_SETUP.md`**를 참고하세요.
 
 > ⚠️ 실제 빌드/서명/스토어 제출은 **본인 PC**에서 진행해야 합니다.
 > (Android는 Windows/Mac/Linux, **iOS는 macOS + Xcode 필수**)
