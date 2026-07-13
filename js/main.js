@@ -4,6 +4,7 @@ import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
 import { playClickSound } from './audio.js';
+import { startBgm, toggleBgm, isBgmMuted } from './bgm.js';
 import {
   initAds,
   adsAvailable,
@@ -46,6 +47,7 @@ const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
 const shareLabel = document.getElementById('share-label');
+const btnMute = document.getElementById('btn-mute');
 const btnRewardCoins = document.getElementById('btn-reward-coins');
 const btnMenu = document.getElementById('btn-menu');
 
@@ -427,11 +429,28 @@ app.addEventListener('click', (e) => {
 
 document.addEventListener('contextmenu', (e) => e.preventDefault());
 
+// 배경음: 첫 사용자 입력에서 시작(음소거 설정이 아니면), 버튼으로 on/off
+let bgmArmed = false;
+window.addEventListener('pointerdown', () => {
+  if (bgmArmed) return;
+  bgmArmed = true;
+  startBgm();
+}, { once: true });
+
+function updateMuteBtn() {
+  if (btnMute) btnMute.textContent = isBgmMuted() ? '🔇 배경음 꺼짐' : '🔊 배경음 켜짐';
+}
+btnMute?.addEventListener('click', () => {
+  toggleBgm();
+  updateMuteBtn();
+});
+
 async function boot() {
   initNative();
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
+  updateMuteBtn();
   setMode(selectedMode);
   await initScores();
   setMode(selectedMode); // 점수 로드 후 기록 갱신
