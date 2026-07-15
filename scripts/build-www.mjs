@@ -11,7 +11,7 @@ const www = resolve(root, 'www');
 rmSync(www, { recursive: true, force: true });
 mkdirSync(www, { recursive: true });
 
-const files = ['index.html', 'manifest.json'];
+const files = ['index.html', 'manifest.json', 'privacy.html'];
 const dirs = ['css', 'js', 'assets', 'icons'];
 
 for (const f of files) {
