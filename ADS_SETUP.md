@@ -10,7 +10,9 @@ npm install            # @capacitor-community/admob 포함 설치
 npm run sync           # www 빌드 + cap sync
 npm run open:android   # 안드로이드 스튜디오에서 실행/테스트
 ```
-> Capacitor 8 과 peer dependency 경고가 나오면 `npm install --legacy-peer-deps` 로 설치하세요.
+> `@capacitor-community/admob` 는 **8.x**(Capacitor 8 전용)를 사용합니다.
+> 7.x 를 쓰면 iOS 에서 dyld 로드 크래시가 납니다. Pod 변경 후에는 반드시
+> `ios/App` 에서 `rm -rf Pods Podfile.lock && pod install` + Xcode `⇧⌘K`(Clean Build) 하세요.
 
 ## 2. 광고가 나오는 위치
 | 광고 | 노출 시점 | 코드 |
