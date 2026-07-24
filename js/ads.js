@@ -6,7 +6,7 @@
 // ───────────────────────────────────────────────────────────────
 // ⚠️ 출시(실 수익화) 전에 반드시 할 일
 //   1) 아래 REAL_IDS 의 플랫폼별 광고 단위 ID 를 실제 ID 로 채움(null=테스트)
-//   2) IS_TESTING = false 로 변경(본인 기기 테스트 중에는 true 유지 권장)
+//   2) IS_TESTING = false 유지. 본인 기기 테스트는 TEST_DEVICE_IDS 등록으로 해결
 //   3) Android: android/app/src/main/AndroidManifest.xml 의
 //      com.google.android.gms.ads.APPLICATION_ID 를 실제 Android 앱 ID 로 교체
 //   4) iOS: ios/App/App/Info.plist 의 GADApplicationIdentifier 를 실제 iOS 앱 ID
@@ -15,7 +15,14 @@
 // ───────────────────────────────────────────────────────────────
 
 // 개발 중에는 구글 공식 "테스트 광고"를 노출한다(실 수익 없음, 정책 위반 아님).
-const IS_TESTING = true;
+const IS_TESTING = false;
+
+// 개발자 본인 기기(해시 ID). 여기 등록된 기기는 출시 빌드에서도 항상
+// 테스트 광고를 받으므로 실광고 무효 클릭(계정 정지 사유)이 원천 차단된다.
+// ID는 실기기에서 앱 실행 시 Xcode/Logcat 콘솔의 "To get test ads..." 로그에 찍힌다.
+const TEST_DEVICE_IDS = [
+  'cf9300c7057c87d5b480bc94be7f63f5', // 지호 iPhone
+];
 
 // 구글 공식 테스트 광고 단위 ID(실 수익 없음, 개발용). 아직 실제 ID 가
 // 없는 항목은 이 테스트 ID 를 그대로 사용한다.
@@ -69,7 +76,10 @@ export async function initAds() {
   const AdMob = admob();
   if (!AdMob || initialized) return;
   try {
-    await AdMob.initialize({ initializeForTesting: IS_TESTING });
+    await AdMob.initialize({
+      initializeForTesting: IS_TESTING,
+      testingDevices: TEST_DEVICE_IDS,
+    });
     initialized = true;
   } catch (err) {
     console.warn('AdMob 초기화 실패:', err);
