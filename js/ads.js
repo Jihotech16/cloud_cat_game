@@ -71,11 +71,22 @@ export function adsAvailable() {
 
 let initialized = false;
 
-/** 앱 부팅 시 1회 호출. AdMob 초기화(+iOS 추적 동의 요청). */
+/** 앱 부팅 시 1회 호출. iOS 추적 동의(ATT) 팝업 → AdMob 초기화. */
 export async function initAds() {
   const AdMob = admob();
   if (!AdMob || initialized) return;
   try {
+    // iOS: App Tracking Transparency 동의 팝업을 광고 초기화(=추적 데이터 수집)
+    // '전에' 반드시 띄운다. 이 호출이 없으면 애플 심사에서 Guideline 2.1 로
+    // 반려된다(프레임워크는 링크됐는데 팝업이 안 뜬다는 사유).
+    // 이미 응답한 사용자에게는 팝업이 다시 뜨지 않고 즉시 반환된다.
+    if (platform() === 'ios' && typeof AdMob.requestTrackingAuthorization === 'function') {
+      try {
+        await AdMob.requestTrackingAuthorization();
+      } catch (err) {
+        console.warn('ATT 동의 요청 실패:', err);
+      }
+    }
     await AdMob.initialize({
       initializeForTesting: IS_TESTING,
       testingDevices: TEST_DEVICE_IDS,
