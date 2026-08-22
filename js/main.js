@@ -291,9 +291,11 @@ function showRewardChoices(choices, info = {}) {
       : `<span class="reward-icon">${reward.icon}</span>`;
     card.innerHTML = `
       ${iconHtml}
-      <span class="reward-label">${t(`reward.${reward.id}.label`)}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
-      <span class="reward-desc">${t(`reward.${reward.id}.desc`)} ${tagChips}</span>
-      ${downside}${evoChip}
+      <span class="reward-body">
+        <span class="reward-label">${t(`reward.${reward.id}.label`)}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
+        <span class="reward-desc">${t(`reward.${reward.id}.desc`)} ${tagChips}</span>
+        ${downside}${evoChip}
+      </span>
     `;
     card.addEventListener('click', () => {
       rewardScreen.classList.add('hidden');
