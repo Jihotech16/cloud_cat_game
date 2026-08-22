@@ -4,7 +4,7 @@ import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
-import { t } from './i18n.js';
+import { t, getFont } from './i18n.js';
 import {
   hapticLight,
   hapticMedium,
@@ -1089,7 +1089,7 @@ export class Game {
     for (const f of this.floatTexts) {
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5));
-      ctx.font = `${Math.round(15 * GAME_SCALE * f.scale)}px Jua, sans-serif`;
+      ctx.font = `${Math.round(15 * GAME_SCALE * f.scale)}px ${getFont()}`;
       ctx.textAlign = 'center';
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(45,52,54,0.4)';
@@ -1129,7 +1129,7 @@ export class Game {
     ctx.save();
     ctx.globalAlpha = Math.max(0, a);
     ctx.textAlign = 'center';
-    ctx.font = `${Math.round(26 * GAME_SCALE)}px Jua, sans-serif`;
+    ctx.font = `${Math.round(26 * GAME_SCALE)}px ${getFont()}`;
     ctx.lineWidth = 5;
     ctx.strokeStyle = 'rgba(45,52,54,0.45)';
     ctx.fillStyle = '#ffffff';
@@ -1770,7 +1770,7 @@ export class Game {
   _drawReadyHint() {
     const ctx = this.ctx;
     ctx.save();
-    ctx.font = `${18 * GAME_SCALE}px Jua, sans-serif`;
+    ctx.font = `${18 * GAME_SCALE}px ${getFont()}`;
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.shadowColor = 'rgba(45, 52, 54, 0.25)';

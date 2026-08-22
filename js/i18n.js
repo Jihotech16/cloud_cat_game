@@ -11,6 +11,26 @@ export const LANGS = [
   { code: 'zh', label: '中文' },
 ];
 
+// 언어별 귀여운 라운드 글꼴 스택. 각 스크립트에 맞는 글꼴을 앞에 두고
+// 나머지는 Jua/시스템으로 폴백한다. (Google Fonts 로 로드)
+const FONT_STACKS = {
+  ko: "'Jua', sans-serif",
+  en: "'Baloo 2', 'Jua', sans-serif",
+  ja: "'Mochiy Pop One', 'Jua', sans-serif",
+  zh: "'ZCOOL KuaiLe', 'Jua', sans-serif",
+};
+
+/** 현재 언어의 글꼴 스택 문자열(캔버스 텍스트에도 사용). */
+export function getFont() {
+  return FONT_STACKS[current] || FONT_STACKS.ko;
+}
+
+function applyFont() {
+  try {
+    document.documentElement.style.setProperty('--game-font', getFont());
+  } catch { /* noop */ }
+}
+
 const DICT = {
   ko: {
     'gate.mobileOnly.title': '모바일 전용 게임',
@@ -380,6 +400,7 @@ export function setLang(code) {
   current = code;
   try { localStorage.setItem(LANG_KEY, code); } catch { /* noop */ }
   try { document.documentElement.lang = code; } catch { /* noop */ }
+  applyFont();
 }
 
 /** 번역 조회. {x} 자리표시자는 params.x 로 치환. 없으면 en → 키 순으로 폴백. */
@@ -397,6 +418,7 @@ export function t(key, params) {
 
 /** data-i18n / data-i18n-html 속성이 붙은 정적 요소를 현재 언어로 채운다. */
 export function applyStaticI18n(root = document) {
+  applyFont();
   root.querySelectorAll('[data-i18n]').forEach((el) => {
     el.textContent = t(el.getAttribute('data-i18n'));
   });
