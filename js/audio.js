@@ -100,6 +100,13 @@ export function playJumpSound(power = 0.5) {
   voice({ freq: base * 0.5, glideTo: base * 0.95, type: 'sine', dur: 0.1, gain: 0.06 });
 }
 
+// 퍼펙트 차지: 밝게 상승하는 3음 아르페지오 "티링↑".
+export function playPerfectSound() {
+  voice({ freq: 880, type: 'triangle', dur: 0.1, gain: 0.13, attack: 0.004, filterHz: 5000 });
+  voice({ freq: 1174, type: 'triangle', t0: 0.05, dur: 0.1, gain: 0.12, attack: 0.004 });
+  voice({ freq: 1568, type: 'sine', t0: 0.1, dur: 0.14, gain: 0.12, attack: 0.004 });
+}
+
 // 오브 수집: 맑은 종소리 "팅".
 export function playCollectSound() {
   voice({ freq: 1318, type: 'sine', dur: 0.13, gain: 0.13, attack: 0.004, filterHz: 4000 });

@@ -6,7 +6,13 @@ export const CLOUD_TYPES = {
   BREAKING: 'breaking',
   BOUNCE: 'bounce',
   BOOST: 'boost',
+  ICE: 'ice',     // 미끄럼: 착지해도 멈추지 않고 미끄러진다
+  PHASE: 'phase', // 깜빡임: 실체/투명을 반복, 투명일 때 밟을 수 없다
 };
+
+// 페이즈 구름 주기(프레임): 실체 156 → 투명 84 반복.
+const PHASE_SOLID = 156;
+const PHASE_CYCLE = 240;
 
 const SPRITE_W = 109;
 const SPRITE_H = 31;
@@ -57,6 +63,9 @@ export class Cloud {
       : 0;
     this.broken = false;
     this.breakTimer = 0;
+    // 페이즈: 실체/투명 상태. 서로 어긋나게 랜덤 위상으로 시작.
+    this.phaseT = type === CLOUD_TYPES.PHASE ? Math.random() * PHASE_CYCLE : 0;
+    this.isSolid = true;
   }
 
   update(worldWidth, timeScale = 1) {
@@ -70,6 +79,11 @@ export class Cloud {
         this.x = worldWidth - margin;
         this.vx *= -1;
       }
+    }
+
+    if (this.type === CLOUD_TYPES.PHASE) {
+      this.phaseT += timeScale;
+      this.isSolid = (this.phaseT % PHASE_CYCLE) < PHASE_SOLID;
     }
 
     if (this.broken) {
@@ -86,7 +100,15 @@ export class Cloud {
     if (this.broken && this.breakTimer > 20) return;
 
     const screenY = this.y - cameraY;
-    const alpha = this.broken ? Math.max(0, 1 - this.breakTimer / 20) : 1;
+    let alpha = this.broken ? Math.max(0, 1 - this.breakTimer / 20) : 1;
+    // 페이즈: 투명 상태면 흐릿하게(밟을 수 없음). 실체 만료 직전엔 깜빡.
+    if (this.type === CLOUD_TYPES.PHASE) {
+      if (!this.isSolid) alpha *= 0.22;
+      else {
+        const p = this.phaseT % PHASE_CYCLE;
+        if (p > PHASE_SOLID - 30) alpha *= 0.55 + 0.45 * Math.abs(Math.sin(p * 0.6));
+      }
+    }
     const w = this.width * scale;
     const h = this.drawHeight * scale;
     const dx = this.x - w / 2;
@@ -119,6 +141,8 @@ export class Cloud {
         [CLOUD_TYPES.BREAKING]: 'sepia(0.35) brightness(1.12) saturate(1.2)',
         [CLOUD_TYPES.BOUNCE]: 'drop-shadow(0 0 5px rgba(255,95,168,0.95)) saturate(1.3)',
         [CLOUD_TYPES.BOOST]: 'drop-shadow(0 0 6px rgba(120,220,255,0.95)) brightness(1.05)',
+        [CLOUD_TYPES.ICE]: 'brightness(1.12) saturate(0.55) hue-rotate(165deg) drop-shadow(0 0 3px rgba(150,230,255,0.9))',
+        [CLOUD_TYPES.PHASE]: 'brightness(1.05) saturate(0.7) hue-rotate(255deg)',
       };
       let filter = filters[this.type] ?? '';
       if (dim) filter = filter ? `${filter} ${dim}` : dim;
@@ -222,19 +246,27 @@ export class Cloud {
 }
 
 export function pickCloudType(heightScore) {
+  const clamp = (v) => Math.min(1, Math.max(0, v));
   // 아주 천천히 변하도록 긴 구간에 걸쳐 특수 구름이 늘어난다.
-  const t = Math.min(1, Math.max(0, (heightScore - 80) / 1120)); // 80m → 1200m
-  const tBreak = Math.min(1, Math.max(0, (heightScore - 200) / 1000)); // 부서짐은 200m부터
-  const pBreak = 0.10 * tBreak; // 부서짐: 0% → 10% (가장 방해되므로 가장 늦게)
-  const pMove = 0.03 + 0.14 * t; // 이동: 3% → 17%
+  const t = clamp((heightScore - 80) / 1120); // 80m → 1200m
+  const tBreak = clamp((heightScore - 200) / 1000); // 부서짐은 200m부터
+  const tIce = clamp((heightScore - 300) / 900); // 얼음은 300m부터
+  const tPhase = clamp((heightScore - 500) / 900); // 페이즈는 500m부터
+  const pBreak = 0.10 * tBreak; // 부서짐: 0% → 10%
+  const pMove = 0.03 + 0.13 * t; // 이동: 3% → 16%
   const pBounce = 0.03 + 0.07 * t; // 트램펄린(도움): 3% → 10%
   const pBoost = 0.03 + 0.07 * t; // 부스트(도움): 3% → 10%
+  const pIce = 0.08 * tIce; // 얼음(미끄럼): 0% → 8%
+  const pPhase = 0.07 * tPhase; // 페이즈(깜빡): 0% → 7%
 
   const roll = Math.random();
-  if (roll < pBreak) return CLOUD_TYPES.BREAKING;
-  if (roll < pBreak + pBounce) return CLOUD_TYPES.BOUNCE;
-  if (roll < pBreak + pBounce + pBoost) return CLOUD_TYPES.BOOST;
-  if (roll < pBreak + pBounce + pBoost + pMove) return CLOUD_TYPES.MOVING;
+  let acc = 0;
+  if (roll < (acc += pBreak)) return CLOUD_TYPES.BREAKING;
+  if (roll < (acc += pBounce)) return CLOUD_TYPES.BOUNCE;
+  if (roll < (acc += pBoost)) return CLOUD_TYPES.BOOST;
+  if (roll < (acc += pMove)) return CLOUD_TYPES.MOVING;
+  if (roll < (acc += pIce)) return CLOUD_TYPES.ICE;
+  if (roll < (acc += pPhase)) return CLOUD_TYPES.PHASE;
   return CLOUD_TYPES.NORMAL;
 }
 

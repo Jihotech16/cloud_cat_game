@@ -22,6 +22,7 @@ import {
   playShieldSound,
   playRocketSound,
   playHazardSound,
+  playPerfectSound,
 } from './audio.js';
 import {
   GRAVITY,
@@ -34,6 +35,10 @@ import {
   CHARGE_CAP_BASE,
   CHARGE_CAP_STEP,
   CHARGE_EASE_MIN,
+  PERFECT_LO,
+  PERFECT_HI,
+  PERFECT_JUMP_MULT,
+  PERFECT_SCORE_BONUS,
   CLOUD_GAP_MIN,
   CLOUD_GAP_MAX,
   SPAWN_LOOKAHEAD,
@@ -149,6 +154,11 @@ export class Game {
     this.legend = this._emptyLegend();
     this.mods = this._emptyMods();
     this.autoRocketTimer = 0;
+    this.combo = 0;
+    this.bestLandY = Infinity;
+    this.floatTexts = [];
+    this.zoneShown = new Set();
+    this.banner = null;
 
     // 화면 흔들림(임팩트 연출). '동작 줄이기'가 켜져 있으면 흔들지 않는다.
     this.shakeTime = 0;
@@ -272,8 +282,14 @@ export class Game {
         && this.charge >= this._chargeMax() - 0.001) {
         jumpMult *= 1.2;
       }
+      // 퍼펙트 차지: 상한 대비 스윗스팟 구간에서 떼면 점프력·점수 보너스
+      const cap = this._chargeMax();
+      const rel = cap > 0 ? this.charge / cap : 0;
+      const perfect = rel >= PERFECT_LO && rel <= PERFECT_HI;
+      if (perfect) jumpMult *= PERFECT_JUMP_MULT;
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
+      if (perfect) this._onPerfect();
       playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
       hapticLight();
       if (cloudBoost > 1) {
@@ -443,25 +459,40 @@ export class Game {
       this._spawnParticles(this.player.x, this.player.bottom, '#ff7ec2', 10);
       this.charge = 0;
       this.callbacks.onCharge?.(0, this.input.holding);
+      this._registerLanding();
       return;
     }
 
-    // 착지 시 다음 점프 방향:
-    // - 벽에 반사됐으면 이미 방향이 바뀌었으니 그대로 둔다.
-    // - 벽에 안 부딪히고 착지했으면 반대 방향으로 전환한다(지그재그).
-    if (Math.abs(this.player.vx) > 0.01) {
-      const incoming = this.player.vx > 0 ? 1 : -1;
-      this.player.facing = this.player.wallBounced ? incoming : -incoming;
+    const onIce = cloud.type === CLOUD_TYPES.ICE;
+    if (onIce) {
+      // 얼음: 지그재그 없이 오던 방향 그대로 미끄러진다(수평 속도 유지).
+      let sv = this.player.vx;
+      if (Math.abs(sv) < 0.5) sv = this.player.facing * this.player.baseSpeed * 0.6;
+      this.player.facing = sv > 0 ? 1 : -1;
+      this.player.land();
+      this.player.alignFeetTo(cloud.top);
+      this.player.vy = 0;
+      this.player.vx = sv;
+    } else {
+      // 착지 시 다음 점프 방향:
+      // - 벽에 반사됐으면 이미 방향이 바뀌었으니 그대로 둔다.
+      // - 벽에 안 부딪히고 착지했으면 반대 방향으로 전환한다(지그재그).
+      if (Math.abs(this.player.vx) > 0.01) {
+        const incoming = this.player.vx > 0 ? 1 : -1;
+        this.player.facing = this.player.wallBounced ? incoming : -incoming;
+      }
+      this.player.land();
+      this.player.alignFeetTo(cloud.top);
+      this.player.vy = 0;
+      this.player.vx = 0;
     }
-    this.player.land();
-    this.player.alignFeetTo(cloud.top);
-    this.player.vy = 0;
-    this.player.vx = 0;
     this.player.groundedCloud = cloud;
     this.player.onGround = true;
     this.charge = 0;
     this.airJumpsLeft = this.doubleJumpLevel;
     this.callbacks.onCharge?.(0, this.input.holding);
+
+    this._registerLanding();
 
     const sw = this._shockwaveRadius();
     if (sw > 0) this._shockwaveAbsorb(sw, this.legend.alwaysShockwave);
@@ -543,6 +574,11 @@ export class Game {
     this.legend = this._emptyLegend();
     this.mods = this._emptyMods();
     this.autoRocketTimer = 0;
+    this.combo = 0;
+    this.bestLandY = Infinity;
+    this.floatTexts = [];
+    this.zoneShown = new Set();
+    this.banner = null;
     this.shakeTime = 0;
     this.shakeMag = 0;
     this.coinsBanked = 0;
@@ -666,7 +702,11 @@ export class Game {
       const x = r + Math.random() * (this.worldWidth - r * 2);
       const dir = Math.random() < 0.5 ? 1 : -1;
       const factor = speedFloor + Math.random() * (speedCeil - speedFloor);
-      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED * factor * this.mods.hazardSpeedMult));
+      // 250m 이상부터 일부 가시는 상하로 물결치며 움직인다(패턴 다양화).
+      const bob = (this.score > 250 && Math.random() < 0.35)
+        ? { amp: this.worldHeight * 0.06, speed: 0.04 + Math.random() * 0.03 }
+        : null;
+      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED * factor * this.mods.hazardSpeedMult, bob));
     }
   }
 
@@ -724,6 +764,8 @@ export class Game {
 
     for (const cloud of this.clouds) {
       if (cloud.broken) continue;
+      // 페이즈 구름이 투명(비실체) 상태면 통과한다.
+      if (!cloud.isSolid) continue;
 
       // 화면 아래로 사라진(보이지 않는) 구름에는 착지하지 않는다.
       if (cloud.top > viewportBottom) continue;
@@ -749,9 +791,28 @@ export class Game {
       this.player.groundedCloud = null;
       return;
     }
+    // 페이즈 구름이 투명해지면 발밑이 사라져 떨어진다.
+    if (!cloud.isSolid) {
+      this.player.groundedCloud = null;
+      this.player.onGround = false;
+      return;
+    }
 
     if (cloud.type === CLOUD_TYPES.MOVING) {
       this.player.x += cloud.vx;
+    }
+
+    // 얼음: 착지 후에도 계속 미끄러진다(약한 마찰). 가장자리로 미끄러지면 떨어짐.
+    if (cloud.type === CLOUD_TYPES.ICE) {
+      this.player.x += this.player.vx;
+      this.player.vx *= 0.99;
+      // 화면 벽에서 튕김(밖으로 미끄러지지 않게)
+      const half = this.player.width / 2;
+      if (this.player.x < half) { this.player.x = half; this.player.vx = Math.abs(this.player.vx); }
+      else if (this.player.x > this.worldWidth - half) { this.player.x = this.worldWidth - half; this.player.vx = -Math.abs(this.player.vx); }
+      if (Math.abs(this.player.vx) > 0.01) {
+        this.player.facing = this.player.vx > 0 ? 1 : -1;
+      }
     }
 
     this.player.alignFeetTo(cloud.top);
@@ -783,8 +844,9 @@ export class Game {
       let burstMult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
       // 시그니처 페어: 점수배율+로켓 → 로켓 중 점수 추가 2배
       if (this.effects.rocket > 0 && this.taken.has('scoreMul')) burstMult *= 2;
-      this.score += Math.round(delta * permMult * burstMult);
+      this.score += Math.round(delta * permMult * burstMult * this._comboMult());
       this.callbacks.onScore?.(this.score);
+      this._checkZone();
     }
   }
 
@@ -809,6 +871,8 @@ export class Game {
     }
 
     const ts = this.effects.slowmo > 0 ? SLOWMO_FACTOR : 1;
+
+    this.player.tickAnim(ts);
 
     for (const cloud of this.clouds) {
       cloud.update(this.worldWidth, ts);
@@ -843,6 +907,11 @@ export class Game {
     this._updateHazards();
     if (this.state !== 'playing' && this.state !== 'ready') return; // 장애물로 게임오버
     this._updateParticles();
+    this._updateFloatTexts();
+    if (this.banner) {
+      this.banner.life -= 0.016;
+      if (this.banner.life <= 0) this.banner = null;
+    }
     if (this.shakeTime > 0) {
       this.shakeTime -= 1;
       if (this.shakeTime === 0) this.shakeMag = 0;
@@ -961,6 +1030,113 @@ export class Game {
     if (this.reduceMotion) return;
     this.shakeMag = Math.max(this.shakeMag, mag);
     this.shakeTime = Math.max(this.shakeTime, frames);
+  }
+
+  // ── 콤보: 연속 상승 착지로 배율을 쌓고, 크게 추락하면 리셋 ──
+  _comboMult() {
+    return 1 + Math.min(this.combo, 40) * 0.015; // 콤보당 +1.5%, 최대 +60%
+  }
+
+  _registerLanding() {
+    const y = this.player.y;
+    if (y < this.bestLandY - 1) {
+      // 더 높이 올라 착지 → 콤보 +1
+      this.combo += 1;
+      this.bestLandY = y;
+      if (this.combo >= 5 && this.combo % 5 === 0) {
+        this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, `콤보 x${this.combo}!`, '#ff9e3d', 1.05);
+        this._addShake(2);
+      }
+    } else if (y > this.bestLandY + this.worldHeight * 0.9) {
+      // 한 화면 이상 추락 후 착지 → 콤보 끊김
+      if (this.combo >= 8) {
+        this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, '콤보 끊김', '#9aa7b0', 0.9);
+      }
+      this.combo = 0;
+      this.bestLandY = y;
+    }
+    this.callbacks.onCombo?.(this.combo, this._comboMult());
+  }
+
+  // 퍼펙트 차지 성공 연출 + 점수 보너스
+  _onPerfect() {
+    const bonus = Math.round(PERFECT_SCORE_BONUS * (1 + this.scoreLevel * SCORE_LEVEL_STEP));
+    this.score += bonus;
+    this.callbacks.onScore?.(this.score);
+    this._addFloatText(this.player.x, this.player.y - this.player.height * 0.6, `PERFECT +${bonus}`, '#ffe08a', 1.05);
+    this._spawnParticles(this.player.x, this.player.bottom, '#ffe9a8', 12);
+    playPerfectSound();
+    hapticMedium();
+  }
+
+  // ── 떠오르는 텍스트(점수 팝업/콤보) ──
+  _addFloatText(x, y, text, color = '#ffffff', scale = 1) {
+    this.floatTexts.push({ x, y, text, color, scale, life: 1, vy: -0.7 * GAME_SCALE });
+  }
+
+  _updateFloatTexts() {
+    for (const f of this.floatTexts) {
+      f.y += f.vy;
+      f.vy *= 0.95;
+      f.life -= 0.018;
+    }
+    if (this.floatTexts.length) this.floatTexts = this.floatTexts.filter((f) => f.life > 0);
+  }
+
+  _drawFloatTexts() {
+    const ctx = this.ctx;
+    for (const f of this.floatTexts) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, f.life * 1.5));
+      ctx.font = `${Math.round(15 * GAME_SCALE * f.scale)}px Jua, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(45,52,54,0.4)';
+      ctx.fillStyle = f.color;
+      const sy = f.y - this.cameraY;
+      ctx.strokeText(f.text, f.x, sy);
+      ctx.fillText(f.text, f.x, sy);
+      ctx.restore();
+    }
+  }
+
+  // ── 고도 구역 진입 배너(화면 중앙, 짧게) ──
+  _showBanner(text) {
+    this.banner = { text, life: 1.5 };
+  }
+
+  _checkZone() {
+    const ZONES = [
+      [224, '🌅 노을 지대'],
+      [400, '🌆 보랏빛 황혼'],
+      [576, '🌙 밤하늘'],
+      [800, '🌌 우주 진입!'],
+    ];
+    for (const [th, label] of ZONES) {
+      if (this.score >= th && !this.zoneShown.has(th)) {
+        this.zoneShown.add(th);
+        this._showBanner(label);
+      }
+    }
+  }
+
+  _drawBanner() {
+    if (!this.banner) return;
+    const ctx = this.ctx;
+    const b = this.banner;
+    const a = Math.min(1, b.life * 1.2) * Math.min(1, (1.5 - b.life) * 3 + 0.2);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.textAlign = 'center';
+    ctx.font = `${Math.round(26 * GAME_SCALE)}px Jua, sans-serif`;
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(45,52,54,0.45)';
+    ctx.fillStyle = '#ffffff';
+    const x = this.worldWidth / 2;
+    const y = this.worldHeight * 0.3;
+    ctx.strokeText(b.text, x, y);
+    ctx.fillText(b.text, x, y);
+    ctx.restore();
   }
 
   _spawnParticles(x, y, color, count) {
@@ -1238,6 +1414,9 @@ export class Game {
   reviveByAd() {
     if (this.usedAdRevive || this.state !== 'gameover') return false;
     this.usedAdRevive = true;
+    this.combo = 0;
+    this.bestLandY = Infinity;
+    this.callbacks.onCombo?.(0, 1);
     this.hazards = []; // 부활 직후 즉사 방지: 주변 가시 제거
     this._revive(); // 화면 중앙으로 끌어올리고 받쳐줄 구름 생성
     this.effects.feather = FEATHER_DURATION; // 잠깐 부드럽게 하강 → 안전 착지 여유
@@ -1576,7 +1755,11 @@ export class Game {
       this._drawShield();
     }
 
+    this._drawFloatTexts();
+
     if (shaking) ctx.restore();
+
+    this._drawBanner();
 
     if (this.state === 'ready') {
       this._drawReadyHint();
