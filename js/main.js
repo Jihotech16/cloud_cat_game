@@ -57,6 +57,7 @@ const btnResume = document.getElementById('btn-resume');
 const btnPauseMenu = document.getElementById('btn-pause-menu');
 
 const gaugeFill = document.getElementById('gauge-fill');
+const comboEl = document.getElementById('combo');
 const effectsEl = document.getElementById('effects');
 const synergyEl = document.getElementById('synergy');
 const coinHud = document.getElementById('coin-count');
@@ -178,6 +179,20 @@ function updateEffects(effects = {}) {
 
 function updateCoinHud(coins) {
   if (coinHud) coinHud.textContent = coins.toLocaleString();
+}
+
+// 콤보 표시(3 이상일 때만). 배율은 퍼센트로.
+function updateCombo(combo = 0, mult = 1) {
+  if (!comboEl) return;
+  const show = combo >= 3;
+  comboEl.classList.toggle('hidden', !show);
+  if (!show) return;
+  const pct = Math.round((mult - 1) * 100);
+  comboEl.innerHTML = `<span class="combo-x">🔥 ${combo} 콤보</span><span class="combo-mult">점수 +${pct}%</span>`;
+  // 재트리거 애니메이션(숫자 오를 때 살짝 튐)
+  comboEl.classList.remove('bump');
+  void comboEl.offsetWidth;
+  comboEl.classList.add('bump');
 }
 
 function updateSynergy(state = {}) {
@@ -327,6 +342,9 @@ function ensureGame() {
     onCoins(coins) {
       updateCoinHud(coins);
     },
+    onCombo(combo, mult) {
+      updateCombo(combo, mult);
+    },
     getStartBonuses() {
       return getStartBonuses();
     },
@@ -336,6 +354,7 @@ function ensureGame() {
       chargeBar.classList.remove('visible');
       btnPause?.classList.add('hidden');
       pauseScreen?.classList.add('hidden');
+      comboEl?.classList.add('hidden');
       gameoverScreen.classList.remove('hidden');
       finalScoreEl.textContent = score;
       newRecordEl.classList.toggle('hidden', !isNewRecord);
@@ -421,6 +440,7 @@ function beginGame() {
   updateEffects({});
   updateSynergy({});
   updateCoinHud(0);
+  updateCombo(0);
   // 어드벤처 전용 HUD(게이지/코인/효과) 표시 제어
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');
   updateHudRecords(selectedMode);

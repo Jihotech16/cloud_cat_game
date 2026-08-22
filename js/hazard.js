@@ -12,10 +12,14 @@ if (typeof Image !== 'undefined') {
 
 // 어드벤처 모드 장애물: 좌우로 떠다니는 가시 덩어리. 닿으면 위험.
 export class Hazard {
-  constructor(x, y, vx) {
+  // bob: { amp, speed } 를 주면 상하로 물결치듯 움직인다(예측 어려운 패턴).
+  constructor(x, y, vx, bob = null) {
     this.x = x;
     this.y = y;
+    this.baseY = y;
     this.vx = vx;
+    this.bob = bob;
+    this.bobPhase = Math.random() * Math.PI * 2;
     this.r = HAZARD_RADIUS;
     this.dead = false;
     this.phase = Math.random() * Math.PI * 2;
@@ -26,6 +30,11 @@ export class Hazard {
     const m = this.r;
     if (this.x < m) { this.x = m; this.vx = Math.abs(this.vx); }
     else if (this.x > worldWidth - m) { this.x = worldWidth - m; this.vx = -Math.abs(this.vx); }
+    // 상하 물결 이동(스폰 고도 기준으로 진동)
+    if (this.bob) {
+      this.bobPhase += this.bob.speed * timeScale;
+      this.y = this.baseY + Math.sin(this.bobPhase) * this.bob.amp;
+    }
   }
 
   draw(ctx, cameraY, frame) {

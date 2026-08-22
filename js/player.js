@@ -69,6 +69,8 @@ export class Player {
     this.chargeLevel = 0;
     this.jumpPeakVy = 0;
     this.wallBounced = false; // 이번 비행 중 벽에 반사됐는지
+    this.squash = 0;   // +면 착지(납작), -면 점프(길쭉). 매 프레임 0으로 감쇠.
+    this.trail = [];   // 빠르게 상승/하강 시 잔상용 최근 위치
   }
 
   get left() {
@@ -124,10 +126,30 @@ export class Player {
     this.chargeLevel = 0;
     this.jumpPeakVy = jumpForce;
     this.wallBounced = false; // 새 비행 시작 — 벽 반사 기록 초기화
+    this.squash = -0.32; // 점프 순간 길쭉하게
+    this.trail.length = 0;
   }
 
   land() {
     this.jumpPeakVy = 0;
+    this.squash = 0.42; // 착지 순간 납작하게
+    this.trail.length = 0;
+  }
+
+  // 매 프레임 호출: 스쿼시 감쇠 + 잔상 갱신.
+  tickAnim(timeScale = 1) {
+    // 0을 향해 부드럽게 복귀
+    this.squash *= Math.pow(0.72, timeScale);
+    if (Math.abs(this.squash) < 0.01) this.squash = 0;
+
+    // 공중에서 빠르게 움직일 때만 잔상 남김
+    const fast = !this.groundedCloud && Math.abs(this.vy) > 6;
+    if (fast) {
+      this.trail.unshift({ x: this.x, y: this.y });
+      if (this.trail.length > 4) this.trail.pop();
+    } else if (this.trail.length) {
+      this.trail.pop();
+    }
   }
 
   _getReadyFrame() {
@@ -154,11 +176,36 @@ export class Player {
   draw(ctx, cameraY) {
     const screenY = this.y - cameraY;
     const size = Player.DISPLAY_SIZE;
+    const faceRight = this.vx !== 0 ? this.vx > 0 : this.facing > 0;
+
+    // 잔상(모션 트레일): 최근 위치에 흐릿한 실루엣
+    if (this.trail.length && catImageReady) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      for (let i = this.trail.length - 1; i >= 0; i--) {
+        const t = this.trail[i];
+        const a = 0.16 * (1 - i / (this.trail.length + 1));
+        if (a <= 0.01) continue;
+        ctx.globalAlpha = a;
+        ctx.save();
+        ctx.translate(t.x, t.y - cameraY);
+        if (faceRight) ctx.scale(-1, 1);
+        ctx.drawImage(catImage, -size / 2, -size / 2, size, size);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(this.x, screenY);
-    const faceRight = this.vx !== 0 ? this.vx > 0 : this.facing > 0;
+    // 스쿼시&스트레치 — 발밑을 기준으로 눌리고 늘어난다.
+    if (this.squash !== 0) {
+      const footY = size / 2 - Player.FEET_INSET;
+      ctx.translate(0, footY);
+      ctx.scale(1 + this.squash * 0.45, 1 - this.squash * 0.45);
+      ctx.translate(0, -footY);
+    }
     if (faceRight) ctx.scale(-1, 1);
 
     const useReady = this.charging && this.groundedCloud && jumpReadyImageReady;
