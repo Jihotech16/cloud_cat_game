@@ -50,6 +50,11 @@ const shareLabel = document.getElementById('share-label');
 const btnMute = document.getElementById('btn-mute');
 const btnRewardCoins = document.getElementById('btn-reward-coins');
 const btnMenu = document.getElementById('btn-menu');
+const btnRevive = document.getElementById('btn-revive');
+const btnPause = document.getElementById('btn-pause');
+const pauseScreen = document.getElementById('pause-screen');
+const btnResume = document.getElementById('btn-resume');
+const btnPauseMenu = document.getElementById('btn-pause-menu');
 
 const gaugeFill = document.getElementById('gauge-fill');
 const effectsEl = document.getElementById('effects');
@@ -92,6 +97,7 @@ let lastScore = 0;
 let lastIsNewRecord = false;
 let lastEarned = 0; // 이번 판에 획득한 코인(보상형 광고 2배에 사용)
 let gameOverCount = 0; // 전면 광고 빈도 제어용
+let pendingInterstitial = false; // 게임오버 화면을 떠날 때 재생할 전면 광고 예약
 const INTERSTITIAL_EVERY = 3; // N판마다 전면 광고 1회
 
 function updateChargeBar(charge, holding) {
@@ -280,10 +286,12 @@ function ensureGame() {
     getStartBonuses() {
       return getStartBonuses();
     },
-    onGameOver(score, isNewRecord, earned = 0) {
+    onGameOver(score, isNewRecord, earned = 0, info = {}) {
       hud.classList.add('hidden');
       chargeBar.classList.add('hidden');
       chargeBar.classList.remove('visible');
+      btnPause?.classList.add('hidden');
+      pauseScreen?.classList.add('hidden');
       gameoverScreen.classList.remove('hidden');
       finalScoreEl.textContent = score;
       newRecordEl.classList.toggle('hidden', !isNewRecord);
@@ -297,15 +305,16 @@ function ensureGame() {
 
       // 보상형 광고: 코인을 번 어드벤처 모드에서만 '코인 2배' 버튼 노출(네이티브 한정)
       setupRewardCoinsButton(earned);
+      // 보상형 광고: 이어하기(판당 1회, 네이티브 한정)
+      setupReviveButton(info.canRevive);
 
       // 메뉴 화면이므로 배너 다시 노출
       showBanner();
 
-      // 전면 광고: N판마다 1회(첫 판 제외)
+      // 전면 광고는 지금 띄우지 않는다(이어하기 CTA를 가리지 않도록).
+      // N판마다 1회를 예약해두고, 사용자가 '다시 도전/메인'으로 나갈 때 재생한다.
       gameOverCount += 1;
-      if (gameOverCount % INTERSTITIAL_EVERY === 0) {
-        showInterstitial();
-      }
+      pendingInterstitial = gameOverCount % INTERSTITIAL_EVERY === 0;
     },
   });
 }
@@ -328,9 +337,12 @@ function startGame() {
   startScreen.classList.add('hidden');
   gameoverScreen.classList.add('hidden');
   rewardScreen.classList.add('hidden');
+  pauseScreen?.classList.add('hidden');
+  btnRevive?.classList.add('hidden');
   hud.classList.remove('hidden');
   chargeBar.classList.remove('hidden');
   chargeBar.classList.remove('visible');
+  btnPause?.classList.remove('hidden');
   chargeFill.style.width = '0%';
   newRecordEl.classList.add('hidden');
   scoreEl.textContent = '0';
@@ -374,12 +386,60 @@ async function onRewardCoinsClick() {
   }
 }
 
+// 광고 보고 이어하기 버튼 준비(판당 1회, 네이티브 한정).
+function setupReviveButton(canRevive) {
+  if (!btnRevive) return;
+  const eligible = adsAvailable() && !!canRevive;
+  btnRevive.classList.toggle('hidden', !eligible);
+  if (!eligible) return;
+  btnRevive.disabled = false;
+  btnRevive.textContent = '🎬 광고 보고 이어하기';
+}
+
+async function onReviveClick() {
+  if (!btnRevive || btnRevive.disabled || !game) return;
+  btnRevive.disabled = true;
+  btnRevive.textContent = '광고 불러오는 중…';
+  const rewarded = await showRewardedAd();
+  if (rewarded && game.reviveByAd()) {
+    // 다시 플레이 화면으로 전환
+    gameoverScreen.classList.add('hidden');
+    btnRevive.classList.add('hidden');
+    hud.classList.remove('hidden');
+    chargeBar.classList.remove('hidden');
+    btnPause?.classList.remove('hidden');
+    hideBanner();
+    return;
+  }
+  // 시청 취소/실패 → 다시 시도 가능
+  btnRevive.disabled = false;
+  btnRevive.textContent = '🎬 광고 보고 이어하기';
+}
+
+// 예약된 전면 광고가 있으면 재생(게임오버 화면을 떠날 때 1회).
+async function maybeShowInterstitial() {
+  if (!pendingInterstitial) return;
+  pendingInterstitial = false;
+  await showInterstitial();
+}
+
+// 일시정지 열기/닫기
+function openPause() {
+  if (game?.pause()) pauseScreen?.classList.remove('hidden');
+}
+function closePause() {
+  pauseScreen?.classList.add('hidden');
+  game?.resume();
+}
+
 // 게임오버 → 메인 메뉴(시작 화면)로
 function goToMenu() {
   gameoverScreen.classList.add('hidden');
   rewardScreen.classList.add('hidden');
+  pauseScreen?.classList.add('hidden');
   hud.classList.add('hidden');
   chargeBar.classList.add('hidden');
+  btnPause?.classList.add('hidden');
   refreshMenuRecords();
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
   startScreen.classList.remove('hidden');
@@ -392,9 +452,39 @@ window.addEventListener('orientationchange', () => {
 });
 
 btnStart.addEventListener('click', startGame);
-btnRetry.addEventListener('click', startGame);
-btnMenu?.addEventListener('click', goToMenu);
+btnRetry.addEventListener('click', async () => {
+  await maybeShowInterstitial(); // 예약된 전면 광고 먼저 재생
+  startGame();
+});
+btnMenu?.addEventListener('click', async () => {
+  await maybeShowInterstitial();
+  goToMenu();
+});
 btnRewardCoins?.addEventListener('click', onRewardCoinsClick);
+btnRevive?.addEventListener('click', onReviveClick);
+
+// 일시정지 버튼: 캔버스 위에 떠 있으므로 터치가 게임(차지/점프)으로
+// 전파되지 않도록 막는다. 막지 않으면 버튼을 눌러도 점프가 발동한다.
+['touchstart', 'touchend', 'touchcancel'].forEach((ev) => {
+  btnPause?.addEventListener(ev, (e) => e.stopPropagation(), { passive: false });
+});
+btnPause?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  openPause();
+});
+btnResume?.addEventListener('click', closePause);
+btnPauseMenu?.addEventListener('click', () => {
+  pauseScreen?.classList.add('hidden');
+  game?.abandonRun();
+  goToMenu();
+});
+
+// 앱이 백그라운드로 가면(전화 수신·홈 버튼) 자동 일시정지 → 복귀 시 이어하기.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && game?.pause()) {
+    pauseScreen?.classList.remove('hidden');
+  }
+});
 
 modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
