@@ -5,6 +5,12 @@ import { Hazard } from './hazard.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
 import {
+  hapticLight,
+  hapticMedium,
+  hapticHeavy,
+  hapticSuccess,
+} from './haptics.js';
+import {
   playJumpSound,
   playCollectSound,
   playRainbowSound,
@@ -141,6 +147,14 @@ export class Game {
     this.taken = new Set();
     this.synergy = this._emptySynergy();
 
+    // 화면 흔들림(임팩트 연출)
+    this.shakeTime = 0;
+    this.shakeMag = 0;
+    // 이번 판에 메타 저장소로 이미 적립한 코인(광고 이어하기 시 중복 적립 방지)
+    this.coinsBanked = 0;
+    // 광고 이어하기(리바이브)는 판당 1회
+    this.usedAdRevive = false;
+
     this._bindInput();
     this._resize();
     window.addEventListener('resize', () => this._resize());
@@ -246,8 +260,10 @@ export class Game {
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
       playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
+      hapticLight();
       if (cloudBoost > 1) {
         playBoostSound();
+        this._addShake(3);
         this._spawnParticles(this.player.x, this.player.bottom, '#7fdcff', 8);
       }
       this.charge = 0;
@@ -269,6 +285,7 @@ export class Game {
       }
       this.player.bounce(JUMP_FORCE * upgrade * DOUBLE_JUMP_FORCE_MULT);
       playJumpSound();
+      hapticLight();
       this._spawnParticles(this.player.x, this.player.y + this.player.height * 0.3, '#dff3ff', 8);
     }
   }
@@ -354,6 +371,8 @@ export class Game {
       this.player.bounce(BOUNCE_FORCE);
       this.airJumpsLeft = this.doubleJumpLevel;
       playBounceSound();
+      hapticMedium();
+      this._addShake(4);
       this._spawnParticles(this.player.x, this.player.bottom, '#ff7ec2', 10);
       this.charge = 0;
       this.callbacks.onCharge?.(0, this.input.holding);
@@ -442,6 +461,10 @@ export class Game {
     this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
     this.taken = new Set();
     this.synergy = this._emptySynergy();
+    this.shakeTime = 0;
+    this.shakeMag = 0;
+    this.coinsBanked = 0;
+    this.usedAdRevive = false;
 
     // 어드벤처 모드에서만 상점 영구 업그레이드 적용
     if (this.mode === 'adventure') {
@@ -593,8 +616,11 @@ export class Game {
       this.player.groundedCloud = null;
       this.callbacks.onEffects?.(this.getEffects());
       playShieldSound();
+      hapticMedium();
+      this._addShake(6);
     } else {
       playHazardSound();
+      hapticHeavy();
       this._gameOver();
     }
   }
@@ -725,6 +751,10 @@ export class Game {
     this._updateHazards();
     if (this.state !== 'playing' && this.state !== 'ready') return; // 장애물로 게임오버
     this._updateParticles();
+    if (this.shakeTime > 0) {
+      this.shakeTime -= 1;
+      if (this.shakeTime === 0) this.shakeMag = 0;
+    }
     this._tickEffects();
     this._updateSynergyTimers();
     this._updateCamera();
@@ -794,6 +824,7 @@ export class Game {
     if (rainbow) {
       this.gauge = this.gaugeNeeded;
       playRainbowSound();
+      hapticSuccess();
       this._spawnParticles(orb.x, orb.y, 'rainbow', 18);
     } else {
       let fill = ORB_GAUGE_FILL * (1 + this.orbValueLevel * ORB_VALUE_STEP);
@@ -810,6 +841,12 @@ export class Game {
     if (this.gauge >= this.gaugeNeeded) {
       this._triggerReward();
     }
+  }
+
+  // 화면 흔들림 추가(더 센 요청이 오면 덮어쓴다).
+  _addShake(mag, frames = 12) {
+    this.shakeMag = Math.max(this.shakeMag, mag);
+    this.shakeTime = Math.max(this.shakeTime, frames);
   }
 
   _spawnParticles(x, y, color, count) {
@@ -944,7 +981,7 @@ export class Game {
       case 'orbValue': this.orbValueLevel += 1; break; // 영구 누적
       case 'charge': this.chargeRateLevel += 1; break; // 영구 누적
       case 'chargeCap': this.chargeCapLevel += 1; break; // 영구 누적(점프 파워 최대치 ↑)
-      case 'rocket': this.effects.rocket = ROCKET_DURATION; playRocketSound(); break;
+      case 'rocket': this.effects.rocket = ROCKET_DURATION; playRocketSound(); hapticSuccess(); this._addShake(5, 20); break;
       case 'coinBonus':
         this.coins += COIN_REWARD_AMOUNT;
         this.callbacks.onCoins?.(this.coins);
@@ -963,6 +1000,7 @@ export class Game {
     }
 
     playRewardSound();
+    hapticMedium();
     // 레벨이 오를수록 다음 보상에 필요한 게이지를 키운다.
     this.rewardCount += 1;
     this.gaugeNeeded = GAUGE_MAX * (1 + this.rewardCount * GAUGE_LEVEL_STEP);
@@ -1020,10 +1058,66 @@ export class Game {
   _gameOver() {
     this.state = 'gameover';
     playGameOverSound();
+    hapticHeavy();
+    // 이번 판 코인 중 아직 적립하지 않은 만큼만 메타 저장소에 누적한다.
+    // (광고 이어하기로 판이 이어지면 _gameOver 가 두 번 불리므로 중복 적립 방지)
     const earned = this.mode === 'adventure' ? this.coins : 0;
-    const totalCoins = earned > 0 ? addCoins(earned) : 0; // 메타 저장에 누적
+    const delta = Math.max(0, earned - this.coinsBanked);
+    if (delta > 0) {
+      addCoins(delta);
+      this.coinsBanked = earned;
+    }
     const isNewRecord = saveBestScore(this.mode, this.score);
-    this.callbacks.onGameOver?.(this.score, isNewRecord, earned, totalCoins);
+    // 광고 이어하기: 판당 1회만 제공
+    const canRevive = !this.usedAdRevive;
+    this.callbacks.onGameOver?.(this.score, isNewRecord, earned, { canRevive });
+  }
+
+  // 광고 시청 성공 후 그 자리에서 부활해 이어서 플레이한다(판당 1회).
+  reviveByAd() {
+    if (this.usedAdRevive || this.state !== 'gameover') return false;
+    this.usedAdRevive = true;
+    this.hazards = []; // 부활 직후 즉사 방지: 주변 가시 제거
+    this._revive(); // 화면 중앙으로 끌어올리고 받쳐줄 구름 생성
+    this.effects.feather = FEATHER_DURATION; // 잠깐 부드럽게 하강 → 안전 착지 여유
+    this.callbacks.onEffects?.(this.getEffects());
+    this.shakeTime = 0;
+    this.state = 'playing';
+    if (this._loopId) cancelAnimationFrame(this._loopId);
+    this._loop();
+    return true;
+  }
+
+  // 일시정지 / 재개 (플레이 중에만)
+  pause() {
+    if (this.state !== 'playing') return false;
+    this.state = 'paused';
+    if (this._loopId) cancelAnimationFrame(this._loopId);
+    this.input.holding = false; // 재개 시 의도치 않은 차지 방지
+    this.callbacks.onCharge?.(this.charge, false);
+    return true;
+  }
+
+  resume() {
+    if (this.state !== 'paused') return false;
+    this.state = 'playing';
+    if (this._loopId) cancelAnimationFrame(this._loopId);
+    this._loop();
+    return true;
+  }
+
+  // 일시정지 중 메뉴로 나갈 때: 점수·코인을 저장하고 판을 종료한다(진행 손실 방지).
+  abandonRun() {
+    if (this.state !== 'paused' && this.state !== 'playing') return;
+    if (this._loopId) cancelAnimationFrame(this._loopId);
+    const earned = this.mode === 'adventure' ? this.coins : 0;
+    const delta = Math.max(0, earned - this.coinsBanked);
+    if (delta > 0) {
+      addCoins(delta);
+      this.coinsBanked = earned;
+    }
+    saveBestScore(this.mode, this.score);
+    this.state = 'gameover';
   }
 
   // 고도에 따라 하늘 색을 낮→노을→황혼→밤→우주로 보간한다.
@@ -1284,7 +1378,19 @@ export class Game {
   }
 
   _draw() {
+    // 배경은 흔들지 않는다(가장자리 빈 틈 방지). 월드 레이어만 흔든다.
     this._drawBackground();
+
+    const ctx = this.ctx;
+    let shaking = false;
+    if (this.shakeTime > 0 && this.shakeMag > 0) {
+      const m = this.shakeMag * Math.min(1, this.shakeTime / 12);
+      const ox = (Math.random() * 2 - 1) * m;
+      const oy = (Math.random() * 2 - 1) * m;
+      ctx.save();
+      ctx.translate(ox, oy);
+      shaking = true;
+    }
 
     const cloudScale = this._cloudScale();
     const altitude = Math.min(this.score / 800, 1);
@@ -1308,6 +1414,8 @@ export class Game {
     if (this.shield) {
       this._drawShield();
     }
+
+    if (shaking) ctx.restore();
 
     if (this.state === 'ready') {
       this._drawReadyHint();
