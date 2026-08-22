@@ -3,7 +3,7 @@ import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
-import { playClickSound } from './audio.js';
+import { playClickSound, setSfxMuted } from './audio.js';
 import { startBgm, toggleBgm, isBgmMuted } from './bgm.js';
 import {
   initAds,
@@ -76,6 +76,10 @@ const btnShopClose = document.getElementById('btn-shop-close');
 
 const modeButtons = document.querySelectorAll('.mode-btn');
 const modeHint = document.getElementById('mode-hint');
+
+const tutorialScreen = document.getElementById('tutorial-screen');
+const btnTutorialStart = document.getElementById('btn-tutorial-start');
+const ADV_TUT_KEY = 'cloudCat_advTutorialSeen';
 
 const EFFECT_BADGES = [
   ['jumpLevel', (n) => `<img class="badge-ico" src="assets/rocket.png" alt="">×${n}`],
@@ -303,10 +307,11 @@ function ensureGame() {
       updateHudRecords(game.mode);
       refreshMenuRecords();
 
-      // 보상형 광고: 코인을 번 어드벤처 모드에서만 '코인 2배' 버튼 노출(네이티브 한정)
-      setupRewardCoinsButton(earned);
       // 보상형 광고: 이어하기(판당 1회, 네이티브 한정)
+      const reviveEligible = adsAvailable() && !!info.canRevive;
       setupReviveButton(info.canRevive);
+      // 코인 2배: 이어하기 버튼이 뜨면 숨겨서 보상형 버튼 2개 동시노출을 막는다.
+      setupRewardCoinsButton(earned, reviveEligible);
 
       // 메뉴 화면이므로 배너 다시 노출
       showBanner();
@@ -332,9 +337,35 @@ function updateLayout() {
   }
 }
 
+function isAdvTutorialSeen() {
+  try {
+    return localStorage.getItem(ADV_TUT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markAdvTutorialSeen() {
+  try {
+    localStorage.setItem(ADV_TUT_KEY, '1');
+  } catch {
+    /* noop */
+  }
+}
+
+// 어드벤처 첫 진입이면 튜토리얼을 먼저 보여주고, 아니면 바로 시작한다.
 function startGame() {
+  if (selectedMode === 'adventure' && !isAdvTutorialSeen()) {
+    tutorialScreen?.classList.remove('hidden');
+    return;
+  }
+  beginGame();
+}
+
+function beginGame() {
   ensureGame();
   startScreen.classList.add('hidden');
+  tutorialScreen?.classList.add('hidden');
   gameoverScreen.classList.add('hidden');
   rewardScreen.classList.add('hidden');
   pauseScreen?.classList.add('hidden');
@@ -359,9 +390,10 @@ function startGame() {
 
 // 보상형 광고로 코인 2배 받기 버튼 준비.
 // 코인을 번 어드벤처 모드 + 네이티브(광고 가능) 환경에서만 노출한다.
-function setupRewardCoinsButton(earned) {
+function setupRewardCoinsButton(earned, suppress = false) {
   if (!btnRewardCoins) return;
-  const eligible = adsAvailable() && earned > 0;
+  // suppress=true(이어하기 버튼 노출 중)면 코인2배 버튼은 숨긴다.
+  const eligible = adsAvailable() && earned > 0 && !suppress;
   btnRewardCoins.classList.toggle('hidden', !eligible);
   if (!eligible) return;
   btnRewardCoins.disabled = false;
@@ -452,6 +484,11 @@ window.addEventListener('orientationchange', () => {
 });
 
 btnStart.addEventListener('click', startGame);
+btnTutorialStart?.addEventListener('click', () => {
+  markAdvTutorialSeen();
+  tutorialScreen?.classList.add('hidden');
+  beginGame();
+});
 btnRetry.addEventListener('click', async () => {
   await maybeShowInterstitial(); // 예약된 전면 광고 먼저 재생
   startGame();
@@ -528,10 +565,11 @@ window.addEventListener('pointerdown', () => {
 }, { once: true });
 
 function updateMuteBtn() {
-  if (btnMute) btnMute.textContent = isBgmMuted() ? '🔇 배경음 꺼짐' : '🔊 배경음 켜짐';
+  if (btnMute) btnMute.textContent = isBgmMuted() ? '🔇 사운드 꺼짐' : '🔊 사운드 켜짐';
 }
 btnMute?.addEventListener('click', () => {
   toggleBgm();
+  setSfxMuted(isBgmMuted()); // 효과음도 함께 on/off
   updateMuteBtn();
 });
 
@@ -540,6 +578,7 @@ async function boot() {
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
+  setSfxMuted(isBgmMuted()); // 저장된 음소거 설정을 효과음에도 반영
   updateMuteBtn();
   setMode(selectedMode);
   await initScores();

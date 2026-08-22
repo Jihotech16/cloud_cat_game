@@ -147,9 +147,13 @@ export class Game {
     this.taken = new Set();
     this.synergy = this._emptySynergy();
 
-    // 화면 흔들림(임팩트 연출)
+    // 화면 흔들림(임팩트 연출). '동작 줄이기'가 켜져 있으면 흔들지 않는다.
     this.shakeTime = 0;
     this.shakeMag = 0;
+    this.reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.addEventListener?.('change', (e) => {
+      this.reduceMotion = e.matches;
+    });
     // 이번 판에 메타 저장소로 이미 적립한 코인(광고 이어하기 시 중복 적립 방지)
     this.coinsBanked = 0;
     // 광고 이어하기(리바이브)는 판당 1회
@@ -843,8 +847,9 @@ export class Game {
     }
   }
 
-  // 화면 흔들림 추가(더 센 요청이 오면 덮어쓴다).
+  // 화면 흔들림 추가(더 센 요청이 오면 덮어쓴다). '동작 줄이기' 시 무시.
   _addShake(mag, frames = 12) {
+    if (this.reduceMotion) return;
     this.shakeMag = Math.max(this.shakeMag, mag);
     this.shakeTime = Math.max(this.shakeTime, frames);
   }

@@ -923,3 +923,52 @@ img.reward-icon {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
+
+/* 손쉬운 사용 > 동작 줄이기: 장식용 반복 애니메이션을 최소화한다.
+   (화면 흔들림은 game.js에서 별도로 비활성화) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* 어드벤처 튜토리얼 안내 리스트 */
+.tutorial-list {
+  list-style: none;
+  margin: 14px 0 6px;
+  padding: 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tutorial-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.tutorial-list strong {
+  font-weight: 700;
+}
+
+.tut-ico {
+  flex: 0 0 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.tut-ico .cart-ico {
+  width: 24px;
+  height: 24px;
+}

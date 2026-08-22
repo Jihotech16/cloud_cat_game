@@ -3,6 +3,8 @@
 
 let audioCtx = null;
 let master = null;
+let sfxMuted = false;
+const SFX_VOLUME = 0.9;
 
 function getCtx() {
   if (!audioCtx) {
@@ -10,11 +12,17 @@ function getCtx() {
     if (!AC) return null;
     audioCtx = new AC();
     master = audioCtx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = sfxMuted ? 0 : SFX_VOLUME;
     master.connect(audioCtx.destination);
   }
   if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
   return audioCtx;
+}
+
+// 효과음 음소거(전체 음소거에 연동). master 게인을 0으로 낮춘다.
+export function setSfxMuted(muted) {
+  sfxMuted = !!muted;
+  if (master) master.gain.value = sfxMuted ? 0 : SFX_VOLUME;
 }
 
 // 단일 보이스: 주파수 글라이드 + 부드러운 엔벨로프 + (선택)로우패스.
