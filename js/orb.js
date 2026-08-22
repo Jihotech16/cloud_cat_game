@@ -220,11 +220,12 @@ export const SYNERGIES = {
 
 // 시그니처 페어: 특정 두 보상을 모두 가지면 발동하는 숨은 조합.
 // ids 둘을 모두 taken 하면 effect 가 켜진다. HUD 에 '거의 완성' 힌트로 노출한다.
+// id 는 i18n 키(pair.<id>.label/.desc)에 대응한다.
 export const SIGNATURE_PAIRS = [
-  { ids: ['magnet', 'orbValue'], emoji: '⛏️', label: '자원 채굴', desc: '오브가 코인을 2배로 줘요' },
-  { ids: ['scoreMul', 'rocket'], emoji: '☄️', label: '유성 궤도', desc: '로켓 중 점수가 추가로 2배!' },
-  { ids: ['jump', 'doubleJump'], emoji: '🤸', label: '공중 곡예', desc: '공중 점프가 지상 점프만큼 강해져요' },
-  { ids: ['chargeCap', 'charge'], emoji: '🔌', label: '과충전', desc: '완충 시 점프력 +20%' },
+  { id: 'mine', ids: ['magnet', 'orbValue'], emoji: '⛏️' },
+  { id: 'meteor', ids: ['scoreMul', 'rocket'], emoji: '☄️' },
+  { id: 'acro', ids: ['jump', 'doubleJump'], emoji: '🤸' },
+  { id: 'overcharge', ids: ['chargeCap', 'charge'], emoji: '🔌' },
 ];
 
 // 등급 가중치(고도 진행도 반영)로 중복 없이 n개의 보상을 고른다.

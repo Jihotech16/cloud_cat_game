@@ -14,7 +14,8 @@ import {
   showRewardedAd,
 } from './ads.js';
 import { addCoins } from './meta.js';
-import { TIERS, TAGS, SYNERGIES } from './orb.js';
+import { TIERS, TAGS } from './orb.js';
+import { t, applyStaticI18n, getLang, setLang, LANGS } from './i18n.js';
 import {
   getCoins,
   getStartBonuses,
@@ -92,19 +93,14 @@ const EFFECT_BADGES = [
   ['chargeRateLevel', null, (n) => `⚡×${n}`],
 ];
 
-// 전설 보유 badge [플래그키, 이모지, 이름]
+// 전설 보유 badge [플래그키, 이모지, i18n 보상 id]
 const LEGEND_BADGES = [
-  ['infiniteMagnet', '🌀', '무한 자석'],
-  ['hazardBreaker', '💥', '가시 파괴자'],
-  ['alwaysShockwave', '🌊', '파동 마스터'],
-  ['autoRocket', '🚀', '로켓 엔진'],
-  ['goldFeather', '🕊️', '황금 깃털'],
+  ['infiniteMagnet', '🌀', 'legMagnet'],
+  ['hazardBreaker', '💥', 'legHazard'],
+  ['alwaysShockwave', '🌊', 'legShock'],
+  ['autoRocket', '🚀', 'legRocket'],
+  ['goldFeather', '🕊️', 'legFeather'],
 ];
-
-const MODE_HINTS = {
-  classic: '순수 점프 실력에 도전하는 기본 모드',
-  adventure: '오브를 모아 보상을 받고 상점을 이용하는 모드',
-};
 
 let game = null;
 let selectedMode = 'classic';
@@ -140,7 +136,7 @@ function setMode(mode) {
   modeButtons.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
-  if (modeHint) modeHint.textContent = MODE_HINTS[mode] ?? '';
+  if (modeHint) modeHint.textContent = t(`mode.${mode}`);
   // 어드벤처 전용 UI(상점)는 해당 모드에서만 노출
   btnShop?.classList.toggle('hidden', mode !== 'adventure');
   refreshMenuRecords();
@@ -169,8 +165,8 @@ function updateEffects(effects = {}) {
   // 전설 보유 표시(전용 강조 badge)
   const legends = effects.legends || {};
   const legendMarks = [];
-  for (const [flag, emoji, name] of LEGEND_BADGES) {
-    if (legends[flag]) legendMarks.push(`<span class="effect-badge legend" title="${name}">${emoji}</span>`);
+  for (const [flag, emoji, id] of LEGEND_BADGES) {
+    if (legends[flag]) legendMarks.push(`<span class="effect-badge legend" title="${t(`reward.${id}.label`)}">${emoji}</span>`);
   }
   effectsEl.innerHTML = badges
     .map((b) => `<span class="effect-badge">${b}</span>`)
@@ -188,7 +184,7 @@ function updateCombo(combo = 0, mult = 1) {
   comboEl.classList.toggle('hidden', !show);
   if (!show) return;
   const pct = Math.round((mult - 1) * 100);
-  comboEl.innerHTML = `<span class="combo-x">🔥 ${combo} 콤보</span><span class="combo-mult">점수 +${pct}%</span>`;
+  comboEl.innerHTML = `<span class="combo-x">${t('combo.count', { n: combo })}</span><span class="combo-mult">${t('combo.scoreBonus', { pct })}</span>`;
   // 재트리거 애니메이션(숫자 오를 때 살짝 튐)
   comboEl.classList.remove('bump');
   void comboEl.offsetWidth;
@@ -203,8 +199,8 @@ function updateSynergy(state = {}) {
     if (!s || s.count <= 0) continue;
     const meta = TAGS[tag];
     const stars = s.tier >= 4 ? '★★★' : s.tier >= 3 ? '★★' : s.tier >= 2 ? '★' : '';
-    const cur = s.tier > 0 ? SYNERGIES[tag]?.[s.tier] ?? '' : `${meta.label} 세트`;
-    const nextTxt = s.next ? ` · 다음 ${s.next}개` : '';
+    const cur = s.tier > 0 ? t(`syn.${tag}.${s.tier}`) : t('syn.set', { tag: t(`tag.${tag}`) });
+    const nextTxt = s.next ? ` · ${t('syn.next', { n: s.next })}` : '';
     badges.push(
       `<span class="syn-badge${s.tier > 0 ? ' active' : ''}" style="--syn:${meta.color}" title="${cur}${nextTxt}">${meta.emoji}${s.count}${stars}</span>`,
     );
@@ -213,7 +209,7 @@ function updateSynergy(state = {}) {
   for (const p of state.pairs || []) {
     const active = p.have >= 2;
     badges.push(
-      `<span class="pair-badge${active ? ' active' : ''}" title="${p.label}: ${p.desc}">${p.emoji}${active ? '' : '…'}</span>`,
+      `<span class="pair-badge${active ? ' active' : ''}" title="${t(`pair.${p.id}.label`)}: ${t(`pair.${p.id}.desc`)}">${p.emoji}${active ? '' : '…'}</span>`,
     );
   }
   synergyEl.innerHTML = badges.join('');
@@ -239,11 +235,11 @@ function renderShop() {
     row.innerHTML = `
       ${iconHtml}
       <span class="shop-info">
-        <span class="shop-label">${up.label} <em>Lv.${level}/${up.max}</em></span>
-        <span class="shop-desc">${up.desc}</span>
+        <span class="shop-label">${t(`upgrade.${up.id}.label`)} <em>Lv.${level}/${up.max}</em></span>
+        <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
       </span>
       <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? 'MAX' : `<img class="coin-ico" src="assets/coin.png" alt=""> ${cost.toLocaleString()}`}
+        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin.png" alt=""> ${cost.toLocaleString()}`}
       </button>
     `;
     if (!maxed && affordable) {
@@ -272,30 +268,31 @@ function showRewardChoices(choices, info = {}) {
     const card = document.createElement('button');
     card.className = `reward-card reward-card--${reward.tier}`;
     if (reward.tradeoff) card.classList.add('reward-card--tradeoff');
-    const tierLabel = TIERS[reward.tier]?.label ?? '';
+    const tierLabel = t(`tier.${reward.tier}`);
     const levelChip = reward.level != null
       ? `<span class="reward-level">Lv.${reward.level}→${reward.level + 1}</span>`
       : '';
     // 진화 표시: 이번에 고르면 진화 / 이미 진화됨
+    const evoName = t(`reward.${reward.id}.evo`);
     const evoChip = reward.willEvolve
-      ? `<span class="reward-evo">✨ ${reward.evolveName} 진화!</span>`
+      ? `<span class="reward-evo">${t('rewardCard.evolveNow', { name: evoName })}</span>`
       : reward.evolved
-        ? `<span class="reward-evo evolved">★ ${reward.evolveName}</span>`
+        ? `<span class="reward-evo evolved">${t('rewardCard.evolved', { name: evoName })}</span>`
         : '';
     // 트레이드오프 대가 표시
     const downside = reward.downside
-      ? `<span class="reward-downside">⚠ ${reward.downside}</span>`
+      ? `<span class="reward-downside">${t('rewardCard.downside', { text: t(`reward.${reward.id}.downside`) })}</span>`
       : '';
     const tagChips = (reward.tags ?? [])
-      .map((t) => `<span class="reward-tag" style="--syn:${TAGS[t]?.color}">${TAGS[t]?.emoji} ${TAGS[t]?.label}</span>`)
+      .map((tg) => `<span class="reward-tag" style="--syn:${TAGS[tg]?.color}">${TAGS[tg]?.emoji} ${t(`tag.${tg}`)}</span>`)
       .join('');
     const iconHtml = reward.icon.endsWith('.png')
       ? `<img class="reward-icon" src="${reward.icon}" alt="">`
       : `<span class="reward-icon">${reward.icon}</span>`;
     card.innerHTML = `
       ${iconHtml}
-      <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
-      <span class="reward-desc">${reward.desc} ${tagChips}</span>
+      <span class="reward-label">${t(`reward.${reward.id}.label`)}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
+      <span class="reward-desc">${t(`reward.${reward.id}.desc`)} ${tagChips}</span>
       ${downside}${evoChip}
     `;
     card.addEventListener('click', () => {
@@ -307,11 +304,11 @@ function showRewardChoices(choices, info = {}) {
 
   if (btnReroll) {
     const cost = info.rerollCost ?? 0;
-    btnReroll.innerHTML = `🔄 다시 뽑기 (<img class="coin-ico" src="assets/coin.png" alt=""> ${cost})`;
+    btnReroll.innerHTML = `${t('reward.reroll')} (<img class="coin-ico" src="assets/coin.png" alt=""> ${cost})`;
     btnReroll.disabled = (info.coins ?? 0) < cost;
   }
   if (btnSkip) {
-    btnSkip.innerHTML = `⏭️ 건너뛰기 (+<img class="coin-ico" src="assets/coin.png" alt=""> ${info.skipReward ?? 0})`;
+    btnSkip.innerHTML = `${t('reward.skip')} (+<img class="coin-ico" src="assets/coin.png" alt=""> ${info.skipReward ?? 0})`;
   }
 
   rewardScreen.classList.remove('hidden');
@@ -362,7 +359,7 @@ function ensureGame() {
       lastScore = score;
       lastIsNewRecord = isNewRecord;
       lastEarned = earned;
-      if (shareLabel) shareLabel.textContent = '결과 공유하기';
+      if (shareLabel) shareLabel.textContent = t('gameover.share');
       updateHudRecords(game.mode);
       refreshMenuRecords();
 
@@ -457,24 +454,24 @@ function setupRewardCoinsButton(earned, suppress = false) {
   btnRewardCoins.classList.toggle('hidden', !eligible);
   if (!eligible) return;
   btnRewardCoins.disabled = false;
-  btnRewardCoins.textContent = '🎬 광고 보고 코인 2배';
+  btnRewardCoins.textContent = t('ad.doubleCoins');
 }
 
 async function onRewardCoinsClick() {
   if (!btnRewardCoins || btnRewardCoins.disabled || lastEarned <= 0) return;
   btnRewardCoins.disabled = true;
-  btnRewardCoins.textContent = '광고 불러오는 중…';
+  btnRewardCoins.textContent = t('ad.loading');
   const rewarded = await showRewardedAd();
   if (rewarded) {
     addCoins(lastEarned); // 같은 양만큼 한 번 더 지급 → 2배
     gameoverCoinsEl.textContent = lastEarned * 2;
     if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
-    btnRewardCoins.textContent = '✅ 코인 2배 획득!';
+    btnRewardCoins.textContent = t('ad.doubled');
     lastEarned = 0; // 중복 수령 방지
   } else {
     // 시청 취소/실패 → 다시 시도 가능
     btnRewardCoins.disabled = false;
-    btnRewardCoins.textContent = '🎬 광고 보고 코인 2배';
+    btnRewardCoins.textContent = t('ad.doubleCoins');
   }
 }
 
@@ -485,13 +482,13 @@ function setupReviveButton(canRevive) {
   btnRevive.classList.toggle('hidden', !eligible);
   if (!eligible) return;
   btnRevive.disabled = false;
-  btnRevive.textContent = '🎬 광고 보고 이어하기';
+  btnRevive.textContent = t('ad.revive');
 }
 
 async function onReviveClick() {
   if (!btnRevive || btnRevive.disabled || !game) return;
   btnRevive.disabled = true;
-  btnRevive.textContent = '광고 불러오는 중…';
+  btnRevive.textContent = t('ad.loading');
   const rewarded = await showRewardedAd();
   if (rewarded && game.reviveByAd()) {
     // 다시 플레이 화면으로 전환
@@ -505,7 +502,7 @@ async function onReviveClick() {
   }
   // 시청 취소/실패 → 다시 시도 가능
   btnRevive.disabled = false;
-  btnRevive.textContent = '🎬 광고 보고 이어하기';
+  btnRevive.textContent = t('ad.revive');
 }
 
 // 예약된 전면 광고가 있으면 재생(게임오버 화면을 떠날 때 1회).
@@ -601,9 +598,9 @@ btnShare.addEventListener('click', async () => {
   btnShare.disabled = true;
   const result = await shareResult(lastScore, lastIsNewRecord);
   if (result === 'copied' && shareLabel) {
-    shareLabel.textContent = '✅ 결과를 복사했어요!';
+    shareLabel.textContent = t('gameover.shareCopied');
     setTimeout(() => {
-      shareLabel.textContent = '결과 공유하기';
+      shareLabel.textContent = t('gameover.share');
     }, 2000);
   }
   btnShare.disabled = false;
@@ -625,7 +622,7 @@ window.addEventListener('pointerdown', () => {
 }, { once: true });
 
 function updateMuteBtn() {
-  if (btnMute) btnMute.textContent = isBgmMuted() ? '🔇 사운드 꺼짐' : '🔊 사운드 켜짐';
+  if (btnMute) btnMute.textContent = isBgmMuted() ? t('sound.off') : t('sound.on');
 }
 btnMute?.addEventListener('click', () => {
   toggleBgm();
@@ -633,7 +630,31 @@ btnMute?.addEventListener('click', () => {
   updateMuteBtn();
 });
 
+// 언어 선택기: 버튼을 만들고, 누르면 언어 전환 + 화면 문구 갱신.
+function renderLangSelector() {
+  const el = document.getElementById('lang-select');
+  if (!el) return;
+  el.innerHTML = '';
+  for (const { code, label } of LANGS) {
+    const b = document.createElement('button');
+    b.className = 'lang-btn' + (code === getLang() ? ' active' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => {
+      setLang(code);
+      applyStaticI18n();
+      updateMuteBtn();
+      setMode(selectedMode); // 모드 힌트 갱신
+      refreshMenuRecords();
+      renderLangSelector();
+    });
+    el.appendChild(b);
+  }
+}
+
 async function boot() {
+  document.documentElement.lang = getLang();
+  applyStaticI18n();
+  renderLangSelector();
   initNative();
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출

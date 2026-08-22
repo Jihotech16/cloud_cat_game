@@ -1,13 +1,13 @@
 // 게임 결과 공유.
 // 우선순위: Capacitor Share(네이티브 앱) → Web Share API(모바일 웹) → 클립보드 복사.
 
+import { t } from './i18n.js';
+
 const GAME_URL = 'https://jihotech16.github.io/cloud_cat_game/';
 
 function buildMessage(score, isBest) {
-  const head = isBest
-    ? `☁️ Poing: Cloud Jump 신기록! ${score}m 등반!`
-    : `☁️ Poing: Cloud Jump에서 ${score}m 등반!`;
-  return `${head}\n나보다 높이 올라갈 수 있어? 도전해봐!`;
+  const head = isBest ? t('share.best', { n: score }) : t('share.normal', { n: score });
+  return `${head}\n${t('share.cta')}`;
 }
 
 // 결과를 공유한다. 성공/공유시 true, 클립보드 복사로 대체했으면 'copied', 실패 false.
@@ -19,7 +19,7 @@ export async function shareResult(score, isBest = false) {
   const cap = window.Capacitor;
   if (cap?.isNativePlatform?.() && cap.Plugins?.Share) {
     try {
-      await cap.Plugins.Share.share({ title, text, url: GAME_URL, dialogTitle: '결과 공유' });
+      await cap.Plugins.Share.share({ title, text, url: GAME_URL, dialogTitle: t('gameover.share') });
       return true;
     } catch (err) {
       if (isAbort(err)) return false; // 사용자가 취소
