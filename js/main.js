@@ -81,13 +81,23 @@ const tutorialScreen = document.getElementById('tutorial-screen');
 const btnTutorialStart = document.getElementById('btn-tutorial-start');
 const ADV_TUT_KEY = 'cloudCat_advTutorialSeen';
 
+// [상태키, 진화키(없으면 null), 렌더]
 const EFFECT_BADGES = [
-  ['jumpLevel', (n) => `<img class="badge-ico" src="assets/rocket.png" alt="">×${n}`],
-  ['doubleJumpLevel', (n) => `🪽×${n}`],
-  ['magnetLevel', (n) => `🧲×${n}`],
-  ['orbValueLevel', (n) => `💎×${n}`],
-  ['scoreLevel', (n) => `📈×${n}`],
-  ['chargeRateLevel', (n) => `⚡×${n}`],
+  ['jumpLevel', 'jump', (n) => `<img class="badge-ico" src="assets/rocket.png" alt="">×${n}`],
+  ['doubleJumpLevel', null, (n) => `🪽×${n}`],
+  ['magnetLevel', 'magnet', (n) => `🧲×${n}`],
+  ['orbValueLevel', 'orbValue', (n) => `💎×${n}`],
+  ['scoreLevel', 'scoreMul', (n) => `📈×${n}`],
+  ['chargeRateLevel', null, (n) => `⚡×${n}`],
+];
+
+// 전설 보유 badge [플래그키, 이모지, 이름]
+const LEGEND_BADGES = [
+  ['infiniteMagnet', '🌀', '무한 자석'],
+  ['hazardBreaker', '💥', '가시 파괴자'],
+  ['alwaysShockwave', '🌊', '파동 마스터'],
+  ['autoRocket', '🚀', '로켓 엔진'],
+  ['goldFeather', '🕊️', '황금 깃털'],
 ];
 
 const MODE_HINTS = {
@@ -142,8 +152,12 @@ function updateGauge(ratio) {
 
 function updateEffects(effects = {}) {
   const badges = [];
-  for (const [key, fmt] of EFFECT_BADGES) {
-    if (effects[key] > 0) badges.push(fmt(effects[key]));
+  const evolved = effects.evolved || {};
+  for (const [key, evoKey, fmt] of EFFECT_BADGES) {
+    if (effects[key] > 0) {
+      const star = evoKey && evolved[evoKey] ? '<span class="evo-star">★</span>' : '';
+      badges.push(fmt(effects[key]) + star);
+    }
   }
   if (effects.scoreX2) badges.push('✨×2');
   if (effects.slowmo) badges.push('🐢');
@@ -151,9 +165,15 @@ function updateEffects(effects = {}) {
   if (effects.feather) badges.push('🪶');
   if (effects.rocket) badges.push('<img class="badge-ico" src="assets/rocket.png" alt="">');
   if (effects.shield) badges.push('🛡️');
+  // 전설 보유 표시(전용 강조 badge)
+  const legends = effects.legends || {};
+  const legendMarks = [];
+  for (const [flag, emoji, name] of LEGEND_BADGES) {
+    if (legends[flag]) legendMarks.push(`<span class="effect-badge legend" title="${name}">${emoji}</span>`);
+  }
   effectsEl.innerHTML = badges
     .map((b) => `<span class="effect-badge">${b}</span>`)
-    .join('');
+    .join('') + legendMarks.join('');
 }
 
 function updateCoinHud(coins) {
@@ -167,10 +187,18 @@ function updateSynergy(state = {}) {
     const s = state[tag];
     if (!s || s.count <= 0) continue;
     const meta = TAGS[tag];
-    const star = s.tier >= 4 ? '★' : '';
-    const title = s.tier > 0 ? SYNERGIES[tag]?.[s.tier] ?? '' : '';
+    const stars = s.tier >= 4 ? '★★★' : s.tier >= 3 ? '★★' : s.tier >= 2 ? '★' : '';
+    const cur = s.tier > 0 ? SYNERGIES[tag]?.[s.tier] ?? '' : `${meta.label} 세트`;
+    const nextTxt = s.next ? ` · 다음 ${s.next}개` : '';
     badges.push(
-      `<span class="syn-badge${s.tier > 0 ? ' active' : ''}" style="--syn:${meta.color}" title="${title}">${meta.emoji}${s.count}${star}</span>`,
+      `<span class="syn-badge${s.tier > 0 ? ' active' : ''}" style="--syn:${meta.color}" title="${cur}${nextTxt}">${meta.emoji}${s.count}${stars}</span>`,
+    );
+  }
+  // 시그니처 페어 힌트: 완성(2/2)은 강조, 1/2 는 흐리게 '거의' 표시
+  for (const p of state.pairs || []) {
+    const active = p.have >= 2;
+    badges.push(
+      `<span class="pair-badge${active ? ' active' : ''}" title="${p.label}: ${p.desc}">${p.emoji}${active ? '' : '…'}</span>`,
     );
   }
   synergyEl.innerHTML = badges.join('');
@@ -228,9 +256,20 @@ function showRewardChoices(choices, info = {}) {
   for (const reward of choices) {
     const card = document.createElement('button');
     card.className = `reward-card reward-card--${reward.tier}`;
+    if (reward.tradeoff) card.classList.add('reward-card--tradeoff');
     const tierLabel = TIERS[reward.tier]?.label ?? '';
     const levelChip = reward.level != null
       ? `<span class="reward-level">Lv.${reward.level}→${reward.level + 1}</span>`
+      : '';
+    // 진화 표시: 이번에 고르면 진화 / 이미 진화됨
+    const evoChip = reward.willEvolve
+      ? `<span class="reward-evo">✨ ${reward.evolveName} 진화!</span>`
+      : reward.evolved
+        ? `<span class="reward-evo evolved">★ ${reward.evolveName}</span>`
+        : '';
+    // 트레이드오프 대가 표시
+    const downside = reward.downside
+      ? `<span class="reward-downside">⚠ ${reward.downside}</span>`
       : '';
     const tagChips = (reward.tags ?? [])
       .map((t) => `<span class="reward-tag" style="--syn:${TAGS[t]?.color}">${TAGS[t]?.emoji} ${TAGS[t]?.label}</span>`)
@@ -242,6 +281,7 @@ function showRewardChoices(choices, info = {}) {
       ${iconHtml}
       <span class="reward-label">${reward.label}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
       <span class="reward-desc">${reward.desc} ${tagChips}</span>
+      ${downside}${evoChip}
     `;
     card.addEventListener('click', () => {
       rewardScreen.classList.add('hidden');
