@@ -1102,3 +1102,30 @@ img.reward-icon {
   width: 24px;
   height: 24px;
 }
+
+/* 언어 선택기 (시작 화면 하단) */
+.lang-select {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.lang-btn {
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(150, 160, 170, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+  color: #636e72;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.lang-btn.active {
+  border-color: #6ec6ff;
+  background: #6ec6ff;
+  color: #fff;
+  font-weight: 700;
+}

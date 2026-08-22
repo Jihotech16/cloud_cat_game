@@ -4,6 +4,7 @@ import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
+import { t } from './i18n.js';
 import {
   hapticLight,
   hapticMedium,
@@ -1044,13 +1045,13 @@ export class Game {
       this.combo += 1;
       this.bestLandY = y;
       if (this.combo >= 5 && this.combo % 5 === 0) {
-        this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, `콤보 x${this.combo}!`, '#ff9e3d', 1.05);
+        this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, t('combo.milestone', { n: this.combo }), '#ff9e3d', 1.05);
         this._addShake(2);
       }
     } else if (y > this.bestLandY + this.worldHeight * 0.9) {
       // 한 화면 이상 추락 후 착지 → 콤보 끊김
       if (this.combo >= 8) {
-        this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, '콤보 끊김', '#9aa7b0', 0.9);
+        this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, t('combo.break'), '#9aa7b0', 0.9);
       }
       this.combo = 0;
       this.bestLandY = y;
@@ -1063,7 +1064,7 @@ export class Game {
     const bonus = Math.round(PERFECT_SCORE_BONUS * (1 + this.scoreLevel * SCORE_LEVEL_STEP));
     this.score += bonus;
     this.callbacks.onScore?.(this.score);
-    this._addFloatText(this.player.x, this.player.y - this.player.height * 0.6, `PERFECT +${bonus}`, '#ffe08a', 1.05);
+    this._addFloatText(this.player.x, this.player.y - this.player.height * 0.6, t('game.perfect', { n: bonus }), '#ffe08a', 1.05);
     this._spawnParticles(this.player.x, this.player.bottom, '#ffe9a8', 12);
     playPerfectSound();
     hapticMedium();
@@ -1107,15 +1108,15 @@ export class Game {
 
   _checkZone() {
     const ZONES = [
-      [224, '🌅 노을 지대'],
-      [400, '🌆 보랏빛 황혼'],
-      [576, '🌙 밤하늘'],
-      [800, '🌌 우주 진입!'],
+      [224, 'zone.sunset'],
+      [400, 'zone.dusk'],
+      [576, 'zone.night'],
+      [800, 'zone.space'],
     ];
-    for (const [th, label] of ZONES) {
+    for (const [th, key] of ZONES) {
       if (this.score >= th && !this.zoneShown.has(th)) {
         this.zoneShown.add(th);
-        this._showBanner(label);
+        this._showBanner(t(key));
       }
     }
   }
@@ -1774,7 +1775,7 @@ export class Game {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.shadowColor = 'rgba(45, 52, 54, 0.25)';
     ctx.shadowBlur = 6;
-    ctx.fillText('👆 꾹 눌렀다 떼면 출발!', this.worldWidth / 2, this.worldHeight - 48 * GAME_SCALE);
+    ctx.fillText(t('game.readyHint'), this.worldWidth / 2, this.worldHeight - 48 * GAME_SCALE);
     ctx.restore();
   }
 
