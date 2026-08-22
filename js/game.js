@@ -1,6 +1,6 @@
 import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
-import { Orb, pickRewardChoices, REWARDS } from './orb.js';
+import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
@@ -146,6 +146,9 @@ export class Game {
     this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
     this.taken = new Set();
     this.synergy = this._emptySynergy();
+    this.legend = this._emptyLegend();
+    this.mods = this._emptyMods();
+    this.autoRocketTimer = 0;
 
     // 화면 흔들림(임팩트 연출). '동작 줄이기'가 켜져 있으면 흔들지 않는다.
     this.shakeTime = 0;
@@ -244,7 +247,10 @@ export class Game {
 
   _tryJump() {
     if (!this.player) return;
-    const upgrade = (1 + this.jumpLevel * JUMP_LEVEL_STEP) * this.synergy.jumpForceMult;
+    // 점프력 배율 = 레벨 보너스 × 시너지 × 트레이드오프 × 진화(메가 점프)
+    const evolveJump = this.jumpLevel >= 5 ? 1.25 : 1;
+    const upgrade = (1 + this.jumpLevel * JUMP_LEVEL_STEP)
+      * this.synergy.jumpForceMult * this.mods.jumpForceMult * evolveJump;
     const cloud = this.player.groundedCloud;
 
     if (cloud) {
@@ -260,7 +266,12 @@ export class Game {
         }
       }
 
-      const jumpMult = JUMP_MIN_MULT + this.charge * CHARGE_JUMP_BONUS;
+      let jumpMult = JUMP_MIN_MULT + this.charge * CHARGE_JUMP_BONUS;
+      // 시그니처 페어(과충전): 차지+최대치 보유 & 완충이면 점프력 +20%
+      if (this.taken.has('chargeCap') && this.taken.has('charge')
+        && this.charge >= this._chargeMax() - 0.001) {
+        jumpMult *= 1.2;
+      }
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
       this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
       playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
@@ -287,7 +298,10 @@ export class Game {
       if (Math.abs(this.player.vx) < 0.01) {
         this.player.vx = this.player.facing * this.player.baseSpeed;
       }
-      this.player.bounce(JUMP_FORCE * upgrade * DOUBLE_JUMP_FORCE_MULT);
+      // 시그니처 페어(공중 곡예): 점프+더블점프 보유 시 공중 점프도 지상급 위력
+      const airMult = (this.taken.has('jump') && this.taken.has('doubleJump'))
+        ? 1 : DOUBLE_JUMP_FORCE_MULT;
+      this.player.bounce(JUMP_FORCE * upgrade * airMult);
       playJumpSound();
       hapticLight();
       this._spawnParticles(this.player.x, this.player.y + this.player.height * 0.3, '#dff3ff', 8);
@@ -295,11 +309,12 @@ export class Game {
   }
 
   _cloudScale() {
-    return this.effects.bigcloud > 0 ? BIGCLOUD_SCALE : 1;
+    const base = this.effects.bigcloud > 0 ? BIGCLOUD_SCALE : 1;
+    return base * this.mods.platformScale; // 트레이드오프(광란)로 작아질 수 있음
   }
 
   _chargeRate() {
-    return CHARGE_RATE * (1 + this.chargeRateLevel * CHARGE_RATE_STEP);
+    return CHARGE_RATE * (1 + this.chargeRateLevel * CHARGE_RATE_STEP) * this.mods.chargeRateMult;
   }
 
   // 프레임당 실제 충전 증가량. 시작은 천천히, 채울수록 빨라지는 ease-in.
@@ -319,9 +334,10 @@ export class Game {
   _emptySynergy() {
     return {
       jumpForceMult: 1,
-      shockwave: false,
+      shockwaveRadius: 0,
       orbFillMult: 1,
       orbDoubleChance: 0,
+      magnetBonus: 0,
       scoreMult: 1,
       scoreAutoGrow: false,
       fallBonus: 0,
@@ -329,28 +345,75 @@ export class Game {
     };
   }
 
-  // 계열 보유 수에 따라 세트 시너지를 다시 계산한다.
+  _emptyLegend() {
+    return {
+      infiniteMagnet: false, // 무한 자석: 화면 오브 자동 수집
+      hazardBreaker: false,  // 가시 파괴자: 닿아도 죽지 않고 부숨
+      alwaysShockwave: false, // 파동 마스터: 착지마다 충격파
+      autoRocket: false,     // 로켓 엔진: 주기적 자동 로켓
+      goldFeather: false,    // 황금 깃털: 상시 저속 낙하
+    };
+  }
+
+  _emptyMods() {
+    return {
+      jumpForceMult: 1,
+      scoreMult: 1,
+      orbFillMult: 1,
+      coinMult: 1,
+      baseSpeedMult: 1,
+      platformScale: 1,
+      chargeRateMult: 1,
+      hazardSpeedMult: 1,
+      gravityMult: 1,
+    };
+  }
+
+  // 계열 보유 수(2/3/4)에 따라 세트 시너지를 다시 계산한다. 상위 단계는 하위를 포함.
   _recomputeSynergy() {
     const c = this.tagCount;
     const s = this._emptySynergy();
-    if (c.jump >= 2) s.jumpForceMult = SYN_JUMP_FORCE_MULT;
-    if (c.jump >= 4) s.shockwave = true;
-    if (c.orb >= 2) s.orbFillMult = SYN_ORB_FILL_MULT;
-    if (c.orb >= 4) s.orbDoubleChance = SYN_ORB_DOUBLE_CHANCE;
-    if (c.score >= 2) s.scoreMult = SYN_SCORE_MULT;
-    if (c.score >= 4) s.scoreAutoGrow = true;
-    if (c.survival >= 2) s.fallBonus = this.worldHeight * SYN_FALL_BONUS;
+    const GS = GAME_SCALE;
+    // 점프
+    if (c.jump >= 2) s.jumpForceMult = 1.15;
+    if (c.jump >= 3) { s.jumpForceMult = 1.30; s.shockwaveRadius = 90 * GS; }
+    if (c.jump >= 4) { s.jumpForceMult = 1.50; s.shockwaveRadius = 150 * GS; }
+    // 오브
+    if (c.orb >= 2) s.orbFillMult = 1.25;
+    if (c.orb >= 3) { s.orbFillMult = 1.45; s.magnetBonus = 1.5 * MAGNET_RANGE_STEP; }
+    if (c.orb >= 4) { s.orbFillMult = 1.70; s.orbDoubleChance = 0.30; }
+    // 점수
+    if (c.score >= 2) s.scoreMult = 1.20;
+    if (c.score >= 3) s.scoreMult = 1.45;
+    if (c.score >= 4) { s.scoreMult = 1.75; s.scoreAutoGrow = true; }
+    // 생존
+    if (c.survival >= 2) s.fallBonus = this.worldHeight * 0.28;
+    if (c.survival >= 3) s.fallBonus = this.worldHeight * 0.5;
     if (c.survival >= 4) s.shieldRegen = true;
     this.synergy = s;
     this.callbacks.onSynergy?.(this.getSynergyState());
   }
 
-  // HUD 표시용 계열 상태 { jump:{count,tier}, ... }
+  // 착지 충격파 반경(0 = 없음). 시너지·전설·진화 중 가장 큰 값을 쓴다.
+  _shockwaveRadius() {
+    let r = this.synergy.shockwaveRadius || 0;
+    if (this.jumpLevel >= 5) r = Math.max(r, 90 * GAME_SCALE); // 메가 점프 진화
+    if (this.legend.alwaysShockwave) r = Math.max(r, 160 * GAME_SCALE);
+    return r;
+  }
+
+  // HUD 표시용 계열 상태 + 시그니처 페어 진행도.
   getSynergyState() {
-    const out = {};
+    const out = { pairs: [] };
     for (const tag of ['jump', 'orb', 'score', 'survival']) {
       const count = this.tagCount[tag];
-      out[tag] = { count, tier: count >= 4 ? 4 : count >= 2 ? 2 : 0 };
+      const tier = count >= 4 ? 4 : count >= 3 ? 3 : count >= 2 ? 2 : 0;
+      const next = count < 4 ? Math.max(2, count + 1) : null; // 다음 임계까지
+      out[tag] = { count, tier, next };
+    }
+    for (const p of SIGNATURE_PAIRS) {
+      const have = p.ids.filter((id) => this.taken.has(id)).length;
+      if (have > 0) out.pairs.push({ ...p, have });
     }
     return out;
   }
@@ -400,16 +463,14 @@ export class Game {
     this.airJumpsLeft = this.doubleJumpLevel;
     this.callbacks.onCharge?.(0, this.input.holding);
 
-    if (this.synergy.shockwave) {
-      this._shockwaveAbsorb();
-    }
+    const sw = this._shockwaveRadius();
+    if (sw > 0) this._shockwaveAbsorb(sw, this.legend.alwaysShockwave);
   }
 
-  // 점프 4세트: 착지 시 주변 오브를 빨아들인다.
-  _shockwaveAbsorb() {
+  // 착지 충격파: 반경 내 오브를 흡수한다. breakHazards=true 면 가시도 부순다(전설).
+  _shockwaveAbsorb(r, breakHazards = false) {
     const px = this.player.x;
     const py = this.player.y;
-    const r = SYN_SHOCKWAVE_RADIUS;
     let absorbed = false;
     for (const orb of this.orbs) {
       if (orb.collected) continue;
@@ -419,9 +480,23 @@ export class Game {
         absorbed = true;
       }
     }
+    if (breakHazards) {
+      for (const h of this.hazards) {
+        if (h.dead) continue;
+        if (Math.hypot(px - h.x, py - h.y) <= r) {
+          h.dead = true;
+          this.coins += 1;
+          this._spawnParticles(h.x, h.y, '#ffd24a', 10);
+          absorbed = true;
+        }
+      }
+      this.hazards = this.hazards.filter((h) => !h.dead);
+    }
     if (absorbed) {
       this.orbs = this.orbs.filter((o) => !o.collected);
+      this.callbacks.onCoins?.(this.coins);
       this._spawnParticles(px, py, '#bfe9ff', 12);
+      this._addShake(3);
     }
   }
 
@@ -465,6 +540,9 @@ export class Game {
     this.tagCount = { jump: 0, orb: 0, score: 0, survival: 0 };
     this.taken = new Set();
     this.synergy = this._emptySynergy();
+    this.legend = this._emptyLegend();
+    this.mods = this._emptyMods();
+    this.autoRocketTimer = 0;
     this.shakeTime = 0;
     this.shakeMag = 0;
     this.coinsBanked = 0;
@@ -588,7 +666,7 @@ export class Game {
       const x = r + Math.random() * (this.worldWidth - r * 2);
       const dir = Math.random() < 0.5 ? 1 : -1;
       const factor = speedFloor + Math.random() * (speedCeil - speedFloor);
-      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED * factor));
+      this.hazards.push(new Hazard(x, this.highestHazardY, dir * HAZARD_SPEED * factor * this.mods.hazardSpeedMult));
     }
   }
 
@@ -612,6 +690,16 @@ export class Game {
   }
 
   _onHazardHit(h) {
+    // 전설 '가시 파괴자': 닿아도 죽지 않고 부수며 코인을 얻는다(보호막 소모 없음).
+    if (this.legend.hazardBreaker) {
+      h.dead = true;
+      this.coins += 2;
+      this.callbacks.onCoins?.(this.coins);
+      this._spawnParticles(h.x, h.y, '#ffd24a', 14);
+      hapticMedium();
+      this._addShake(4);
+      return;
+    }
     if (this.shield) {
       this.shield = false;
       h.dead = true;
@@ -691,7 +779,7 @@ export class Game {
     if (climbed > this.rawClimb) {
       const delta = climbed - this.rawClimb;
       this.rawClimb = climbed;
-      const permMult = (1 + this.scoreLevel * SCORE_LEVEL_STEP) * this.synergy.scoreMult;
+      const permMult = (1 + this.scoreLevel * SCORE_LEVEL_STEP) * this.synergy.scoreMult * this.mods.scoreMult;
       let burstMult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
       // 시그니처 페어: 점수배율+로켓 → 로켓 중 점수 추가 2배
       if (this.effects.rocket > 0 && this.taken.has('scoreMul')) burstMult *= 2;
@@ -740,9 +828,9 @@ export class Game {
     } else if (this.player.groundedCloud) {
       this._updateGrounded();
     } else {
-      this.player.update(GRAVITY, this.worldWidth, ts);
-      // 깃털: 낙하 속도 제한
-      if (this.effects.feather > 0 && this.player.vy > FEATHER_MAX_FALL) {
+      this.player.update(GRAVITY * this.mods.gravityMult, this.worldWidth, ts);
+      // 깃털(일시) 또는 황금 깃털(전설·상시): 낙하 속도 제한
+      if ((this.effects.feather > 0 || this.legend.goldFeather) && this.player.vy > FEATHER_MAX_FALL) {
         this.player.vy = FEATHER_MAX_FALL;
       }
       this._checkLanding();
@@ -777,14 +865,27 @@ export class Game {
     }
   }
 
-  // 시간 기반 세트 효과: 점수 자동 상승 / 보호막 자동 재생
+  // 시간 기반 효과: 점수 자동 상승(시너지/복리 진화) / 보호막 재생 / 자동 로켓(전설)
   _updateSynergyTimers() {
-    if (this.synergy.scoreAutoGrow && this.frame % SYN_SCORE_AUTOGROW_FRAMES === 0) {
+    // 점수 배율 자동 상승: 점수 4세트 또는 '복리 점수'(점수배율 Lv5 진화)
+    if ((this.synergy.scoreAutoGrow || this.scoreLevel >= 5)
+      && this.frame % SYN_SCORE_AUTOGROW_FRAMES === 0) {
       this.scoreLevel += 1;
     }
     if (this.synergy.shieldRegen && !this.shield && this.frame % SYN_SHIELD_REGEN_FRAMES === 0) {
       this.shield = true;
       this.callbacks.onEffects?.(this.getEffects());
+    }
+    // 전설 '로켓 엔진': 약 12초마다 자동 로켓 부스트
+    if (this.legend.autoRocket) {
+      this.autoRocketTimer += 1;
+      if (this.autoRocketTimer >= 12 * 60 && this.effects.rocket <= 0) {
+        this.autoRocketTimer = 0;
+        this.effects.rocket = ROCKET_DURATION;
+        playRocketSound();
+        this._addShake(5, 20);
+        this.callbacks.onEffects?.(this.getEffects());
+      }
     }
   }
 
@@ -793,7 +894,12 @@ export class Game {
     const px = this.player.x;
     const py = this.player.y;
     const pickDist = this.player.width * 0.4 + ORB_PICKUP_PADDING;
-    const magnetRange = this.magnetLevel * MAGNET_RANGE_STEP;
+    // 자석 범위 = 레벨×스텝 × 진화(자기 폭풍 Lv3=×2) + 오브 3세트 보너스
+    const evolveMagnet = this.magnetLevel >= 3 ? 2 : 1;
+    let magnetRange = this.magnetLevel * MAGNET_RANGE_STEP * evolveMagnet + this.synergy.magnetBonus;
+    // 전설 '무한 자석': 사실상 화면 전체를 끌어당긴다.
+    if (this.legend.infiniteMagnet) magnetRange = Math.max(magnetRange, this.worldWidth + this.worldHeight);
+    const magnetSpeed = this.legend.infiniteMagnet ? ORB_MAGNET_SPEED * 1.6 : ORB_MAGNET_SPEED;
 
     for (const orb of this.orbs) {
       if (orb.collected) continue;
@@ -803,8 +909,8 @@ export class Game {
       const dist = Math.hypot(dx, dy);
 
       if (magnetRange > 0 && dist < magnetRange && dist > 0.01) {
-        orb.x += (dx / dist) * ORB_MAGNET_SPEED;
-        orb.y += (dy / dist) * ORB_MAGNET_SPEED;
+        orb.x += (dx / dist) * magnetSpeed;
+        orb.y += (dy / dist) * magnetSpeed;
       }
 
       if (dist < pickDist + orb.r) {
@@ -818,9 +924,12 @@ export class Game {
   _collectOrb(orb) {
     const rainbow = orb.type === 'rainbow';
 
-    // 코인 적립 (시그니처 페어: 자석+오브가치 → 코인 2배)
+    // 코인 적립. 시그니처 페어(자석+오브가치) 코인 2배 · 트레이드오프(탐욕) coinMult ·
+    // 오브가치 Lv5 진화(보석 세공) 시 +1 코인.
     let coinGain = rainbow ? COIN_PER_RAINBOW : COIN_PER_ORB;
     if (this.taken.has('magnet') && this.taken.has('orbValue')) coinGain *= 2;
+    if (!rainbow && this.orbValueLevel >= 5) coinGain += 1;
+    coinGain = Math.round(coinGain * this.mods.coinMult);
     this.coins += coinGain;
     this.callbacks.onCoins?.(this.coins);
 
@@ -832,7 +941,7 @@ export class Game {
       this._spawnParticles(orb.x, orb.y, 'rainbow', 18);
     } else {
       let fill = ORB_GAUGE_FILL * (1 + this.orbValueLevel * ORB_VALUE_STEP);
-      fill *= this.synergy.orbFillMult; // 오브 2세트
+      fill *= this.synergy.orbFillMult * this.mods.orbFillMult; // 오브 세트 + 트레이드오프
       if (this.synergy.orbDoubleChance > 0 && Math.random() < this.synergy.orbDoubleChance) {
         fill *= 2; // 오브 4세트: 가끔 2배
       }
@@ -928,10 +1037,20 @@ export class Game {
     const exclude = this.shield ? ['shield'] : [];
     // 더블 점프가 최대(3회)면 더 이상 제공하지 않는다.
     if (this.doubleJumpLevel >= DOUBLE_JUMP_MAX_LEVEL) exclude.push('doubleJump');
-    const choices = pickRewardChoices(3, this._rewardProgress(), exclude).map((r) => ({
-      ...r,
-      level: this._rewardLevel(r.id),
-    }));
+    // 유니크(전설·트레이드오프)는 이미 획득했으면 제외한다.
+    for (const r of REWARDS) {
+      if (r.unique && this.taken.has(r.id)) exclude.push(r.id);
+    }
+    const choices = pickRewardChoices(3, this._rewardProgress(), exclude).map((r) => {
+      const level = this._rewardLevel(r.id);
+      const out = { ...r, level };
+      // 진화 정보: 이미 진화했는지 / 이번에 고르면 진화하는지
+      if (r.evolveAt != null && level != null) {
+        out.evolved = level >= r.evolveAt;
+        out.willEvolve = level + 1 === r.evolveAt;
+      }
+      return out;
+    });
     this.callbacks.onReward?.(choices, {
       coins: this.coins,
       rerollCost: this._rerollCost(),
@@ -991,6 +1110,34 @@ export class Game {
         this.coins += COIN_REWARD_AMOUNT;
         this.callbacks.onCoins?.(this.coins);
         break;
+
+      // ── 트레이드오프(강력 + 대가) ──
+      case 'trFrenzy': // 점수 +50% / 발판 -18%
+        this.mods.scoreMult *= 1.5;
+        this.mods.platformScale *= 0.82;
+        break;
+      case 'trGlass': // 점프력 +40% / 차지 -30%
+        this.mods.jumpForceMult *= 1.4;
+        this.mods.chargeRateMult *= 0.7;
+        break;
+      case 'trGreed': // 오브 충전 +60% · 코인 2배 / 가시 +40% 속도
+        this.mods.orbFillMult *= 1.6;
+        this.mods.coinMult *= 2;
+        this.mods.hazardSpeedMult *= 1.4;
+        break;
+      case 'trRush': // 이동 +30% / 중력 +15%
+        this.mods.baseSpeedMult *= 1.3;
+        this.mods.gravityMult *= 1.15;
+        if (this.player) this.player.baseSpeed *= 1.3;
+        break;
+
+      // ── 전설(룰 변경 유니크) ──
+      case 'legMagnet': this.legend.infiniteMagnet = true; break;
+      case 'legHazard': this.legend.hazardBreaker = true; break;
+      case 'legShock': this.legend.alwaysShockwave = true; break;
+      case 'legRocket': this.legend.autoRocket = true; this.autoRocketTimer = 0; break;
+      case 'legFeather': this.legend.goldFeather = true; break;
+
       default: break;
     }
 
@@ -1053,6 +1200,15 @@ export class Game {
       orbValueLevel: this.orbValueLevel,
       chargeRateLevel: this.chargeRateLevel,
       chargeCapLevel: this.chargeCapLevel,
+      // 진화 여부(레벨 badge 에 ★ 표시용)
+      evolved: {
+        jump: this.jumpLevel >= 5,
+        magnet: this.magnetLevel >= 3,
+        scoreMul: this.scoreLevel >= 5,
+        orbValue: this.orbValueLevel >= 5,
+      },
+      // 전설 보유(전용 badge)
+      legends: { ...this.legend },
     };
   }
 

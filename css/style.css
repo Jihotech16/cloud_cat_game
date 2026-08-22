@@ -228,6 +228,39 @@ img.gauge-icon {
   to { transform: scale(1); opacity: 1; }
 }
 
+/* 시그니처 페어 배지: 1/2 는 흐리게(거의), 2/2 완성은 금빛 강조 */
+.pair-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px solid rgba(150, 160, 170, 0.35);
+  opacity: 0.5;
+}
+.pair-badge.active {
+  opacity: 1;
+  color: #7a4d00;
+  background: linear-gradient(90deg, #ffe08a, #ff9ec2);
+  border-color: #f6b73c;
+  box-shadow: 0 0 8px rgba(246, 183, 60, 0.6);
+}
+
+/* 진화 별표(효과 배지 위) */
+.evo-star {
+  color: #f6b73c;
+  margin-left: 1px;
+  text-shadow: 0 0 4px rgba(246, 183, 60, 0.7);
+}
+
+/* 전설 보유 효과 배지 */
+.effect-badge.legend {
+  background: linear-gradient(135deg, #ffe08a, #ff9ec2);
+  box-shadow: 0 0 8px rgba(255, 170, 90, 0.65);
+}
+
 /* 모드 선택 */
 .mode-select {
   display: flex;
@@ -535,6 +568,40 @@ img.reward-icon {
 }
 .reward-card--epic .reward-label { color: #8b3fd6; }
 .reward-card--epic .reward-tier { background: #a855f7; }
+
+.reward-card--legendary {
+  border-color: #f6b73c;
+  background: linear-gradient(135deg, rgba(255, 215, 120, 0.18), rgba(255, 120, 180, 0.13));
+  box-shadow: 0 0 18px rgba(246, 183, 60, 0.6);
+}
+.reward-card--legendary .reward-label { color: #b8791a; }
+.reward-card--legendary .reward-tier {
+  background: linear-gradient(90deg, #f6b73c, #ff7ea6);
+}
+
+/* 트레이드오프: 점선 테두리로 '대가 있음'을 시각화 */
+.reward-card--tradeoff {
+  border-style: dashed;
+}
+
+/* 트레이드오프 대가 문구 */
+.reward-downside {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #d9483b;
+}
+
+/* 진화 표시 */
+.reward-evo {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e0872a;
+}
+.reward-evo.evolved { color: #b8791a; }
 
 .reward-desc {
   font-size: 0.82rem;
