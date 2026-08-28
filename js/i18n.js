@@ -380,14 +380,22 @@ const DICT = {
 let current = detectLang();
 
 function detectLang() {
+  // 1) 사용자가 직접 고른 언어가 있으면 그것을 최우선(폰 언어보다 우선).
   try {
     const stored = localStorage.getItem(LANG_KEY);
     if (stored && DICT[stored]) return stored;
   } catch { /* noop */ }
-  const n = (navigator.language || 'en').toLowerCase();
-  if (n.startsWith('ko')) return 'ko';
-  if (n.startsWith('ja')) return 'ja';
-  if (n.startsWith('zh')) return 'zh';
+  // 2) 없으면 폰의 선호 언어 목록을 순서대로 보고 지원 언어 중 첫 매칭.
+  const prefs = (navigator.languages && navigator.languages.length)
+    ? navigator.languages
+    : [navigator.language || 'en'];
+  for (const raw of prefs) {
+    const n = String(raw || '').toLowerCase();
+    if (n.startsWith('ko')) return 'ko';
+    if (n.startsWith('ja')) return 'ja';
+    if (n.startsWith('zh')) return 'zh';
+    if (n.startsWith('en')) return 'en';
+  }
   return 'en';
 }
 
