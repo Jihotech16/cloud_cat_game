@@ -1549,12 +1549,10 @@ export class Game {
       this._drawPlanet(ctx, w * 0.24, h * 0.26, 20 * GAME_SCALE, planetA);
     }
 
-    // 떠다니는 구름: 고도가 오르면 옅어지다 사라짐
+    // 배경 장식 구름: 정적(제자리 고정). 고도가 오르면 옅어지다 사라짐.
     const cloudA = Math.max(0, 1 - altitude / 0.5);
     if (cloudA > 0) {
       for (const dec of this.cloudDecor) {
-        dec.y += dec.speed;
-        if (dec.y > h + 40) dec.y = -40;
         this._drawDecorCloud(ctx, dec.x, dec.y, dec.scale * 30 * GAME_SCALE, cloudA);
       }
     }

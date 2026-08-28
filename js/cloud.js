@@ -7,12 +7,9 @@ export const CLOUD_TYPES = {
   BOUNCE: 'bounce',
   BOOST: 'boost',
   ICE: 'ice',     // 미끄럼: 착지해도 멈추지 않고 미끄러진다
-  PHASE: 'phase', // 깜빡임: 실체/투명을 반복, 투명일 때 밟을 수 없다
+  // PHASE 는 정적 연출 방침에 따라 현재 스폰되지 않는다(타입만 남겨둠).
+  PHASE: 'phase',
 };
-
-// 페이즈 구름 주기(프레임): 실체 156 → 투명 84 반복.
-const PHASE_SOLID = 156;
-const PHASE_CYCLE = 240;
 
 const SPRITE_W = 109;
 const SPRITE_H = 31;
@@ -63,9 +60,7 @@ export class Cloud {
       : 0;
     this.broken = false;
     this.breakTimer = 0;
-    // 페이즈: 실체/투명 상태. 서로 어긋나게 랜덤 위상으로 시작.
-    this.phaseT = type === CLOUD_TYPES.PHASE ? Math.random() * PHASE_CYCLE : 0;
-    this.isSolid = true;
+    this.isSolid = true; // 항상 실체(페이즈 구름 비활성)
   }
 
   update(worldWidth, timeScale = 1) {
@@ -79,11 +74,6 @@ export class Cloud {
         this.x = worldWidth - margin;
         this.vx *= -1;
       }
-    }
-
-    if (this.type === CLOUD_TYPES.PHASE) {
-      this.phaseT += timeScale;
-      this.isSolid = (this.phaseT % PHASE_CYCLE) < PHASE_SOLID;
     }
 
     if (this.broken) {
@@ -100,15 +90,8 @@ export class Cloud {
     if (this.broken && this.breakTimer > 20) return;
 
     const screenY = this.y - cameraY;
-    let alpha = this.broken ? Math.max(0, 1 - this.breakTimer / 20) : 1;
-    // 페이즈: 투명 상태면 흐릿하게(밟을 수 없음). 실체 만료 직전엔 깜빡.
-    if (this.type === CLOUD_TYPES.PHASE) {
-      if (!this.isSolid) alpha *= 0.22;
-      else {
-        const p = this.phaseT % PHASE_CYCLE;
-        if (p > PHASE_SOLID - 30) alpha *= 0.55 + 0.45 * Math.abs(Math.sin(p * 0.6));
-      }
-    }
+    // 부서지는 구름의 페이드아웃만 유지(피드백에 필요). 그 외에는 정적.
+    const alpha = this.broken ? Math.max(0, 1 - this.breakTimer / 20) : 1;
     const w = this.width * scale;
     const h = this.drawHeight * scale;
     const dx = this.x - w / 2;
@@ -153,7 +136,7 @@ export class Cloud {
       if (this.type === CLOUD_TYPES.BOUNCE) {
         this._drawBounceMark(ctx, this.x, screenY, w);
       } else if (this.type === CLOUD_TYPES.BOOST) {
-        this._drawBoostMark(ctx, this.x, screenY, w, frame);
+        this._drawBoostMark(ctx, this.x, screenY, w);
       }
     } else {
       this._drawFallback(ctx, screenY, w, h);
@@ -162,10 +145,10 @@ export class Cloud {
     ctx.restore();
   }
 
-  // 부스트 구름 표시: 청록(시안) 상승 화살표 3개 + 반짝이
-  _drawBoostMark(ctx, cx, screenY, w, frame = 0) {
+  // 부스트 구름 표시: 청록(시안) 상승 화살표 3개 + 반짝이 (정적)
+  _drawBoostMark(ctx, cx, screenY, w) {
     const baseY = screenY - this.drawHeight * 0.18;
-    const rise = Math.sin(frame * 0.12) * w * 0.02; // 살짝 위아래 떠오름
+    const rise = 0; // 정적: 떠오름 애니메이션 없음
 
     const arrow = (ax, ay, size, color) => {
       ctx.fillStyle = color;
@@ -195,9 +178,7 @@ export class Cloud {
       { x: cx + w * 0.05, y: baseY - w * 0.16, ph: 4.0 },
     ];
     for (const sp of sparkles) {
-      const tw = Math.sin(frame * 0.18 + sp.ph);
-      if (tw < 0.1) continue;
-      const r = w * 0.035 * tw;
+      const r = w * 0.035; // 정적: 깜빡임 없이 항상 같은 크기
       ctx.beginPath();
       ctx.moveTo(sp.x, sp.y - r);
       ctx.lineTo(sp.x + r * 0.32, sp.y);
@@ -251,13 +232,13 @@ export function pickCloudType(heightScore) {
   const t = clamp((heightScore - 80) / 1120); // 80m → 1200m
   const tBreak = clamp((heightScore - 200) / 1000); // 부서짐은 200m부터
   const tIce = clamp((heightScore - 300) / 900); // 얼음은 300m부터
-  const tPhase = clamp((heightScore - 500) / 900); // 페이즈는 500m부터
   const pBreak = 0.10 * tBreak; // 부서짐: 0% → 10%
-  const pMove = 0.03 + 0.13 * t; // 이동: 3% → 16%
+  const pMove = 0.03 + 0.15 * t; // 이동: 3% → 18%
   const pBounce = 0.03 + 0.07 * t; // 트램펄린(도움): 3% → 10%
   const pBoost = 0.03 + 0.07 * t; // 부스트(도움): 3% → 10%
-  const pIce = 0.08 * tIce; // 얼음(미끄럼): 0% → 8%
-  const pPhase = 0.07 * tPhase; // 페이즈(깜빡): 0% → 7%
+  const pIce = 0.09 * tIce; // 얼음(미끄럼): 0% → 9%
+  // 페이즈(깜빡이며 사라지는) 구름은 정적 연출 방침에 따라 비활성화.
+  const pPhase = 0;
 
   const roll = Math.random();
   let acc = 0;
