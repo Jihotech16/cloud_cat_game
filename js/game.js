@@ -620,8 +620,8 @@ export class Game {
     this._snapToStartCloud();
 
     let y = startY;
-    for (let i = 0; i < 18; i++) {
-      y -= CLOUD_GAP_MIN + Math.random() * (CLOUD_GAP_MAX - CLOUD_GAP_MIN);
+    for (let i = 0; i < 24; i++) {
+      y -= this._cloudGap();
       const x = Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
       const type = pickCloudType(0);
       this.clouds.push(new Cloud(x, y, type, randomCloudWidth()));
@@ -641,6 +641,14 @@ export class Game {
     this._loop();
   }
 
+  // 구름 세로 간격. 초반(저고도)엔 좁혀서 촘촘하게 → 두 모드 모두 시작이 수월.
+  // 0~250m 사이에서 기본 간격으로 부드럽게 넓어진다.
+  _cloudGap() {
+    const t = Math.min(1, this.score / 250);
+    const factor = 0.62 + 0.38 * t; // 시작 62% 간격 → 100%
+    return (CLOUD_GAP_MIN + Math.random() * (CLOUD_GAP_MAX - CLOUD_GAP_MIN)) * factor;
+  }
+
   // 고도가 오를수록 구름이 아주 천천히 작아진다(1500m에서 30% 작게, 하한 유지).
   _cloudSpawnWidth() {
     const t = Math.min(1, this.score / 1500);
@@ -655,7 +663,7 @@ export class Game {
 
     let y = this.highestSpawnedY;
     while (y > spawnAbove) {
-      const gap = CLOUD_GAP_MIN + Math.random() * (CLOUD_GAP_MAX - CLOUD_GAP_MIN);
+      const gap = this._cloudGap();
       y -= gap;
       const x = Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
       const type = pickCloudType(this.score);
