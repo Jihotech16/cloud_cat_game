@@ -16,14 +16,16 @@ const PHASE_CYCLE = 240;
 
 const SPRITE_W = 109;
 const SPRITE_H = 31;
+const SPRITE_FRAME_COUNT = 6;
+const SPRITE_FRAME_TICKS = 9;
 const PLATFORM_FROM_TOP = 0.32;
 
 let cloudImage = null;
 let cloudImageReady = false;
 
 // 특수 구름 전용 스프라이트(있으면 사용). platFrac=발판이 스프라이트 높이의 어디쯤(위→아래 비율)
-function loadCloudVariant(src, platFrac, wScale) {
-  const v = { img: null, ready: false, platFrac, wScale };
+function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = SPRITE_FRAME_TICKS) {
+  const v = { img: null, ready: false, platFrac, wScale, frameCount, frameTicks };
   if (typeof Image !== 'undefined') {
     v.img = new Image();
     v.img.onload = () => { v.ready = true; };
@@ -33,14 +35,14 @@ function loadCloudVariant(src, platFrac, wScale) {
   return v;
 }
 const VARIANT_SPRITES = {
-  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost.png', 0.47, 1.15),
-  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce.png', 0.58, 1.15),
+  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.46, 1.15, 4, 10),
+  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-sheet.png', 0.61, 1.15, 4, 10),
 };
 
 export function loadCloudSprite() {
   if (cloudImage) return cloudImage;
   cloudImage = new Image();
-  cloudImage.src = 'assets/cloud-export.png';
+  cloudImage.src = 'assets/cloud-sheet.png';
   cloudImage.onload = () => {
     cloudImageReady = true;
   };
@@ -66,6 +68,8 @@ export class Cloud {
     // 페이즈: 실체/투명 상태. 서로 어긋나게 랜덤 위상으로 시작.
     this.phaseT = type === CLOUD_TYPES.PHASE ? Math.random() * PHASE_CYCLE : 0;
     this.isSolid = true;
+    // 구름마다 시작 프레임을 흩어 여러 발판이 동시에 변하지 않게 한다.
+    this.animFrameOffset = Math.floor(Math.random() * SPRITE_FRAME_COUNT * SPRITE_FRAME_TICKS);
   }
 
   update(worldWidth, timeScale = 1) {
@@ -109,10 +113,16 @@ export class Cloud {
         if (p > PHASE_SOLID - 30) alpha *= 0.55 + 0.45 * Math.abs(Math.sin(p * 0.6));
       }
     }
+    // 부서지는 구름은 좌우로 흔들린다.
+    const shakeX = this.broken
+      ? Math.sin(this.breakTimer * 2.4) * Math.min(3, this.breakTimer * 0.2)
+      : 0;
+    const visualX = this.x + shakeX;
+    const visualY = screenY;
     const w = this.width * scale;
     const h = this.drawHeight * scale;
-    const dx = this.x - w / 2;
-    const dy = screenY - h / 2;
+    const dx = visualX - w / 2;
+    const dy = visualY - h / 2;
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -124,15 +134,23 @@ export class Cloud {
     const variant = VARIANT_SPRITES[this.type];
     if (variant && variant.ready) {
       // 전용 스프라이트(구름 + 이펙트 포함)
-      const aspect = variant.img.naturalHeight / variant.img.naturalWidth;
+      const sourceW = variant.img.naturalWidth / variant.frameCount;
+      const sourceH = variant.img.naturalHeight;
+      const aspect = sourceH / sourceW;
       const dispW = w * variant.wScale;
       const dispH = dispW * aspect;
-      const platScreen = screenY - this.drawHeight * scale * 0.18; // 발판(구름 윗면) 화면 y
-      const sdx = this.x - dispW / 2;
+      const platScreen = visualY - this.drawHeight * scale * 0.18; // 발판(구름 윗면) 화면 y
+      const sdx = visualX - dispW / 2;
       const sdy = platScreen - dispH * variant.platFrac;
       ctx.imageSmoothingEnabled = false;
       ctx.filter = dim || 'none';
-      ctx.drawImage(variant.img, sdx, sdy, dispW, dispH);
+      const frameIndex = Math.floor((frame + this.animFrameOffset) / variant.frameTicks)
+        % variant.frameCount;
+      ctx.drawImage(
+        variant.img,
+        frameIndex * sourceW, 0, sourceW, sourceH,
+        sdx, sdy, dispW, dispH,
+      );
       ctx.filter = 'none';
     } else if (cloudImageReady) {
       const filters = {
@@ -147,16 +165,24 @@ export class Cloud {
       let filter = filters[this.type] ?? '';
       if (dim) filter = filter ? `${filter} ${dim}` : dim;
       ctx.filter = filter || 'none';
-      ctx.drawImage(cloudImage, dx, dy, w, h);
+      const sourceW = cloudImage.naturalWidth / SPRITE_FRAME_COUNT;
+      const sourceH = cloudImage.naturalHeight;
+      const frameIndex = Math.floor((frame + this.animFrameOffset) / SPRITE_FRAME_TICKS)
+        % SPRITE_FRAME_COUNT;
+      ctx.drawImage(
+        cloudImage,
+        frameIndex * sourceW, 0, sourceW, sourceH,
+        dx, dy, w, h,
+      );
       ctx.filter = 'none';
 
       if (this.type === CLOUD_TYPES.BOUNCE) {
-        this._drawBounceMark(ctx, this.x, screenY, w);
+        this._drawBounceMark(ctx, visualX, visualY, w);
       } else if (this.type === CLOUD_TYPES.BOOST) {
-        this._drawBoostMark(ctx, this.x, screenY, w, frame);
+        this._drawBoostMark(ctx, visualX, visualY, w, frame);
       }
     } else {
-      this._drawFallback(ctx, screenY, w, h);
+      this._drawFallback(ctx, visualX, visualY, w, h);
     }
 
     ctx.restore();
@@ -234,12 +260,12 @@ export class Cloud {
     ctx.restore();
   }
 
-  _drawFallback(ctx, screenY, w, h) {
+  _drawFallback(ctx, centerX, screenY, w, h) {
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#c8dff0';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(this.x, screenY, w * 0.45, h * 0.55, 0, 0, Math.PI * 2);
+    ctx.ellipse(centerX, screenY, w * 0.45, h * 0.55, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }

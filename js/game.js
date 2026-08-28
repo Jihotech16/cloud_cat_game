@@ -239,6 +239,8 @@ export class Game {
       y: Math.random() * this.worldHeight,
       scale: Math.random() * 0.6 + 0.4,
       speed: Math.random() * 0.15 + 0.05,
+      drift: (Math.random() * 0.08 + 0.025) * (Math.random() > 0.5 ? 1 : -1),
+      phase: Math.random() * Math.PI * 2,
     }));
     this.shootingStars = Array.from({ length: 3 }, () => this._newShootingStar());
   }
@@ -1554,8 +1556,12 @@ export class Game {
     if (cloudA > 0) {
       for (const dec of this.cloudDecor) {
         dec.y += dec.speed;
+        dec.x += dec.drift;
         if (dec.y > h + 40) dec.y = -40;
-        this._drawDecorCloud(ctx, dec.x, dec.y, dec.scale * 30 * GAME_SCALE, cloudA);
+        if (dec.x < -50) dec.x = w + 50;
+        if (dec.x > w + 50) dec.x = -50;
+        const floatY = Math.sin(this.frame * 0.018 + dec.phase) * 4 * GAME_SCALE;
+        this._drawDecorCloud(ctx, dec.x, dec.y + floatY, dec.scale * 30 * GAME_SCALE, cloudA);
       }
     }
   }
