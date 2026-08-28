@@ -30,10 +30,10 @@ function loadCloudVariant(src, platFrac, wScale) {
   return v;
 }
 // platFrac: 발판(구름 윗면)이 스프라이트 높이의 어디쯤인지(위→아래 비율).
-// 스프라이트의 효과(화살표·반짝이) 부분을 줄여 재작업하면서 값도 함께 갱신됨.
+// 효과(결정·화살표)가 큰 원본 아트 기준 값. 아트를 바꾸면 이 값도 같이 맞춰야 한다.
 const VARIANT_SPRITES = {
-  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost.png', 0.29, 1.15),
-  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce.png', 0.35, 1.15),
+  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost.png', 0.47, 1.15),
+  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce.png', 0.58, 1.15),
 };
 
 export function loadCloudSprite() {
