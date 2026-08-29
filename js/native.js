@@ -7,6 +7,9 @@ export async function initNative() {
   const cap = window.Capacitor;
   if (!cap?.isNativePlatform?.()) return;
 
+  // 네이티브 전용 스타일 훅(예: "홈 화면에 추가" 안내 숨김 — 이미 앱이므로)
+  document.documentElement.classList.add('is-native');
+
   const plugins = cap.Plugins ?? {};
   const { StatusBar, SplashScreen } = plugins;
 

@@ -102,11 +102,15 @@
         </div>
         <p id="mode-hint" class="mode-hint"></p>
         <button id="btn-start" class="btn-primary" data-i18n="start.btnStart">게임 시작</button>
-        <button id="btn-shop" class="btn-secondary"><img class="cart-ico" src="assets/shop-cart.png" alt=""> <span data-i18n="start.shop">상점</span> (<img class="coin-ico" src="assets/coin.png" alt=""> <span id="menu-coins">0</span>)</button>
-        <button id="btn-mute" class="btn-secondary">🔊 Sound on</button>
-        <p class="best-record"><span data-i18n="start.myBest">내 최고 기록</span>: <strong id="menu-best">0</strong>m</p>
-        <p class="best-record global-record"><span data-i18n="start.globalBest">전체 최고 기록</span>: <strong id="menu-global-best">0</strong>m</p>
-        <p class="install-hint" data-i18n="start.installHint">홈 화면에 추가하면 앱처럼 플레이할 수 있어요</p>
+        <div class="menu-actions">
+          <button id="btn-shop" class="btn-secondary"><img class="cart-ico" src="assets/shop-cart.png" alt=""> <span data-i18n="start.shop">상점</span> (<img class="coin-ico" src="assets/coin.png" alt=""> <span id="menu-coins">0</span>)</button>
+          <button id="btn-mute" class="btn-secondary">🔊 Sound on</button>
+        </div>
+        <div class="records">
+          <p class="best-record"><span data-i18n="start.myBest">내 최고 기록</span>: <strong id="menu-best">0</strong>m</p>
+          <p class="best-record global-record"><span data-i18n="start.globalBest">전체 최고 기록</span>: <strong id="menu-global-best">0</strong>m</p>
+        </div>
+        <p class="install-hint pwa-only" data-i18n="start.installHint">홈 화면에 추가하면 앱처럼 플레이할 수 있어요</p>
         <p class="install-hint"><a href="privacy.html" target="_blank" rel="noopener" data-i18n="start.privacy">개인정보 처리방침</a></p>
         <p class="lang-label" data-i18n="start.language">언어</p>
         <div id="lang-select" class="lang-select" aria-label="Language"></div>
