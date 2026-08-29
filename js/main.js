@@ -657,7 +657,9 @@ async function boot() {
   document.documentElement.lang = getLang();
   applyStaticI18n();
   renderLangSelector();
-  initNative();
+  // 스플래시가 내려간 뒤에 ATT 를 요청해야 한다. iOS 는 앱이 active 가
+  // 아니면 추적 동의 팝업을 조용히 무시하기 때문이다(심사 반려 사유였음).
+  await initNative();
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();

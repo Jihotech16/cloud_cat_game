@@ -71,22 +71,68 @@ export function adsAvailable() {
 
 let initialized = false;
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * iOS 추적 동의(ATT) 팝업을 확실히 띄운다.
+ *
+ * iOS 는 앱이 active 상태가 아닐 때 requestTrackingAuthorization 을 조용히
+ * 무시한다 — 팝업이 뜨지 않고 notDetermined 로 즉시 반환된다. 스플래시가
+ * 떠 있는 동안 호출하면 정확히 이 현상이 나고, 2026-07 심사에서 이 사유로
+ * Guideline 2.1 반려를 받았다(프레임워크는 링크됐는데 팝업을 못 찾겠다).
+ *
+ * 그래서 (1) 호출 전에 스플래시가 내려가길 기다리고(main.js 에서 initNative
+ * 를 await), (2) 여기서 상태를 확인해가며 재시도하고, (3) 그래도 안 뜨면
+ * 첫 사용자 입력 시 한 번 더 시도한다. 사용자 입력 시점은 앱이 반드시
+ * active 이므로 마지막 안전망이 된다.
+ */
+async function requestAttWithRetry(AdMob) {
+  if (platform() !== 'ios') return;
+  if (typeof AdMob.requestTrackingAuthorization !== 'function') return;
+
+  const status = async () => {
+    try {
+      const r = await AdMob.trackingAuthorizationStatus?.();
+      return r?.status ?? null;
+    } catch {
+      return null; // 조회 실패는 미결정으로 간주하고 요청을 시도한다
+    }
+  };
+
+  // 이미 응답한 사용자에게는 다시 물을 수 없다(설정에서만 변경 가능).
+  const before = await status();
+  if (before && before !== 'notDetermined') return;
+
+  for (let i = 0; i < 3; i++) {
+    try {
+      await AdMob.requestTrackingAuthorization();
+    } catch (err) {
+      console.warn('ATT 동의 요청 실패:', err);
+    }
+    const after = await status();
+    if (after && after !== 'notDetermined') return; // 사용자가 응답함
+    await sleep(600); // 아직 active 가 아닐 수 있으니 잠시 후 재시도
+  }
+
+  // 마지막 안전망: 첫 사용자 입력 때 한 번 더(그 시점엔 반드시 active).
+  const onFirstInput = async () => {
+    document.removeEventListener('pointerdown', onFirstInput);
+    if ((await status()) === 'notDetermined') {
+      try {
+        await AdMob.requestTrackingAuthorization();
+      } catch { /* noop */ }
+    }
+  };
+  document.addEventListener('pointerdown', onFirstInput, { once: true });
+}
+
 /** 앱 부팅 시 1회 호출. iOS 추적 동의(ATT) 팝업 → AdMob 초기화. */
 export async function initAds() {
   const AdMob = admob();
   if (!AdMob || initialized) return;
   try {
-    // iOS: App Tracking Transparency 동의 팝업을 광고 초기화(=추적 데이터 수집)
-    // '전에' 반드시 띄운다. 이 호출이 없으면 애플 심사에서 Guideline 2.1 로
-    // 반려된다(프레임워크는 링크됐는데 팝업이 안 뜬다는 사유).
-    // 이미 응답한 사용자에게는 팝업이 다시 뜨지 않고 즉시 반환된다.
-    if (platform() === 'ios' && typeof AdMob.requestTrackingAuthorization === 'function') {
-      try {
-        await AdMob.requestTrackingAuthorization();
-      } catch (err) {
-        console.warn('ATT 동의 요청 실패:', err);
-      }
-    }
+    // ATT 팝업은 광고 초기화(=추적 데이터 수집) '전에' 띄워야 한다.
+    await requestAttWithRetry(AdMob);
     await AdMob.initialize({
       initializeForTesting: IS_TESTING,
       testingDevices: TEST_DEVICE_IDS,
