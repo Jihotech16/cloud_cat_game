@@ -19,6 +19,9 @@ App Store Connect / Google Play 콘솔에 언어별로 붙여넣으세요.
 **키워드 (쉼표 구분):**
 고양이,점프,구름,아케이드,캐주얼,로그라이크,점수,오프라인,한손,미니게임,도약,하이스코어
 
+**Google Play 간단한 설명 (80):**
+꾹 눌렀다 떼면 점프! 구름을 밟고 하늘 끝까지 오르는 한 손 아케이드 점프 게임
+
 **설명:**
 구름 위를 통통 뛰어오르는 귀여운 고양이 아케이드 점프 게임!
 
@@ -46,10 +49,13 @@ App Store Connect / Google Play 콘솔에 언어별로 붙여넣으세요.
 Bounce the clouds, cute cat!
 
 **Promotional Text (170):**
-Press and release to leap up the clouds! Nail the sweet spot for a PERFECT jump, chain landings for combos, and collect orbs for legendary, evolving, trade-off powers — all the way to space!
+Press and release to leap up the clouds! Nail the sweet spot for a PERFECT jump, chain landings for combos, and collect orbs for legendary powers — all the way to space!
 
 **Keywords:**
 cat,jump,cloud,arcade,casual,roguelike,high score,offline,one hand,doodle,leap,minigame
+
+**Google Play Short Description (80):**
+Press and release to jump! Climb the clouds to space, one-handed.
 
 **Description:**
 Poing: Cloud Jump is a one-handed arcade jumper starring a cute cloud-hopping cat!
@@ -83,6 +89,9 @@ Free, one hand, portrait, offline-friendly. How high can you climb?
 **キーワード:**
 猫,ジャンプ,雲,アーケード,カジュアル,ローグライク,ハイスコア,オフライン,片手,ミニゲーム,飛躍
 
+**Google Play 簡単な説明 (80):**
+長押しして離すとジャンプ！雲を登って宇宙まで、片手で遊べるアーケードゲーム
+
 **説明:**
 雲の上をぴょんぴょん跳ねる、かわいい猫のアーケードジャンプゲーム！
 
@@ -114,6 +123,9 @@ Free, one hand, portrait, offline-friendly. How high can you climb?
 
 **关键词:**
 猫,跳跃,云,街机,休闲,肉鸽,高分,离线,单手,小游戏,弹跳
+
+**Google Play 简短说明 (80):**
+长按后松开起跳！踩着云朵一路爬向太空的单手街机跳跃游戏
 
 **描述:**
 《Poing: Cloud Jump》是一款可爱猫咪在云朵间弹跳的单手街机跳跃游戏！
