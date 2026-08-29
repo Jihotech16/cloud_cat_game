@@ -756,12 +756,18 @@ img.reward-icon {
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   background: rgba(110, 198, 255, 0.35);
   backdrop-filter: blur(4px);
   z-index: 20;
   padding: 20px;
+  /* 내용이 화면보다 길면 잘리지 않고 스크롤되게 한다.
+     (align-items:center 로는 넘칠 때 위쪽이 잘려 도달 불가) */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
 }
 
 .overlay.hidden,
@@ -786,6 +792,9 @@ img.reward-icon {
   width: 100%;
   max-width: 320px;
   animation: popIn 0.35s ease-out;
+  /* 자동 마진 중앙정렬: 공간이 남으면 가운데, 넘치면 0이 되어 잘리지 않는다 */
+  margin: auto;
+  flex-shrink: 0;
 }
 
 @keyframes popIn {
@@ -986,8 +995,17 @@ img.reward-icon {
   display: none;
 }
 
-.best-record {
+/* 내 기록 · 전체 기록을 한 줄에 나란히(좁으면 자동 줄바꿈) */
+.records {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
   margin-top: 14px;
+}
+
+.best-record {
+  margin: 0;
   font-size: 0.9rem;
   color: #636e72;
 }
@@ -998,7 +1016,7 @@ img.reward-icon {
 }
 
 .best-record.global-record {
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .best-record.global-record strong {
@@ -1145,4 +1163,91 @@ img.reward-icon {
   background: #6ec6ff;
   color: #fff;
   font-weight: 700;
+}
+
+/* ───────────────────────────────────────────────────────────────
+   시작 화면 압축 레이아웃
+   메뉴 항목이 많아(모드 선택·시작·상점·사운드·기록·안내·언어) 작은
+   화면에서는 패널이 세로로 넘친다. 어드벤처 모드를 고르면 상점 버튼이
+   더해져(main.js) 한 줄 더 길어진다. 아래 규칙으로 밀도를 높인다.
+   ─────────────────────────────────────────────────────────────── */
+
+/* 상점·사운드를 한 줄에. 상점이 .hidden 이면 사운드가 폭을 다 쓴다. */
+.menu-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.menu-actions .btn-secondary {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+/* 네이티브 앱에서는 "홈 화면에 추가" 안내가 의미 없다(이미 앱). */
+.is-native .pwa-only {
+  display: none;
+}
+
+/* 세로가 짧은 기기: 여백·글자·미리보기를 단계적으로 줄인다.
+   (iPhone SE 667pt, 일반 기기의 가로 모드 등) */
+@media (max-height: 780px) {
+  .panel {
+    padding: 20px 18px;
+  }
+  .title {
+    font-size: 1.45rem;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    margin-bottom: 10px;
+  }
+  .cat-preview {
+    max-width: 210px;
+    margin: 4px auto 10px;
+  }
+  .controls {
+    margin-bottom: 14px;
+  }
+  .mode-select {
+    margin: 10px 0 4px;
+  }
+  .mode-hint {
+    margin-bottom: 10px;
+  }
+  .btn-primary {
+    padding: 13px 20px;
+    font-size: 1.05rem;
+  }
+  .btn-secondary {
+    padding: 11px 16px;
+  }
+  .records {
+    margin-top: 10px;
+  }
+  .install-hint,
+  .lang-label {
+    margin-top: 8px;
+  }
+}
+
+@media (max-height: 660px) {
+  .cat-preview {
+    max-width: 150px;
+  }
+  /* 조작 설명 둘째 줄과 언어 라벨은 없어도 뜻이 통한다 */
+  .touch-hint.sub,
+  .lang-label {
+    display: none;
+  }
+  .lang-select {
+    margin-top: 10px;
+  }
+  .subtitle {
+    display: none;
+  }
 }
