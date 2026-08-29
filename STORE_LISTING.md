@@ -34,7 +34,7 @@ App Store Connect / Google Play 콘솔에 언어별로 붙여넣으세요.
 • 강력한 대신 대가가 있는 트레이드오프 카드
 • 계열 세트 시너지와 숨은 시그니처 페어
 
-낮 → 노을 → 밤 → 우주로 변하는 하늘을 오르며, 떠다니는 가시를 피하고 트램펄린·부스트 구름을 타고, 미끄러운 얼음 구름과 깜빡이는 페이즈 구름을 넘나드세요. 모은 코인으로 상점에서 영구 강화하고, 전 세계 최고 기록에 도전!
+낮 → 노을 → 밤 → 우주로 변하는 하늘을 오르며, 떠다니는 가시를 피하고 트램펄린·부스트 구름을 타고, 미끄러운 얼음 구름을 넘나드세요. 모은 코인으로 상점에서 영구 강화하고, 전 세계 최고 기록에 도전!
 
 무료 · 한 손 · 세로 모드 · 가볍게 오프라인. 얼마나 높이 오를 수 있나요?
 
@@ -66,7 +66,7 @@ Press and hold to charge, then release to leap — hold longer to jump higher, a
 • Trade-off cards — big power for a price
 • Set synergies & hidden signature pairs
 
-Climb through living skies — day, sunset, night, and outer space — dodging drifting spikes, riding trampolines and boosters, and hopping across icy and phasing clouds. Spend coins in the shop for permanent upgrades, and race the world's best score.
+Climb through living skies — day, sunset, night, and outer space — dodging drifting spikes, riding trampolines and boosters, and hopping across slippery icy clouds. Spend coins in the shop for permanent upgrades, and race the world's best score.
 
 Free, one hand, portrait, offline-friendly. How high can you climb?
 
@@ -98,7 +98,7 @@ Free, one hand, portrait, offline-friendly. How high can you climb?
 • 強力だが代償のあるトレードオフカード
 • 系統セットシナジーと隠しシグネチャーペア
 
-昼 → 夕焼け → 夜 → 宇宙へと変わる空を登り、漂うトゲを避け、トランポリンやブースト雲に乗り、滑る氷の雲と点滅するフェイズ雲を越えていこう。集めたコインでショップを永久強化し、世界最高スコアに挑戦！
+昼 → 夕焼け → 夜 → 宇宙へと変わる空を登り、漂うトゲを避け、トランポリンやブースト雲に乗り、滑る氷の雲を越えていこう。集めたコインでショップを永久強化し、世界最高スコアに挑戦！
 
 無料・片手・縦向き・オフラインOK。どこまで高く登れる？
 
@@ -130,7 +130,7 @@ Free, one hand, portrait, offline-friendly. How high can you climb?
 • 强力却有代价的权衡卡牌
 • 系别套装协同与隐藏签名组合
 
-穿越昼→黄昏→夜→太空不断变化的天空，躲避漂浮尖刺，乘坐弹床与助推云，跨越湿滑的冰云与闪烁的相位云。用金币在商店永久强化，冲击全球最高分！
+穿越昼→黄昏→夜→太空不断变化的天空，躲避漂浮尖刺，乘坐弹床与助推云，跨越湿滑的冰云。用金币在商店永久强化，冲击全球最高分！
 
 免费·单手·竖屏·可离线畅玩。你能爬多高？
 
