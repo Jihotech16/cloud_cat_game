@@ -25,6 +25,10 @@ export const CHARGE_CAP_STEP = 0.15; // '최대치 ⬆' 보상 1회당 +15% (최
 // 충전 가속 곡선: 시작은 느리게(살짝 점프 미세 조절), 채울수록 빨라짐.
 // 충전이 0일 때 기준 속도의 비율(낮을수록 초반이 더 천천히 찬다).
 export const CHARGE_EASE_MIN = 0.25;
+// 최대치에 닿은 뒤 그대로 유지하는 시간(프레임, 60fps 기준 3초).
+// 이 시간이 지나면 게이지가 0 으로 돌아가 다시 차오른다 — 타이밍을 놓쳐도
+// 잠깐 기다리면 원하는 세기로 다시 조준할 수 있게 하려는 것.
+export const CHARGE_HOLD_FRAMES = 180;
 export const CLOUD_GAP_MIN = 40 * GAME_SCALE;
 export const CLOUD_GAP_MAX = 66 * GAME_SCALE;
 export const SPAWN_LOOKAHEAD = 1.2;

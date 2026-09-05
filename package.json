@@ -35,7 +35,8 @@
     "@capacitor/ios": "^8.4.1",
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
-    "@capacitor/status-bar": "^8.0.2"
+    "@capacitor/status-bar": "^8.0.2",
+    "capacitor-firebase-app-check": "file:vendor/capacitor-firebase-app-check"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.1",

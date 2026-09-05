@@ -17,12 +17,20 @@
 // 개발 중에는 구글 공식 "테스트 광고"를 노출한다(실 수익 없음, 정책 위반 아님).
 const IS_TESTING = false;
 
-// 개발자 본인 기기(해시 ID). 여기 등록된 기기는 출시 빌드에서도 항상
-// 테스트 광고를 받으므로 실광고 무효 클릭(계정 정지 사유)이 원천 차단된다.
-// ID는 실기기에서 앱 실행 시 Xcode/Logcat 콘솔의 "To get test ads..." 로그에 찍힌다.
-const TEST_DEVICE_IDS = [
-  'cf9300c7057c87d5b480bc94be7f63f5', // 지호 iPhone
-];
+// 개발자 본인 기기(해시 ID).
+//
+// ⚠️ 2026-09-05 확인: 이 배열은 실제로 동작하지 않는다.
+// AdMob.initialize({ testingDevices }) 로 넘겨도 GMA SDK 의
+// requestConfiguration.testDeviceIdentifiers 는 빈 배열로 남는다(실기기 로그로 확인).
+// 즉 여기에 올바른 ID 를 넣어도 개발자 기기에 실광고가 그대로 나간다.
+//
+// 그래서 개발자 기기는 **AdMob 콘솔**에 등록해 막는다:
+//   설정 > 기기 테스트 > 테스트 기기 추가 (플랫폼 iOS, 광고 ID/IDFA 입력)
+// 콘솔 등록은 서버에서 적용되므로 앱 코드와 무관하고 이미 배포된 빌드에도 즉시 먹는다.
+//   · 지호 iPhone 16 Pro Max — IDFA BFD5AF9A-13FE-418C-A9A8-B5EABD9D21A9 (2026-09-05 등록)
+// IDFA 는 ATT 를 허용한 상태에서만 유효하다. 재설치해도 바뀌지 않는다
+// (기기 해시 ID 와 달리 IDFA 는 IDFV 기반이 아니다).
+const TEST_DEVICE_IDS = [];
 
 // 구글 공식 테스트 광고 단위 ID(실 수익 없음, 개발용). 아직 실제 ID 가
 // 없는 항목은 이 테스트 ID 를 그대로 사용한다.
