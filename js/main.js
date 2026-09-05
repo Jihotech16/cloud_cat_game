@@ -1,6 +1,7 @@
 import { Game } from './game.js';
 import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
+import { initAppCheck } from './appcheck.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
 import { playClickSound, setSfxMuted } from './audio.js';
@@ -660,6 +661,8 @@ async function boot() {
   // 스플래시가 내려간 뒤에 ATT 를 요청해야 한다. iOS 는 앱이 active 가
   // 아니면 추적 동의 팝업을 조용히 무시하기 때문이다(심사 반려 사유였음).
   await initNative();
+  // 기록 REST 요청에 붙일 토큰을 먼저 준비한다(initScores 보다 앞서야 한다).
+  await initAppCheck();
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();

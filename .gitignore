@@ -21,3 +21,6 @@ android/key.properties
 # 잡파일
 .DS_Store
 *.log
+
+# 벤더링한 Capacitor 플러그인의 의존성(빌드에 불필요, npm 이 다시 만든다)
+vendor/*/node_modules/

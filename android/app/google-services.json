@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "685412353436",
+    "firebase_url": "https://cloudcatjumpinggame-default-rtdb.firebaseio.com",
+    "project_id": "cloudcatjumpinggame",
+    "storage_bucket": "cloudcatjumpinggame.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685412353436:android:8c932435d3f28642e03459",
+        "android_client_info": {
+          "package_name": "com.jihotech.cloudcatjump"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOKP3J2aZLvaIMWLOzdlsnvd_o-7cmERQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

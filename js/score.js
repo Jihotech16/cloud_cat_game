@@ -1,4 +1,5 @@
 import { FIREBASE_DB_URL } from './firebase-config.js';
+import { withAppCheck } from './appcheck.js';
 
 const DEVICE_KEY = 'cloudCatJump_deviceId';
 
@@ -53,13 +54,13 @@ function extractScore(value) {
 }
 
 async function fetchRemoteBest(mode) {
-  const res = await fetch(firebaseScorePath(mode));
+  const res = await fetch(firebaseScorePath(mode), { headers: await withAppCheck() });
   if (!res.ok) throw new Error(`Firebase read failed: ${res.status}`);
   return extractScore(await res.json());
 }
 
 async function fetchGlobalBest(mode) {
-  const res = await fetch(firebaseGlobalBestPath(mode));
+  const res = await fetch(firebaseGlobalBestPath(mode), { headers: await withAppCheck() });
   if (!res.ok) throw new Error(`Firebase read failed: ${res.status}`);
   return extractScore(await res.json());
 }
@@ -68,7 +69,7 @@ async function fetchGlobalBest(mode) {
 async function pushGlobalBest(mode, score) {
   const res = await fetch(firebaseGlobalBestPath(mode), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await withAppCheck({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ score, updatedAt: Date.now() }),
   });
   if (!res.ok) throw new Error(`Firebase global write failed: ${res.status}`);
@@ -77,7 +78,7 @@ async function pushGlobalBest(mode, score) {
 async function pushRemoteBest(mode, score) {
   const res = await fetch(firebaseScorePath(mode), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await withAppCheck({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ score, updatedAt: Date.now() }),
   });
   if (!res.ok) throw new Error(`Firebase write failed: ${res.status}`);
