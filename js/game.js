@@ -36,6 +36,7 @@ import {
   CHARGE_CAP_BASE,
   CHARGE_CAP_STEP,
   CHARGE_EASE_MIN,
+  CHARGE_HOLD_FRAMES,
   PERFECT_LO,
   PERFECT_HI,
   PERFECT_JUMP_MULT,
@@ -126,6 +127,7 @@ export class Game {
     this.clouds = [];
     this.input = { holding: false };
     this.charge = 0;
+    this.chargeHold = 0;
     this.stars = [];
     this.cloudDecor = [];
 
@@ -299,6 +301,7 @@ export class Game {
         this._spawnParticles(this.player.x, this.player.bottom, '#7fdcff', 8);
       }
       this.charge = 0;
+      this.chargeHold = 0;
       this.callbacks.onCharge?.(0, false);
       this.airJumpsLeft = this.doubleJumpLevel;
 
@@ -341,6 +344,31 @@ export class Game {
     const t = max > 0 ? this.charge / max : 0;
     const ease = CHARGE_EASE_MIN + (1 - CHARGE_EASE_MIN) * t;
     return this._chargeRate() * ease;
+  }
+
+  // 게이지를 한 프레임 진행시킨다. 최대치에 닿으면 CHARGE_HOLD_FRAMES 동안
+  // 그대로 머물렀다가 0 으로 돌아가 처음부터 다시 차오른다. 최대에서 계속
+  // 멈춰 있으면 타이밍을 놓쳤을 때 작은 점프를 할 방법이 없기 때문이다.
+  _advanceCharge() {
+    const max = this._chargeMax();
+    if (max <= 0) return;
+
+    if (this.chargeHold > 0) {
+      this.chargeHold -= 1;
+      if (this.chargeHold === 0) this.charge = 0; // 유지가 끝나면 처음부터
+      this.callbacks.onCharge?.(this.charge, true);
+      return;
+    }
+
+    const next = this.charge + this._chargeIncrement();
+    if (next >= max) {
+      this.charge = max;
+      this.chargeHold = CHARGE_HOLD_FRAMES;
+    } else {
+      this.charge = next;
+    }
+
+    this.callbacks.onCharge?.(this.charge, true);
   }
 
   // 현재 모을 수 있는 최대 점프 파워(0~1). 보상으로 상한이 올라간다.
@@ -459,6 +487,7 @@ export class Game {
       this._addShake(4);
       this._spawnParticles(this.player.x, this.player.bottom, '#ff7ec2', 10);
       this.charge = 0;
+      this.chargeHold = 0;
       this.callbacks.onCharge?.(0, this.input.holding);
       this._registerLanding();
       return;
@@ -490,6 +519,7 @@ export class Game {
     this.player.groundedCloud = cloud;
     this.player.onGround = true;
     this.charge = 0;
+    this.chargeHold = 0;
     this.airJumpsLeft = this.doubleJumpLevel;
     this.callbacks.onCharge?.(0, this.input.holding);
 
@@ -635,6 +665,7 @@ export class Game {
     this._initDecor();
     this.input = { holding: false };
     this.charge = 0;
+    this.chargeHold = 0;
     this.callbacks.onCharge?.(0, false);
 
     if (this._loopId) cancelAnimationFrame(this._loopId);
@@ -834,8 +865,7 @@ export class Game {
     }
 
     if (this.input.holding) {
-      this.charge = Math.min(this._chargeMax(), this.charge + this._chargeIncrement());
-      this.callbacks.onCharge?.(this.charge, true);
+      this._advanceCharge();
     }
   }
 
@@ -872,8 +902,7 @@ export class Game {
     if (this.state === 'ready') {
       this._snapToStartCloud();
       if (this.input.holding) {
-        this.charge = Math.min(this._chargeMax(), this.charge + this._chargeIncrement());
-        this.callbacks.onCharge?.(this.charge, true);
+        this._advanceCharge();
       }
       this._syncPlayerChargeAnim();
       return;
