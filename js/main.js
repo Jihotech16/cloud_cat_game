@@ -10,7 +10,6 @@ import {
   initAds,
   adsAvailable,
   showBanner,
-  hideBanner,
   showInterstitial,
   showRewardedAd,
 } from './ads.js';
@@ -444,7 +443,7 @@ function beginGame() {
   // 어드벤처 전용 HUD(게이지/코인/효과) 표시 제어
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');
   updateHudRecords(selectedMode);
-  hideBanner(); // 플레이 중에는 배너 숨김
+  // 플레이 중에도 배너를 유지한다. 겹치지 않게 #app 이 배너 몫을 비워 둔다.
   game.start(selectedMode);
 }
 
@@ -500,7 +499,6 @@ async function onReviveClick() {
     hud.classList.remove('hidden');
     chargeBar.classList.remove('hidden');
     btnPause?.classList.remove('hidden');
-    hideBanner();
     return;
   }
   // 시청 취소/실패 → 다시 시도 가능
@@ -673,5 +671,6 @@ async function boot() {
   setMode(selectedMode); // 점수 로드 후 기록 갱신
   updateLayout();
 }
+
 
 boot();

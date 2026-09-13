@@ -19,8 +19,8 @@ let cloudImage = null;
 let cloudImageReady = false;
 
 // 특수 구름 전용 스프라이트(있으면 사용). platFrac=발판이 스프라이트 높이의 어디쯤(위→아래 비율)
-function loadCloudVariant(src, platFrac, wScale) {
-  const v = { img: null, ready: false, platFrac, wScale };
+function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = 10) {
+  const v = { img: null, ready: false, platFrac, wScale, frameCount, frameTicks };
   if (typeof Image !== 'undefined') {
     v.img = new Image();
     v.img.onload = () => { v.ready = true; };
@@ -31,9 +31,13 @@ function loadCloudVariant(src, platFrac, wScale) {
 }
 // platFrac: 발판(구름 윗면)이 스프라이트 높이의 어디쯤인지(위→아래 비율).
 // 효과(결정·화살표)가 큰 원본 아트 기준 값. 아트를 바꾸면 이 값도 같이 맞춰야 한다.
+//
+// frameTicks = 한 프레임을 몇 틱(60fps 기준) 유지할지. 부스트 구름은 이펙트가 높이의
+// 28% 만 올라가서 10 틱(6fps)이면 잔잔하지만, 바운스 구름은 38% 를 올라가 같은 값이면
+// 확 튄다. 그래서 바운스만 18 틱(3.3fps, 한 바퀴 1.2초)으로 늦춘다.
 const VARIANT_SPRITES = {
-  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost.png', 0.47, 1.15),
-  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce.png', 0.58, 1.15),
+  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.58, 1.15, 4, 10),
+  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-imagegen-sheet.png', 0.52, 1.15, 4, 18),
 };
 
 export function loadCloudSprite() {
@@ -63,6 +67,7 @@ export class Cloud {
     this.broken = false;
     this.breakTimer = 0;
     this.isSolid = true; // 항상 실체(페이즈 구름 비활성)
+    this.animFrameOffset = Math.floor(Math.random() * 40);
   }
 
   update(worldWidth, timeScale = 1) {
@@ -92,7 +97,7 @@ export class Cloud {
     if (this.broken && this.breakTimer > 20) return;
 
     const screenY = this.y - cameraY;
-    // 부서지는 구름의 페이드아웃만 유지(피드백에 필요). 그 외에는 정적.
+    // 부서지는 구름의 페이드아웃은 유지한다.
     const alpha = this.broken ? Math.max(0, 1 - this.breakTimer / 20) : 1;
     const w = this.width * scale;
     const h = this.drawHeight * scale;
@@ -102,6 +107,19 @@ export class Cloud {
     ctx.save();
     ctx.globalAlpha = alpha;
 
+    if (this.type === CLOUD_TYPES.NORMAL) {
+      // 약 4초 주기로 숨 쉬는 움직임. 발판 높이를 축으로 삼기 때문에
+      // 착지 위치는 그대로 고정되고 그림만 폭 ±3.5%, 높이 ±5% 변한다.
+      // 폭과 높이를 반대로 움직여야 부피가 유지되는 느낌이 난다.
+      // 구름마다 animFrameOffset 이 달라 한꺼번에 같은 박자로 움직이지 않는다.
+      const phase = (frame / 240 + this.animFrameOffset / 40) * Math.PI * 2;
+      const breath = Math.sin(phase);
+      const platformY = screenY - h * 0.18;
+      ctx.translate(this.x, platformY);
+      ctx.scale(1 + breath * 0.035, 1 - breath * 0.05);
+      ctx.translate(-this.x, -platformY);
+    }
+
     const dim = altitude > 0.05
       ? `brightness(${(1 - 0.32 * altitude).toFixed(2)}) saturate(${(1 - 0.2 * altitude).toFixed(2)})`
       : '';
@@ -109,7 +127,9 @@ export class Cloud {
     const variant = VARIANT_SPRITES[this.type];
     if (variant && variant.ready) {
       // 전용 스프라이트(구름 + 이펙트 포함)
-      const aspect = variant.img.naturalHeight / variant.img.naturalWidth;
+      const sourceW = variant.img.naturalWidth / variant.frameCount;
+      const sourceH = variant.img.naturalHeight;
+      const aspect = sourceH / sourceW;
       const dispW = w * variant.wScale;
       const dispH = dispW * aspect;
       const platScreen = screenY - this.drawHeight * scale * 0.18; // 발판(구름 윗면) 화면 y
@@ -117,7 +137,13 @@ export class Cloud {
       const sdy = platScreen - dispH * variant.platFrac;
       ctx.imageSmoothingEnabled = false;
       ctx.filter = dim || 'none';
-      ctx.drawImage(variant.img, sdx, sdy, dispW, dispH);
+      const frameIndex = Math.floor((frame + this.animFrameOffset) / variant.frameTicks)
+        % variant.frameCount;
+      ctx.drawImage(
+        variant.img,
+        frameIndex * sourceW, 0, sourceW, sourceH,
+        sdx, sdy, dispW, dispH,
+      );
       ctx.filter = 'none';
     } else if (cloudImageReady) {
       const filters = {

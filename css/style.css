@@ -16,6 +16,10 @@
   --shadow: 0 8px 32px rgba(45, 52, 54, 0.18);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* 하단 배너 때문에 UI 가 비켜야 하는 높이(화면 맨 아래 기준). ads.js 가 갱신한다.
+     배너는 webview 를 줄이지 않고 그 위에 겹쳐 뜨며, 홈 인디케이터 바로 위에 붙으므로
+     이 값은 "safe-area-inset-bottom + 배너 높이 + 여유" 다. 배너가 없으면 0. */
+  --banner-reserve: 0px;
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 }
@@ -55,11 +59,14 @@ body {
   width: 100%;
   height: 100%;
   height: 100dvh;
-  padding:
-    var(--safe-top)
-    var(--safe-right)
-    var(--safe-bottom)
-    var(--safe-left);
+  /* safe-area 패딩은 주지 않는다. box-sizing:border-box 라서 캔버스가 그만큼 깎이고,
+     자식의 position:absolute 기준이 padding box 라서 자체적으로 --safe-top 을 쓰는
+     .hud · .pause-btn 이 safe-area 를 두 번 적용받는다. 안전영역은 UI 가 각자 처리한다.
+
+     아래쪽만 배너 몫을 비운다. 배너를 게임 화면 위에 겹쳐 두면 점프하려고 하단을 누르다
+     광고를 눌러 무효 클릭이 되므로(AdMob 계정 제재 사유), 캔버스가 배너 위에서 끝나게 한다.
+     캔버스는 height:100% 라 content box 기준이므로 이 패딩만큼 실제로 줄어든다. */
+  padding-bottom: var(--banner-reserve);
 }
 
 #game-canvas {
@@ -648,13 +655,16 @@ img.reward-icon {
 .charge-bar {
   position: absolute;
   left: 50%;
-  bottom: calc(24px + var(--safe-bottom));
+  /* absolute 의 기준(containing block)은 #app 의 padding box 이고 padding box 는 패딩을
+     포함한다. 즉 #app 의 padding-bottom 으로는 이 게이지가 한 픽셀도 올라가지 않는다.
+     배너를 피하려면 여기서 직접 올려야 한다. 배너가 없을 때는 24px + 홈 인디케이터. */
+  bottom: max(calc(24px + var(--safe-bottom)), calc(8px + var(--banner-reserve)));
+  transition: bottom 0.18s ease, opacity 0.2s;
   transform: translateX(-50%);
   width: min(200px, 52vw);
   z-index: 10;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s;
 }
 
 .charge-bar.visible {
@@ -767,7 +777,7 @@ img.reward-icon {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-top: max(20px, env(safe-area-inset-top));
-  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-bottom: max(20px, env(safe-area-inset-bottom), calc(12px + var(--banner-reserve)));
 }
 
 .overlay.hidden,

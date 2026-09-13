@@ -154,7 +154,54 @@ export async function initAds() {
 // ───────── 배너 ─────────
 let bannerShown = false;
 
-/** 하단 배너 표시(메인/게임오버 등 메뉴 화면에서). */
+// 배너 때문에 하단 UI 가 비켜야 하는 높이를 CSS 변수(--banner-reserve)로 알려준다.
+// 적응형 배너는 기기 폭에 따라 높이가 달라져서 상수로 박아둘 수 없다.
+//
+// ⚠️ 배너 높이만으로는 부족하다. iOS 플러그인은 배너를 webview 위에 겹쳐 올리면서
+// safeAreaLayoutGuide.bottom 에 붙이므로, 배너는 화면 맨 아래가 아니라 홈 인디케이터
+// '위'에서 시작한다. 그래서 비워야 하는 높이는 safe-area-inset-bottom + 배너 높이다.
+// 배너 바로 위를 눌렀을 때 손가락이 광고로 미끄러지지 않도록 완충 여백도 더한다.
+const BANNER_GAP = 10;
+
+// env(safe-area-inset-bottom) 은 JS 로 직접 읽을 수 없어서(getComputedStyle 은 env()
+// 를 풀어주지 않는다) 그 높이를 가진 보이지 않는 요소를 재서 구한다.
+function safeAreaBottomPx() {
+  try {
+    const probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);' +
+      'visibility:hidden;pointer-events:none;';
+    document.body.appendChild(probe);
+    const px = probe.getBoundingClientRect().height;
+    probe.remove();
+    return px;
+  } catch {
+    return 0;
+  }
+}
+
+function setBannerHeight(px) {
+  const h = Math.max(0, Math.round(px));
+  const reserved = h > 0 ? Math.round(safeAreaBottomPx()) + h + BANNER_GAP : 0;
+  document.documentElement.style.setProperty('--banner-reserve', `${reserved}px`);
+}
+
+/** 하단 배너 표시. */
+
+let sizeListenerBound = false;
+function bindBannerSizeListener(AdMob) {
+  if (sizeListenerBound) return;
+  sizeListenerBound = true;
+  try {
+    // 크기가 정해지거나 바뀔 때(회전 등) 실제 높이를 받는다.
+    AdMob.addListener('bannerAdSizeChanged', (size) => {
+      if (bannerShown) setBannerHeight(size?.height ?? 0);
+    });
+  } catch (err) {
+    console.warn('배너 크기 이벤트 구독 실패:', err);
+  }
+}
+
 export async function showBanner() {
   const AdMob = admob();
   if (!AdMob || bannerShown) return;
@@ -167,20 +214,33 @@ export async function showBanner() {
       isTesting: IS_TESTING,
     });
     bannerShown = true;
+    bindBannerSizeListener(AdMob);
+    // 크기 이벤트가 오기 전까지 쓸 잠정값(적응형 배너의 흔한 높이).
+    setBannerHeight(56);
   } catch (err) {
     console.warn('배너 표시 실패:', err);
   }
 }
 
-/** 게임 플레이 중에는 배너를 숨긴다. */
+/** 게임 플레이 중에는 배너를 없앤다.
+ *
+ * hideBanner() 가 아니라 removeBanner() 를 쓴다. hideBanner 는 배너 뷰를 숨기기만 해서
+ * 뷰가 그대로 남고, AdMob 의 자동 새로고침이나 앱 복귀 시 다시 나타나 플레이 화면을
+ * 가린다(실기기에서 게임 중 배너가 떠 있는 것으로 확인). removeBanner 는 뷰를 없애고
+ * 웹뷰 레이아웃까지 되돌린다. 다시 필요할 때는 showBanner 가 새로 만든다.
+ *
+ * bannerShown 플래그로 가드하지 않는다 — showBanner 가 실패했거나 플래그가 실제 상태와
+ * 어긋났을 때도 화면에 남은 배너를 확실히 걷어내기 위해서다. */
 export async function hideBanner() {
   const AdMob = admob();
-  if (!AdMob || !bannerShown) return;
+  if (!AdMob) return;
   try {
-    await AdMob.hideBanner();
-    bannerShown = false;
+    await AdMob.removeBanner();
   } catch (err) {
-    console.warn('배너 숨김 실패:', err);
+    console.warn('배너 제거 실패:', err);
+  } finally {
+    bannerShown = false;
+    setBannerHeight(0);
   }
 }
 
