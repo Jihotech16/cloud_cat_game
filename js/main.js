@@ -14,6 +14,7 @@ import {
   showRewardedAd,
 } from './ads.js';
 import { addCoins } from './meta.js';
+import { onGameFinished } from './review.js';
 import { TIERS, TAGS } from './orb.js';
 import { t, applyStaticI18n, getLang, setLang, LANGS } from './i18n.js';
 import {
@@ -378,6 +379,10 @@ function ensureGame() {
       // N판마다 1회를 예약해두고, 사용자가 '다시 도전/메인'으로 나갈 때 재생한다.
       gameOverCount += 1;
       pendingInterstitial = gameOverCount % INTERSTITIAL_EVERY === 0;
+
+      // 최고 기록을 깬 순간이면 별점 요청(조건·빈도는 review.js 가 관리).
+      // 이어하기 버튼이 떠 있으면 OS 별점 창이 그 버튼을 가리므로 이번엔 묻지 않는다.
+      onGameFinished(isNewRecord, { canAsk: !reviveEligible });
     },
   });
 }
