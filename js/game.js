@@ -178,6 +178,11 @@ export class Game {
     this._bindInput();
     this._resize();
     window.addEventListener('resize', () => this._resize());
+    // 배너가 뜨고 사라지면 #app 의 padding 이 바뀌어 캔버스 표시 크기만 달라진다.
+    // 이때 window resize 는 발생하지 않으므로 직접 관찰해서 다시 계산한다.
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => this._resize()).observe(this.canvas);
+    }
   }
 
   _resize() {
