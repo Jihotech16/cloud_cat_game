@@ -31,6 +31,11 @@ export const CHARGE_EASE_MIN = 0.25;
 export const CHARGE_HOLD_FRAMES = 180;
 export const CLOUD_GAP_MIN = 40 * GAME_SCALE;
 export const CLOUD_GAP_MAX = 66 * GAME_SCALE;
+// 구름 그림끼리 겹치지 않게 배치(game.js _placeCloud).
+export const CLOUD_OVERLAP_NEIGHBORS = 6; // 새 구름과 비교할 직전 구름 수
+export const CLOUD_OVERLAP_TRIES = 20; // 가로 위치를 다시 뽑는 횟수(구름 생성은 드물어서 비용 무시 가능)
+export const CLOUD_OVERLAP_PAD = 4; // 그림 사이 최소 여백(px)
+export const CLOUD_OVERLAP_MAX_PUSH = 90; // 가로로 못 피할 때 위로 올릴 수 있는 최대치(px)
 export const SPAWN_LOOKAHEAD = 1.2;
 
 export const START_CLOUD_WIDTH = Math.round(109 * CLOUD_SCALE);

@@ -43,6 +43,10 @@ import {
   PERFECT_SCORE_BONUS,
   CLOUD_GAP_MIN,
   CLOUD_GAP_MAX,
+  CLOUD_OVERLAP_NEIGHBORS,
+  CLOUD_OVERLAP_TRIES,
+  CLOUD_OVERLAP_PAD,
+  CLOUD_OVERLAP_MAX_PUSH,
   SPAWN_LOOKAHEAD,
   START_CLOUD_WIDTH,
   START_Y_OFFSET,
@@ -657,9 +661,9 @@ export class Game {
     let y = startY;
     for (let i = 0; i < 24; i++) {
       y -= this._cloudGap();
-      const x = Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
-      const type = pickCloudType(0);
-      this.clouds.push(new Cloud(x, y, type, randomCloudWidth()));
+      const cloud = this._placeCloud(y, pickCloudType(0), randomCloudWidth());
+      this.clouds.push(cloud);
+      y = cloud.y;
     }
 
     this.highestSpawnedY = this.clouds.reduce((min, c) => (c.y < min ? c.y : min), startY);
@@ -692,6 +696,40 @@ export class Game {
     return Math.round(randomCloudWidth() * factor);
   }
 
+  // 새 구름의 위치를 정한다. 그림이 바로 아래 구름들과 겹치면 가로 위치를 다시 뽑고,
+  // 가로로 피할 자리가 없으면(움직이는 구름이 이웃이거나 화면이 좁을 때) 겹치지 않을
+  // 만큼만 위로 올린다. 올리는 폭은 CLOUD_OVERLAP_MAX_PUSH 로 제한해서, 기본 충전 점프
+  // (약 260px)로 닿지 못할 만큼 간격이 벌어지는 일은 없게 한다.
+  _placeCloud(y, type, width) {
+    const cloud = new Cloud(0, y, type, width);
+    const neighbors = this.clouds.slice(-CLOUD_OVERLAP_NEIGHBORS);
+    const randomX = () => Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
+
+    for (let i = 0; i < CLOUD_OVERLAP_TRIES; i++) {
+      cloud.x = randomX();
+      if (this._overlapPush(cloud, neighbors) === 0) return cloud;
+    }
+
+    const push = this._overlapPush(cloud, neighbors);
+    if (push <= CLOUD_OVERLAP_MAX_PUSH) cloud.y -= push;
+    return cloud;
+  }
+
+  // cloud 를 이웃과 겹치지 않게 하려면 위로 몇 px 올려야 하는지. 0 이면 이미 안 겹친다.
+  _overlapPush(cloud, neighbors) {
+    const a = cloud.visualBounds(this.worldWidth);
+    let push = 0;
+    for (const other of neighbors) {
+      const b = other.visualBounds(this.worldWidth);
+      const overlapX = a.left < b.right + CLOUD_OVERLAP_PAD && a.right > b.left - CLOUD_OVERLAP_PAD;
+      const overlapY = a.top < b.bottom + CLOUD_OVERLAP_PAD && a.bottom > b.top - CLOUD_OVERLAP_PAD;
+      if (overlapX && overlapY) {
+        push = Math.max(push, a.bottom - (b.top - CLOUD_OVERLAP_PAD));
+      }
+    }
+    return push;
+  }
+
   _spawnClouds() {
     const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
 
@@ -701,9 +739,9 @@ export class Game {
     while (y > spawnAbove) {
       const gap = this._cloudGap();
       y -= gap;
-      const x = Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
-      const type = pickCloudType(this.score);
-      this.clouds.push(new Cloud(x, y, type, this._cloudSpawnWidth()));
+      const cloud = this._placeCloud(y, pickCloudType(this.score), this._cloudSpawnWidth());
+      this.clouds.push(cloud);
+      y = cloud.y;
       this.highestSpawnedY = y;
     }
 

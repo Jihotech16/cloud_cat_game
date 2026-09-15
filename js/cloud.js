@@ -19,8 +19,10 @@ let cloudImage = null;
 let cloudImageReady = false;
 
 // 특수 구름 전용 스프라이트(있으면 사용). platFrac=발판이 스프라이트 높이의 어디쯤(위→아래 비율)
-function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = 10) {
-  const v = { img: null, ready: false, platFrac, wScale, frameCount, frameTicks };
+// aspectHint = 한 프레임의 세로/가로 비율. 이미지가 아직 안 불러와졌을 때도
+// 배치 계산(visualBounds)이 실제 그려질 크기를 알 수 있게 미리 적어 둔다.
+function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = 10, aspectHint = 1) {
+  const v = { img: null, ready: false, platFrac, wScale, frameCount, frameTicks, aspectHint };
   if (typeof Image !== 'undefined') {
     v.img = new Image();
     v.img.onload = () => { v.ready = true; };
@@ -36,8 +38,8 @@ function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = 10
 // 28% 만 올라가서 10 틱(6fps)이면 잔잔하지만, 바운스 구름은 38% 를 올라가 같은 값이면
 // 확 튄다. 그래서 바운스만 18 틱(3.3fps, 한 바퀴 1.2초)으로 늦춘다.
 const VARIANT_SPRITES = {
-  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.58, 1.15, 4, 10),
-  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-imagegen-sheet.png', 0.52, 1.15, 4, 18),
+  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.58, 1.15, 4, 10, 96 / 128),
+  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-imagegen-sheet.png', 0.52, 1.15, 4, 18, 757 / 520),
 };
 
 export function loadCloudSprite() {
@@ -86,6 +88,43 @@ export class Cloud {
     if (this.broken) {
       this.breakTimer += 1;
     }
+  }
+
+  // 화면에 실제로 그려지는 영역(월드 좌표, 구름 배율 1 기준). draw() 와 같은 계산을 한다.
+  // 발판(top)과 달리 그림 전체를 덮으므로, 구름을 배치할 때 그림끼리 겹치는지 보는 데 쓴다.
+  // 바운스 구름은 위로 솟는 이펙트 때문에 그림 높이가 일반 구름의 6배 가까이 된다.
+  visualBounds(worldWidth) {
+    let left;
+    let right;
+    let top;
+    let bottom;
+    const variant = VARIANT_SPRITES[this.type];
+    if (variant) {
+      const aspect = variant.ready
+        ? variant.img.naturalHeight / (variant.img.naturalWidth / variant.frameCount)
+        : variant.aspectHint;
+      const dispW = this.width * variant.wScale;
+      const dispH = dispW * aspect;
+      const plat = this.y - this.drawHeight * 0.18;
+      top = plat - dispH * variant.platFrac;
+      bottom = top + dispH;
+      left = this.x - dispW / 2;
+      right = this.x + dispW / 2;
+    } else {
+      // 일반 구름은 숨쉬기로 폭 3.5%, 높이 5% 까지 커진다.
+      const w = this.width * 1.035;
+      const h = this.drawHeight * 1.05;
+      left = this.x - w / 2;
+      right = this.x + w / 2;
+      top = this.y - h / 2;
+      bottom = this.y + h / 2;
+    }
+    // 움직이는 구름은 결국 화면 폭 전체를 지나가므로 가로로는 피할 수 없다.
+    if (this.type === CLOUD_TYPES.MOVING) {
+      left = 0;
+      right = worldWidth;
+    }
+    return { left, right, top, bottom };
   }
 
   get top() {
