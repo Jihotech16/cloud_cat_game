@@ -13,15 +13,12 @@ export async function initNative() {
   const plugins = cap.Plugins ?? {};
   const { StatusBar, SplashScreen } = plugins;
 
-  // 상태바는 숨긴다. 게임 화면이라 시계·배터리가 필요 없고, 그 자리까지 점수 HUD 를
-  // 끌어올리기 위해서다(style.css .hud 참고). 숨김이 실패해도 보이게 되는 경우를 위해
-  // 하늘색 배경에 어울리는 어두운 아이콘 스타일은 먼저 지정해 둔다.
+  // 상태바: 하늘색 배경에 어울리는 어두운 아이콘(Style.Light = 밝은 배경용)
   if (StatusBar) {
     try {
       await StatusBar.setStyle({ style: 'LIGHT' });
       // Android 전용 — iOS 에서는 무시됨
       await StatusBar.setBackgroundColor?.({ color: '#6ec6ff' });
-      await StatusBar.hide();
     } catch {
       /* 상태바 제어 실패는 치명적이지 않으므로 무시 */
     }

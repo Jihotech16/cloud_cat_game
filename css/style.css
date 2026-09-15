@@ -126,11 +126,11 @@ body {
 
 .hud {
   position: absolute;
-  /* 상태바는 숨긴다(native.js). 그러면 노치·다이내믹 아일랜드 기기의 safe-top 에는 그 아래
-     여유 공간이 10px 넘게 남으므로 그만큼 끌어올린다. 아일랜드 하단(48px)과 safe-top(59~62px)
-     사이, 노치 하단(30~35px)과 safe-top(44~50px) 사이 모두 10px 이상이라 겹치지 않는다.
-     노치 없는 기기는 상태바를 숨기면 safe-top 이 0 이 되므로 최소 8px 은 둔다. */
-  top: max(8px, calc(var(--safe-top) - 10px));
+  /* 노치·다이내믹 아일랜드 기기의 safe-top(44~62px)은 상태바 글자(시계·배터리)보다 한참
+     아래까지 잡혀 있어서 8px 끌어올려도 글자와 8px 이상 떨어진다(16 Pro Max 기준 18px).
+     노치 없는 기기는 safe-top 이 상태바 높이(20px) 그 자체라 끌어올리면 시계를 덮으므로
+     오히려 4px 내린 위치 아래로는 가지 않게 한다. safe-top 이 0 인 환경(웹)은 8px. */
+  top: max(8px, min(calc(var(--safe-top) + 4px), 24px), calc(var(--safe-top) - 8px));
   left: var(--safe-left);
   right: var(--safe-right);
   display: flex;
