@@ -34,6 +34,14 @@ const chargeBar = document.getElementById('charge-bar');
 const chargeFill = document.getElementById('charge-fill');
 const chargeTrack = document.querySelector('.charge-track');
 const hud = document.getElementById('hud');
+// HUD 높이는 모드(어드벤처는 게이지·시너지·효과 줄이 붙음)와 보유 효과에 따라 달라진다.
+// 콤보 표시와 일시정지 버튼이 HUD 를 가리지 않도록 실제 하단 위치를 CSS 변수로 알려준다.
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => {
+    const bottom = hud.getBoundingClientRect().bottom;
+    if (bottom > 0) document.documentElement.style.setProperty('--hud-bottom', `${Math.round(bottom)}px`);
+  }).observe(hud);
+}
 const startScreen = document.getElementById('start-screen');
 const gameoverScreen = document.getElementById('gameover-screen');
 
