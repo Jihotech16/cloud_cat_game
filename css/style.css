@@ -126,11 +126,12 @@ body {
 
 .hud {
   position: absolute;
-  /* 노치·다이내믹 아일랜드 기기의 safe-top(44~62px)은 상태바 글자(시계·배터리)보다 한참
-     아래까지 잡혀 있어서 8px 끌어올려도 글자와 8px 이상 떨어진다(16 Pro Max 기준 18px).
-     노치 없는 기기는 safe-top 이 상태바 높이(20px) 그 자체라 끌어올리면 시계를 덮으므로
-     오히려 4px 내린 위치 아래로는 가지 않게 한다. safe-top 이 0 인 환경(웹)은 8px. */
-  top: max(8px, min(calc(var(--safe-top) + 4px), 24px), calc(var(--safe-top) - 8px));
+  /* 상태바(시계·배터리)와 노치·다이내믹 아일랜드는 가리지 않되 그 바로 아래에 붙인다.
+     가운데 '최고' 칸이 아일랜드 바로 밑에 오므로, 아일랜드 기기(safe-top 59~62, 아일랜드 하단 48px)는
+     48px 에서 멈춘다(패딩 4px 포함 점수 줄 y 52, 아일랜드와 4px). 노치 기기(safe-top 44~50,
+     노치 하단 30~35px)는 safe-top - 8px. 노치 없는 기기는 safe-top 이 상태바 높이(20px)
+     그 자체라 그 아래 24px 에 둔다. safe-top 이 0 인 환경(웹)은 8px. */
+  top: max(8px, min(calc(var(--safe-top) + 4px), 24px), min(calc(var(--safe-top) - 8px), 48px));
   left: var(--safe-left);
   right: var(--safe-right);
   display: flex;
