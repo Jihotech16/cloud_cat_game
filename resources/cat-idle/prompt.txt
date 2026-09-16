@@ -1,0 +1,11 @@
+Mode: built-in image_gen
+Use case: identity-preserve.
+Asset type: pixel art game character idle animation sprite sheet.
+Reference image 1 is the exact original cat identity and style. Draw a new four-frame idle animation of THIS SAME orange tabby cat, not a redesigned cat. Keep the exact warm orange and tan striped fur, cream muzzle and belly, dark brown pixel outlines, black oval eyes with highlights, tiny pink nose, front-facing upright stance, paws held by chest, tail on viewer's right. No clothing or accessories.
+Layout: exactly 4 equally sized square cells in one horizontal row, ordered left to right, genuinely transparent background. Cat same scale, fixed feet baseline and centered body anchor in all cells, ample transparent margin, entire ears and tail visible. Pixel-art sprites matching the chunky pixel density of the 128x128 reference, NOT high detail illustration.
+Draw every frame individually with extremely subtle motion suitable for a calm idle loop:
+1 relaxed neutral, both eyes open.
+2 gentle inhale, torso rises only about one native pixel, eyes open, tail tip drifts slightly.
+3 soft blink with both eyelids closed, torso settles, tiny ear and tail-tip change.
+4 eyes open again, returning near frame 1, quiet exhale.
+Body breathing maximum 1-2 native pixels, feet stay planted, no jumping, no rocking side to side, no dramatic squash, no translation of the entire sprite. Smooth wraparound frame 4 to 1. Preserve cat identity and proportions rigorously. No ground, shadow, effects, labels, borders, grid lines, text or watermark.

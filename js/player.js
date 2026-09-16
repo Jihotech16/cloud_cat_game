@@ -7,12 +7,21 @@ import {
 const FRAME_SIZE = 128;
 const JUMP_READY_FRAME_COUNT = 3;
 const JUMPING_FRAME_COUNT = 4;
+// 대기 애니메이션(4프레임): 눈을 뜨고 머물다가 짧게 깜빡인다.
+const IDLE_FRAME_DURATIONS = [1100, 550, 120, 650];
+const IDLE_CYCLE_MS = IDLE_FRAME_DURATIONS.reduce((sum, ms) => sum + ms, 0);
 
 // 복장(스킨)별 스프라이트. 모든 시트는 128px 정사각 프레임 규격을 따른다.
-// idle 이 없으면 준비 동작(ready) 첫 프레임(똑바로 선 자세)을 대기 그림으로 쓴다.
+// 대기 그림은 idleSheet(4프레임 깜빡임) → idle(한 장) → 준비 동작 첫 프레임 순으로 쓴다.
 // *Dy 는 발끝을 기본 고양이와 맞추기 위한 세로 보정(원본 128px 기준, 음수 = 위로).
+// idleSheetDx/Dy 는 대기 시트를 준비 동작 첫 프레임 위치에 맞추는 보정이다. 대기 시트는
+// 세 복장 모두 발끝 y 112 로 가지런히 그려져 있는데, 준비 동작과 위치가 다르면
+// 꾹 누르는 순간 고양이가 옆으로 튀어 보인다.
 const SKIN_SPRITES = {
   default: {
+    idleSheet: 'assets/cat-idle-sheet.png',
+    idleSheetDx: 9, // 대기 시트가 기존 그림(cat.png·준비 첫 프레임)보다 9px 왼쪽에 있다
+    idleSheetDy: 1,
     idle: 'assets/cat.png',
     ready: 'assets/cat_jumpready.png',
     jumping: 'assets/cat_jumping.png',
@@ -23,6 +32,9 @@ const SKIN_SPRITES = {
   // 마녀 고양이는 모자까지 한 칸에 담느라 발끝이 기본 고양이보다 아래에 있다
   // (선 자세 발끝 y 119, 기본 113~116). 그대로 그리면 구름에 파묻혀 보여서 프레임마다 올린다.
   witch: {
+    idleSheet: 'assets/cat-witch-idle-sheet.png',
+    idleSheetDx: 2,
+    idleSheetDy: 1,
     idle: null,
     ready: 'assets/cat-witch-jumpready.png',
     jumping: 'assets/cat-witch-jumping.png',
@@ -32,6 +44,9 @@ const SKIN_SPRITES = {
   },
   // 구름 잠옷 고양이도 수면모자 때문에 발끝이 2~4px 낮다(발끝 y 115, 기본 112~115).
   pajamas: {
+    idleSheet: 'assets/cat-cloud-pajamas-idle-sheet.png',
+    idleSheetDx: 0,
+    idleSheetDy: 1,
     idle: null,
     ready: 'assets/cat-cloud-pajamas-jumpready.png',
     jumping: 'assets/cat-cloud-pajamas-jumping.png',
@@ -43,11 +58,15 @@ const SKIN_SPRITES = {
 
 const loaded = {};
 
-function loadImage(src) {
+// size 를 주면 그 크기가 맞을 때만 ready 로 본다(규격이 틀린 시트는 쓰지 않고 다음 그림으로 대체).
+function loadImage(src, size = null) {
   const entry = { img: null, ready: false };
   if (!src || typeof Image === 'undefined') return entry;
   entry.img = new Image();
-  entry.img.onload = () => { entry.ready = true; };
+  entry.img.onload = () => {
+    entry.ready = !size
+      || (entry.img.naturalWidth === size.w && entry.img.naturalHeight === size.h);
+  };
   entry.img.src = src;
   return entry;
 }
@@ -57,6 +76,7 @@ function spritesFor(id) {
     const def = SKIN_SPRITES[id] ?? SKIN_SPRITES.default;
     loaded[id] = {
       def,
+      idleSheet: loadImage(def.idleSheet, { w: FRAME_SIZE * IDLE_FRAME_DURATIONS.length, h: FRAME_SIZE }),
       idle: loadImage(def.idle),
       ready: loadImage(def.ready),
       jumping: loadImage(def.jumping),
@@ -98,6 +118,7 @@ export class Player {
     this.wallBounced = false; // 이번 비행 중 벽에 반사됐는지
     this.squash = 0;   // +면 착지(납작), -면 점프(길쭉). 매 프레임 0으로 감쇠.
     this.trail = [];   // 빠르게 상승/하강 시 잔상용 최근 위치
+    this.idleElapsedMs = 0; // 대기 애니메이션 진행 시간(서 있을 때만 흐른다)
   }
 
   get left() {
@@ -165,6 +186,12 @@ export class Player {
 
   // 매 프레임 호출: 스쿼시 감쇠 + 잔상 갱신.
   tickAnim(timeScale = 1) {
+    // 대기 애니메이션: 차지 중이거나 공중이면 처음(눈 뜬 프레임)으로 되돌린다.
+    if (this.charging || this._isInAir()) {
+      this.idleElapsedMs = 0;
+    } else {
+      this.idleElapsedMs = (this.idleElapsedMs + (1000 / 60) * timeScale) % IDLE_CYCLE_MS;
+    }
     // 0을 향해 부드럽게 복귀
     this.squash *= Math.pow(0.72, timeScale);
     if (Math.abs(this.squash) < 0.01) this.squash = 0;
@@ -177,6 +204,15 @@ export class Player {
     } else if (this.trail.length) {
       this.trail.pop();
     }
+  }
+
+  _getIdleFrame() {
+    let elapsed = this.idleElapsedMs;
+    for (let i = 0; i < IDLE_FRAME_DURATIONS.length; i++) {
+      if (elapsed < IDLE_FRAME_DURATIONS[i]) return i;
+      elapsed -= IDLE_FRAME_DURATIONS[i];
+    }
+    return 0;
   }
 
   _getReadyFrame() {
@@ -211,8 +247,21 @@ export class Player {
     const pick = (key) => (skin[key].ready ? skin : base);
     const unit = size / FRAME_SIZE;
 
-    // 대기(선 자세) 그림. idle 이미지가 없는 복장은 준비 동작 첫 프레임을 쓴다.
-    const drawIdle = () => {
+    // 대기(선 자세) 그림. 깜빡임 시트 → 한 장짜리 idle → 준비 동작 첫 프레임 순으로 쓴다.
+    // animate=false 면 첫 프레임만(잔상용).
+    const drawIdle = (animate = true) => {
+      const sheetSet = pick('idleSheet');
+      if (sheetSet.idleSheet.ready) {
+        const frame = animate ? this._getIdleFrame() : 0;
+        ctx.drawImage(
+          sheetSet.idleSheet.img,
+          frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE,
+          -size / 2 + sheetSet.def.idleSheetDx * unit,
+          -size / 2 + sheetSet.def.idleSheetDy * unit,
+          size, size,
+        );
+        return true;
+      }
       const idleSet = skin.def.idle ? pick('idle') : pick('ready');
       if (idleSet.def.idle) {
         if (!idleSet.idle.ready) return false;
@@ -239,7 +288,7 @@ export class Player {
         ctx.save();
         ctx.translate(t.x, t.y - cameraY);
         if (faceRight) ctx.scale(-1, 1);
-        drawIdle();
+        drawIdle(false);
         ctx.restore();
       }
       ctx.restore();
