@@ -11,7 +11,8 @@ const LOOKAHEAD = 0.12;     // 스케줄 선반영(초)
 const TICK = 25;            // 스케줄러 주기(ms)
 const VOLUME = 0.16;        // 합성 BGM 전체 볼륨(작게, 효과음보다 낮게)
 
-// 로비 곡. 파일 자체가 꽉 찬 음량(평균 약 -16dB)이라 합성 BGM 과 비슷하게 들리도록 낮춘다.
+// 로비 곡("Cloudlike Bounce", Suno 유료 플랜 제작). 파일 자체가 꽉 찬 음량(평균 약 -18dB)이라
+// 합성 BGM 과 비슷하게 들리도록 낮춘다.
 const LOBBY_SRC = 'assets/audio/bgm-lobby.m4a';
 const LOBBY_VOLUME = 0.3;
 const FADE_IN = 1.2;
