@@ -38,8 +38,9 @@ function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = 10
 // 28% 만 올라가서 10 틱(6fps)이면 잔잔하지만, 바운스 구름은 38% 를 올라가 같은 값이면
 // 확 튄다. 그래서 바운스만 18 틱(3.3fps, 한 바퀴 1.2초)으로 늦춘다.
 const VARIANT_SPRITES = {
+  [CLOUD_TYPES.NORMAL]: loadCloudVariant('assets/cloud-normal-imagegen-sheet.png', 0.32, 1, 4, 36, 248 / 872),
   [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.58, 1.15, 4, 10, 96 / 128),
-  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-imagegen-sheet.png', 0.52, 1.15, 4, 18, 757 / 520),
+  [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-imagegen-v3-sheet.png', 0.52, 1.15, 4, 18, 757 / 520),
 };
 
 export function loadCloudSprite() {
@@ -145,19 +146,6 @@ export class Cloud {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-
-    if (this.type === CLOUD_TYPES.NORMAL) {
-      // 약 4초 주기로 숨 쉬는 움직임. 발판 높이를 축으로 삼기 때문에
-      // 착지 위치는 그대로 고정되고 그림만 폭 ±3.5%, 높이 ±5% 변한다.
-      // 폭과 높이를 반대로 움직여야 부피가 유지되는 느낌이 난다.
-      // 구름마다 animFrameOffset 이 달라 한꺼번에 같은 박자로 움직이지 않는다.
-      const phase = (frame / 240 + this.animFrameOffset / 40) * Math.PI * 2;
-      const breath = Math.sin(phase);
-      const platformY = screenY - h * 0.18;
-      ctx.translate(this.x, platformY);
-      ctx.scale(1 + breath * 0.035, 1 - breath * 0.05);
-      ctx.translate(-this.x, -platformY);
-    }
 
     const dim = altitude > 0.05
       ? `brightness(${(1 - 0.32 * altitude).toFixed(2)}) saturate(${(1 - 0.2 * altitude).toFixed(2)})`

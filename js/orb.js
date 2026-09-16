@@ -1,13 +1,13 @@
 import { ORB_RADIUS } from './config.js';
 
-// 선택 사항: assets/orb.png 가 있으면 그 스프라이트를 쓰고, 없으면 픽셀아트로 재현.
+// 은은한 청록 오브. 로드 실패 시 픽셀아트로 재현.
 let orbImg = null;
 let orbImgReady = false;
 if (typeof Image !== 'undefined') {
   orbImg = new Image();
   orbImg.onload = () => { orbImgReady = true; };
   orbImg.onerror = () => { orbImgReady = false; };
-  orbImg.src = 'assets/orb.png';
+  orbImg.src = 'assets/orb-soft.png';
 }
 
 // 무지개 오브 스프라이트(있으면 사용).
@@ -17,7 +17,7 @@ if (typeof Image !== 'undefined') {
   rainbowImg = new Image();
   rainbowImg.onload = () => { rainbowImgReady = true; };
   rainbowImg.onerror = () => { rainbowImgReady = false; };
-  rainbowImg.src = 'assets/orb-rainbow.png';
+  rainbowImg.src = 'assets/orb-rainbow-soft.png';
 }
 
 // 청록 픽셀아트 구슬 스프라이트(저해상도 → 확대 시 픽셀 느낌). 한 번만 생성해 캐시.
@@ -36,14 +36,11 @@ function getPixelOrb() {
     x.arc(cx + ox, cy + oy, r, 0, Math.PI * 2);
     x.fill();
   };
-  disc(8.4, '#0b5560');                 // 어두운 외곽 링
-  disc(6.8, '#15a9bd');                 // 진한 청록 본체
-  disc(5.2, '#3ad6e6', -0.6, -0.6);     // 밝은 면
-  disc(3.0, '#9af0f6', -1.2, -1.4);     // 하이라이트 영역
-  // 중앙 흰 십자 반짝
-  x.fillStyle = '#ffffff';
-  x.fillRect(Math.round(cx - 0.5), Math.round(cy - 2.5), 2, 5);
-  x.fillRect(Math.round(cx - 2.5), Math.round(cy - 0.5), 5, 2);
+  disc(8.4, '#638e96');
+  disc(6.8, '#8ab9bb');
+  disc(5.2, '#acd1cb', -0.6, -0.6);
+  disc(3.0, '#cde1d7', -1.2, -1.4);
+  x.fillStyle = '#f1f0de';
   // 좌상단 작은 점 하이라이트
   x.fillRect(Math.round(cx - 3.5), Math.round(cy - 3.5), 1, 1);
   pixelOrb = cv;
@@ -63,12 +60,12 @@ export class Orb {
   }
 
   draw(ctx, cameraY, frame) {
-    const t = frame * 0.08 + this.phase;
-    const bob = Math.sin(t) * this.r * 0.18;
+    const t = frame * (Math.PI * 2 / 240) + this.phase;
+    const bob = Math.sin(t) * this.r * 0.06;
     const x = this.x;
     const y = this.y - cameraY + bob;
     const r = this.r;
-    const pulse = 0.85 + 0.15 * Math.sin(t * 1.3);
+    const pulse = 0.985 + 0.015 * Math.sin(t);
 
     if (this.type === 'rainbow') {
       this._drawRainbow(ctx, x, y, r, frame, pulse);
@@ -79,17 +76,16 @@ export class Orb {
     ctx.imageSmoothingEnabled = false;
 
     if (orbImgReady) {
-      // 제공된 스프라이트(반짝이 포함) 사용
-      const size = r * 4.6 * pulse;
+      // 작은 하이라이트만 있는 스프라이트, 크기 변화는 3% 이내.
+      const size = r * 2.8 * pulse;
       ctx.drawImage(orbImg, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
     } else {
-      // 픽셀아트 구슬 + 반짝이 직접 그리기
+      // 이미지 로드 실패 시에도 주변 반짝임 없이 표시한다.
       const sprite = getPixelOrb();
-      const size = r * 2.7;
+      const size = r * 2.4;
       if (sprite) {
         ctx.drawImage(sprite, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
       }
-      this._drawSparkles(ctx, x, y, r, frame);
     }
     ctx.restore();
   }
@@ -119,18 +115,18 @@ export class Orb {
     if (rainbowImgReady) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      const size = r * 4.4; // 크기 고정(맥동 제거)
+      const size = r * 3.3 * pulse;
       ctx.drawImage(rainbowImg, Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
       ctx.restore();
       return;
     }
 
-    const hue = (frame * 4) % 360;
+    const hue = (frame * 0.15 + this.phase * 180 / Math.PI) % 360;
     ctx.save();
     // 무지개 글로우
     const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.4 * pulse);
-    glow.addColorStop(0, `hsla(${hue},100%,70%,0.9)`);
-    glow.addColorStop(1, `hsla(${hue},100%,70%,0)`);
+    glow.addColorStop(0, `hsla(${hue},40%,78%,0.12)`);
+    glow.addColorStop(1, `hsla(${hue},40%,78%,0)`);
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(x, y, r * 2.4 * pulse, 0, Math.PI * 2);
@@ -139,14 +135,14 @@ export class Orb {
     // 무지개 띠 본체
     const body = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
     for (let i = 0; i <= 6; i++) {
-      body.addColorStop(i / 6, `hsl(${(hue + i * 60) % 360},95%,60%)`);
+      body.addColorStop(i / 6, `hsl(${(hue + i * 60) % 360},45%,76%)`);
     }
     ctx.fillStyle = body;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fillStyle = 'rgba(250,248,230,0.6)';
     ctx.beginPath();
     ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.25, 0, Math.PI * 2);
     ctx.fill();

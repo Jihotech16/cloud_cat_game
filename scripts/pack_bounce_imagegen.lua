@@ -1,6 +1,6 @@
 -- Pack the approved ImageGen sheet into equal integer-sized animation cells.
 -- Run with Aseprite --batch --script from the project root.
-local src = Image{fromFile="resources/cloud-sheets/cloud-bounce-imagegen-v2.png"}
+local src = Image{fromFile="resources/cloud-sheets/cloud-bounce-imagegen-v3.png"}
 local count = 4
 local width = math.ceil(src.width / count)
 local sheet = Image(width * count, src.height, ColorMode.RGB)
@@ -14,5 +14,5 @@ for f=0,count-1 do
     end
   end
 end
-sheet:saveAs("assets/cloud-bounce-imagegen-sheet.png")
+sheet:saveAs("assets/cloud-bounce-imagegen-v3-sheet.png")
 print(string.format("Packed %d frames of %dx%d, preserving RGBA pixels",count,width,src.height))
