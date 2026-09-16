@@ -4,50 +4,68 @@ import {
   PLAYER_BASE_SPEED,
 } from './config.js';
 
-const JUMP_READY_FRAME_SIZE = 128;
+const FRAME_SIZE = 128;
 const JUMP_READY_FRAME_COUNT = 3;
-const JUMPING_FRAME_SIZE = 128;
 const JUMPING_FRAME_COUNT = 4;
 
-let catImage = null;
-let catImageReady = false;
-let jumpReadyImage = null;
-let jumpReadyImageReady = false;
-let jumpingImage = null;
-let jumpingImageReady = false;
+// 복장(스킨)별 스프라이트. 모든 시트는 128px 정사각 프레임 규격을 따른다.
+// idle 이 없으면 준비 동작(ready) 첫 프레임(똑바로 선 자세)을 대기 그림으로 쓴다.
+// *Dy 는 발끝을 기본 고양이와 맞추기 위한 세로 보정(원본 128px 기준, 음수 = 위로).
+const SKIN_SPRITES = {
+  default: {
+    idle: 'assets/cat.png',
+    ready: 'assets/cat_jumpready.png',
+    jumping: 'assets/cat_jumping.png',
+    idleDy: 0,
+    readyDy: [0, 0, 0],
+    jumpingDy: 0,
+  },
+  // 마녀 고양이는 모자까지 한 칸에 담느라 발끝이 기본 고양이보다 아래에 있다
+  // (선 자세 발끝 y 119, 기본 113~116). 그대로 그리면 구름에 파묻혀 보여서 프레임마다 올린다.
+  witch: {
+    idle: null,
+    ready: 'assets/cat-witch-jumpready.png',
+    jumping: 'assets/cat-witch-jumping.png',
+    idleDy: -6,
+    readyDy: [-6, -5, -3],
+    jumpingDy: 3,
+  },
+};
 
-export function loadCatSprite() {
-  if (catImage) return catImage;
-  catImage = new Image();
-  catImage.src = 'assets/cat.png';
-  catImage.onload = () => {
-    catImageReady = true;
-  };
-  return catImage;
+const loaded = {};
+
+function loadImage(src) {
+  const entry = { img: null, ready: false };
+  if (!src || typeof Image === 'undefined') return entry;
+  entry.img = new Image();
+  entry.img.onload = () => { entry.ready = true; };
+  entry.img.src = src;
+  return entry;
 }
 
-export function loadJumpReadySprite() {
-  if (jumpReadyImage) return jumpReadyImage;
-  jumpReadyImage = new Image();
-  jumpReadyImage.src = 'assets/cat_jumpready.png';
-  jumpReadyImage.onload = () => {
-    jumpReadyImageReady = true;
-  };
-  return jumpReadyImage;
+function spritesFor(id) {
+  if (!loaded[id]) {
+    const def = SKIN_SPRITES[id] ?? SKIN_SPRITES.default;
+    loaded[id] = {
+      def,
+      idle: loadImage(def.idle),
+      ready: loadImage(def.ready),
+      jumping: loadImage(def.jumping),
+    };
+  }
+  return loaded[id];
 }
 
-export function loadJumpingSprite() {
-  if (jumpingImage) return jumpingImage;
-  jumpingImage = new Image();
-  jumpingImage.src = 'assets/cat_jumping.png';
-  jumpingImage.onload = () => {
-    jumpingImageReady = true;
-  };
-  return jumpingImage;
+let currentSkin = 'default';
+
+// 착용 복장을 바꾼다. 이미지는 처음 쓸 때 불러오고, 다 불러오기 전에는 기본 고양이로 그린다.
+export function setPlayerSkin(id) {
+  currentSkin = SKIN_SPRITES[id] ? id : 'default';
+  spritesFor(currentSkin);
 }
 
 export function isCatSpriteReady() {
-  return catImageReady;
+  return spritesFor('default').idle.ready;
 }
 
 export class Player {
@@ -178,8 +196,30 @@ export class Player {
     const size = Player.DISPLAY_SIZE;
     const faceRight = this.vx !== 0 ? this.vx > 0 : this.facing > 0;
 
+    // 착용 복장이 아직 안 불러와졌으면 기본 고양이로 그린다.
+    const skin = spritesFor(currentSkin);
+    const base = spritesFor('default');
+    const pick = (key) => (skin[key].ready ? skin : base);
+    const unit = size / FRAME_SIZE;
+
+    // 대기(선 자세) 그림. idle 이미지가 없는 복장은 준비 동작 첫 프레임을 쓴다.
+    const drawIdle = () => {
+      const idleSet = skin.def.idle ? pick('idle') : pick('ready');
+      if (idleSet.def.idle) {
+        if (!idleSet.idle.ready) return false;
+        ctx.drawImage(idleSet.idle.img, -size / 2, -size / 2 + idleSet.def.idleDy * unit, size, size);
+      } else {
+        ctx.drawImage(
+          idleSet.ready.img,
+          0, 0, FRAME_SIZE, FRAME_SIZE,
+          -size / 2, -size / 2 + idleSet.def.idleDy * unit, size, size,
+        );
+      }
+      return true;
+    };
+
     // 잔상(모션 트레일): 최근 위치에 흐릿한 실루엣
-    if (this.trail.length && catImageReady) {
+    if (this.trail.length && base.idle.ready) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
       for (let i = this.trail.length - 1; i >= 0; i--) {
@@ -190,7 +230,7 @@ export class Player {
         ctx.save();
         ctx.translate(t.x, t.y - cameraY);
         if (faceRight) ctx.scale(-1, 1);
-        ctx.drawImage(catImage, -size / 2, -size / 2, size, size);
+        drawIdle();
         ctx.restore();
       }
       ctx.restore();
@@ -208,27 +248,25 @@ export class Player {
     }
     if (faceRight) ctx.scale(-1, 1);
 
-    const useReady = this.charging && this.groundedCloud && jumpReadyImageReady;
-    const useJumping = this._isInAir() && jumpingImageReady;
+    const readySet = pick('ready');
+    const jumpingSet = pick('jumping');
+    const useReady = this.charging && this.groundedCloud && readySet.ready.ready;
+    const useJumping = this._isInAir() && jumpingSet.jumping.ready;
     if (useReady) {
       const frame = this._getReadyFrame();
-      const sx = frame * JUMP_READY_FRAME_SIZE;
       ctx.drawImage(
-        jumpReadyImage,
-        sx, 0, JUMP_READY_FRAME_SIZE, JUMP_READY_FRAME_SIZE,
-        -size / 2, -size / 2, size, size,
+        readySet.ready.img,
+        frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE,
+        -size / 2, -size / 2 + (readySet.def.readyDy[frame] ?? 0) * unit, size, size,
       );
     } else if (useJumping) {
       const frame = this._getJumpingFrame();
-      const sx = frame * JUMPING_FRAME_SIZE;
       ctx.drawImage(
-        jumpingImage,
-        sx, 0, JUMPING_FRAME_SIZE, JUMPING_FRAME_SIZE,
-        -size / 2, -size / 2, size, size,
+        jumpingSet.jumping.img,
+        frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE,
+        -size / 2, -size / 2 + jumpingSet.def.jumpingDy * unit, size, size,
       );
-    } else if (catImageReady) {
-      ctx.drawImage(catImage, -size / 2, -size / 2, size, size);
-    } else {
+    } else if (!drawIdle()) {
       ctx.fillStyle = '#ffb347';
       ctx.beginPath();
       ctx.arc(0, 0, size * 0.35, 0, Math.PI * 2);
@@ -239,6 +277,4 @@ export class Player {
   }
 }
 
-loadCatSprite();
-loadJumpReadySprite();
-loadJumpingSprite();
+spritesFor('default');

@@ -442,6 +442,52 @@ img.shop-icon {
   appearance: none;
 }
 
+/* 상점 안 구역 제목(복장 / 강화) */
+.shop-section-title {
+  margin: 6px 2px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #636e72;
+  text-align: left;
+}
+
+/* 복장 미리보기: 준비 동작 시트의 첫 프레임(선 자세)만 보여준다 */
+.skin-preview {
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 300% 100%;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.skin-preview--default { background-image: url('../assets/cat_jumpready.png'); }
+.skin-preview--witch { background-image: url('../assets/cat-witch-jumpready.png'); }
+
+.shop-item--locked .skin-preview {
+  filter: grayscale(1) brightness(0.9);
+  opacity: 0.6;
+}
+
+.shop-buy.is-equipped {
+  background: #7ed6a5;
+}
+
+.gift-panel {
+  text-align: center;
+}
+.gift-preview {
+  width: 140px;
+  height: 140px;
+  margin: 4px auto;
+  display: block;
+  object-fit: contain;
+}
+.gift-panel .btn-secondary {
+  margin-top: 8px;
+}
+
 .shop-buy:disabled {
   background: #cfd6db;
   color: #fff;

@@ -15,6 +15,8 @@ import {
 } from './ads.js';
 import { addCoins } from './meta.js';
 import { onGameFinished } from './review.js';
+import { SKINS, ownsSkin, getEquippedSkin, equipSkin, grantSeasonalSkins } from './skins.js';
+import { setPlayerSkin } from './player.js';
 import { TIERS, TAGS } from './orb.js';
 import { t, applyStaticI18n, getLang, setLang, LANGS } from './i18n.js';
 import {
@@ -224,11 +226,48 @@ function updateSynergy(state = {}) {
   synergyEl.innerHTML = badges.join('');
 }
 
+function renderSkins() {
+  const title = document.createElement('div');
+  title.className = 'shop-section-title';
+  title.textContent = t('shop.skins');
+  shopList.appendChild(title);
+
+  const equipped = getEquippedSkin();
+  for (const skin of SKINS) {
+    const owned = ownsSkin(skin.id);
+    const isEquipped = owned && skin.id === equipped;
+    const row = document.createElement('div');
+    row.className = `shop-item${owned ? '' : ' shop-item--locked'}`;
+    const buttonText = !owned ? t('skin.locked') : isEquipped ? t('skin.equipped') : t('skin.equip');
+    row.innerHTML = `
+      <span class="skin-preview skin-preview--${skin.id}" aria-hidden="true"></span>
+      <span class="shop-info">
+        <span class="shop-label">${t(`skin.${skin.id}.label`)}</span>
+        <span class="shop-desc">${owned ? t(`skin.${skin.id}.desc`) : t('skin.lockedDesc')}</span>
+      </span>
+      <button class="shop-buy${isEquipped ? ' is-equipped' : ''}" ${!owned || isEquipped ? 'disabled' : ''}>${buttonText}</button>
+    `;
+    if (owned && !isEquipped) {
+      row.querySelector('.shop-buy').addEventListener('click', () => {
+        if (equipSkin(skin.id)) setPlayerSkin(skin.id);
+        renderShop();
+      });
+    }
+    shopList.appendChild(row);
+  }
+
+  const upgradesTitle = document.createElement('div');
+  upgradesTitle.className = 'shop-section-title';
+  upgradesTitle.textContent = t('shop.upgrades');
+  shopList.appendChild(upgradesTitle);
+}
+
 function renderShop() {
   const coins = getCoins();
   shopCoinsEl.textContent = coins.toLocaleString();
   menuCoinsEl.textContent = coins.toLocaleString();
   shopList.innerHTML = '';
+  renderSkins();
   for (const up of UPGRADES) {
     const level = getUpgradeLevel(up.id);
     const cost = nextCost(up.id);
@@ -263,6 +302,7 @@ function renderShop() {
 
 function openShop() {
   renderShop();
+  shopList.scrollTop = 0; // 맨 위(복장)부터 보이게
   shopScreen.classList.remove('hidden');
 }
 
@@ -666,6 +706,7 @@ function renderLangSelector() {
 }
 
 async function boot() {
+  setPlayerSkin(getEquippedSkin());
   document.documentElement.lang = getLang();
   applyStaticI18n();
   renderLangSelector();
@@ -683,7 +724,23 @@ async function boot() {
   await initScores();
   setMode(selectedMode); // 점수 로드 후 기록 갱신
   updateLayout();
+  showSeasonalGift();
 }
+
+// 기간 한정 복장 지급(10월 = 마녀 고양이). 이번에 처음 받았으면 선물 창을 띄운다.
+const giftScreen = document.getElementById('gift-screen');
+function showSeasonalGift() {
+  const granted = grantSeasonalSkins();
+  if (!granted.includes('witch') || !giftScreen) return;
+  giftScreen.classList.remove('hidden');
+}
+document.getElementById('btn-gift-equip')?.addEventListener('click', () => {
+  if (equipSkin('witch')) setPlayerSkin('witch');
+  giftScreen.classList.add('hidden');
+});
+document.getElementById('btn-gift-later')?.addEventListener('click', () => {
+  giftScreen.classList.add('hidden');
+});
 
 
 boot();
