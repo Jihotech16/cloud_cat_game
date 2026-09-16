@@ -34,12 +34,12 @@ function loadCloudVariant(src, platFrac, wScale, frameCount = 1, frameTicks = 10
 // platFrac: 발판(구름 윗면)이 스프라이트 높이의 어디쯤인지(위→아래 비율).
 // 효과(결정·화살표)가 큰 원본 아트 기준 값. 아트를 바꾸면 이 값도 같이 맞춰야 한다.
 //
-// frameTicks = 한 프레임을 몇 틱(60fps 기준) 유지할지. 부스트 구름은 이펙트가 높이의
-// 28% 만 올라가서 10 틱(6fps)이면 잔잔하지만, 바운스 구름은 38% 를 올라가 같은 값이면
-// 확 튄다. 그래서 바운스만 18 틱(3.3fps, 한 바퀴 1.2초)으로 늦춘다.
+// frameTicks = 한 프레임을 몇 틱(60fps 기준) 유지할지. 4프레임 한 바퀴 기준으로
+// 일반 36틱(2.4초) · 부스트 24틱(1.6초) · 바운스 18틱(1.2초). 부스트를 10틱(0.67초)으로 두면
+// 혼자만 격렬하게 움직여 보여서 다른 구름과 비슷한 속도로 맞췄다.
 const VARIANT_SPRITES = {
   [CLOUD_TYPES.NORMAL]: loadCloudVariant('assets/cloud-normal-imagegen-sheet.png', 0.32, 1, 4, 36, 248 / 872),
-  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.58, 1.15, 4, 10, 96 / 128),
+  [CLOUD_TYPES.BOOST]: loadCloudVariant('assets/cloud-boost-sheet.png', 0.58, 1.15, 4, 24, 96 / 128),
   [CLOUD_TYPES.BOUNCE]: loadCloudVariant('assets/cloud-bounce-imagegen-v3-sheet.png', 0.52, 1.15, 4, 18, 757 / 520),
 };
 
