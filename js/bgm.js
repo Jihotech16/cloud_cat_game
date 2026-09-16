@@ -5,10 +5,11 @@
 
 const MUTE_KEY = 'cloudCat_bgmMuted';
 
-// 두 곡 모두 꽉 찬 음량(평균 약 -18dB)이라 효과음을 덮지 않도록 낮춘다.
+// 두 곡 모두 꽉 찬 음량(평균 약 -18dB)이다. 효과음은 짧게 -25~-16dB 로 튀는 소리라,
+// 음악이 계속 깔리면 쉽게 덮인다. 음악 평균이 효과음보다 10dB 정도 낮도록(약 -38dB) 0.1 로 둔다.
 const TRACKS = {
-  lobby: { src: 'assets/audio/bgm-lobby.m4a', volume: 0.3 },
-  game: { src: 'assets/audio/bgm-game.m4a', volume: 0.3 },
+  lobby: { src: 'assets/audio/bgm-lobby.m4a', volume: 0.1 },
+  game: { src: 'assets/audio/bgm-game.m4a', volume: 0.1 },
 };
 const FADE_IN = 1.2;
 const FADE_OUT = 0.6;
