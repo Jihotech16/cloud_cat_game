@@ -30,6 +30,15 @@ const SKIN_SPRITES = {
     readyDy: [-6, -5, -3],
     jumpingDy: 3,
   },
+  // 구름 잠옷 고양이도 수면모자 때문에 발끝이 2~4px 낮다(발끝 y 115, 기본 112~115).
+  pajamas: {
+    idle: null,
+    ready: 'assets/cat-cloud-pajamas-jumpready.png',
+    jumping: 'assets/cat-cloud-pajamas-jumping.png',
+    idleDy: -3,
+    readyDy: [-3, -2, 0],
+    jumpingDy: -3,
+  },
 };
 
 const loaded = {};

@@ -464,6 +464,7 @@ img.shop-icon {
 }
 .skin-preview--default { background-image: url('../assets/cat_jumpready.png'); }
 .skin-preview--witch { background-image: url('../assets/cat-witch-jumpready.png'); }
+.skin-preview--pajamas { background-image: url('../assets/cat-cloud-pajamas-jumpready.png'); }
 
 .shop-item--locked .skin-preview {
   filter: grayscale(1) brightness(0.9);

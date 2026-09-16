@@ -15,6 +15,8 @@ const EQUIP_KEY = 'cloudCat_skinEquipped';
 
 export const SKINS = [
   { id: 'default' },
+  // 코인은 어드벤처 모드에서 한 판에 대략 25~40개 모인다 → 500코인이면 15판 안팎.
+  { id: 'pajamas', price: 500 },
   { id: 'witch', season: 'halloween' },
 ];
 
