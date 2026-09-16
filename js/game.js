@@ -948,6 +948,7 @@ export class Game {
         this._advanceCharge();
       }
       this._syncPlayerChargeAnim();
+      this.player.tickAnim(); // 시작 대기 중에도 깜빡임이 흐르도록
       return;
     }
 
