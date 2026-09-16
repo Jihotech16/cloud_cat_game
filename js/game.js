@@ -160,7 +160,6 @@ export class Game {
     this.charge = 0;
     this.chargeHold = 0;
     this.stars = [];
-    this.cloudDecor = [];
 
     this.orbs = [];
     this.hazards = [];
@@ -271,12 +270,6 @@ export class Game {
       y: Math.random() * this.worldHeight * 3,
       size: (Math.random() * 2 + 1) * GAME_SCALE,
       alpha: Math.random() * 0.5 + 0.2,
-    }));
-    this.cloudDecor = Array.from({ length: 6 }, () => ({
-      x: Math.random() * this.worldWidth,
-      y: Math.random() * this.worldHeight,
-      scale: Math.random() * 0.6 + 0.4,
-      speed: Math.random() * 0.15 + 0.05,
     }));
     this.shootingStars = Array.from({ length: 3 }, () => this._newShootingStar());
   }
@@ -1655,15 +1648,6 @@ export class Game {
       this._drawPlanet(ctx, w * 0.24, h * 0.26, 20 * GAME_SCALE, planetA);
     }
 
-    // 떠다니는 배경 구름: 고도가 오르면 옅어지다 사라짐
-    const cloudA = Math.max(0, 1 - altitude / 0.5);
-    if (cloudA > 0) {
-      for (const dec of this.cloudDecor) {
-        dec.y += dec.speed;
-        if (dec.y > h + 40) dec.y = -40;
-        this._drawDecorCloud(ctx, dec.x, dec.y, dec.scale * 30 * GAME_SCALE, cloudA);
-      }
-    }
   }
 
   _drawPixelSky(ctx, altitude, w, h) {
@@ -1826,18 +1810,6 @@ export class Game {
       ctx.fill();
       ctx.restore();
     }
-  }
-
-  _drawDecorCloud(ctx, x, y, r, alpha = 1) {
-    ctx.save();
-    ctx.globalAlpha = 0.25 * alpha;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.arc(x - r * 0.6, y + r * 0.2, r * 0.6, 0, Math.PI * 2);
-    ctx.arc(x + r * 0.6, y + r * 0.2, r * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
   }
 
   _lerpColor(a, b, t) {
