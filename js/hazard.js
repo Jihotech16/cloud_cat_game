@@ -7,7 +7,7 @@ if (typeof Image !== 'undefined') {
   hazardImg = new Image();
   hazardImg.onload = () => { hazardImgReady = true; };
   hazardImg.onerror = () => { hazardImgReady = false; };
-  hazardImg.src = 'assets/hazard.png';
+  hazardImg.src = 'assets/hazard-soft.png';
 }
 
 // 어드벤처 모드 장애물: 좌우로 떠다니는 가시 덩어리. 닿으면 위험.
@@ -42,7 +42,8 @@ export class Hazard {
     const y = this.y - cameraY;
     const r = this.r;
     const rot = frame * 0.04 + this.phase;
-    const pulse = 0.9 + 0.1 * Math.sin(frame * 0.18 + this.phase);
+    // 시각적 맥동만 느리고 작게. 이동과 충돌 반경에는 영향을 주지 않는다.
+    const pulse = 0.9 + 0.02 * Math.sin(frame * (Math.PI * 2 / 240) + this.phase);
 
     ctx.save();
     ctx.translate(x, y);
@@ -59,7 +60,7 @@ export class Hazard {
 
     // 가시
     const spikes = 8;
-    ctx.fillStyle = '#7a1f2b';
+    ctx.fillStyle = '#684553';
     ctx.beginPath();
     for (let i = 0; i < spikes; i++) {
       const a0 = (i / spikes) * Math.PI * 2;
@@ -74,15 +75,15 @@ export class Hazard {
 
     // 본체
     const body = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.2, 0, 0, r * 0.85);
-    body.addColorStop(0, '#e74c3c');
-    body.addColorStop(1, '#a02633');
+    body.addColorStop(0, '#c67e83');
+    body.addColorStop(1, '#795164');
     ctx.fillStyle = body;
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2);
     ctx.fill();
 
     // 경고 코어
-    ctx.fillStyle = '#ffe08a';
+    ctx.fillStyle = '#d4a06d';
     ctx.beginPath();
     ctx.arc(0, 0, r * 0.3 * pulse, 0, Math.PI * 2);
     ctx.fill();

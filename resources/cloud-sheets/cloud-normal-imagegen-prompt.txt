@@ -1,0 +1,1 @@
+Built-in image_gen. Four individually redrawn white pixel-art cloud frames, gentle 2–3% lobe and shading changes, same position and baseline, no arrows or effects. Reference: assets/cloud-export.png. Four equal cells in one vertical column. Transparent background requested; exterior glow removed during asset preparation.
