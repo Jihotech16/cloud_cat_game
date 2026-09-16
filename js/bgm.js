@@ -1,4 +1,6 @@
-// 배경음악(BGM) — 외부 파일 없이 WebAudio 로 합성하는 잔잔한 루프.
+// 배경음악(BGM) — 장면마다 다른 곡을 튼다.
+// - 로비(시작 화면): assets/audio/bgm-lobby.m4a 반복 재생
+// - 게임 중(플레이·일시정지·게임오버): 외부 파일 없이 WebAudio 로 합성하는 잔잔한 루프
 // 음소거 설정은 localStorage 에 저장. 첫 사용자 입력 이후에만 재생(모바일 정책).
 
 const MUTE_KEY = 'cloudCat_bgmMuted';
@@ -7,7 +9,13 @@ const BEAT = 60 / BPM;
 const STEP = BEAT / 2;      // 8분음표 단위
 const LOOKAHEAD = 0.12;     // 스케줄 선반영(초)
 const TICK = 25;            // 스케줄러 주기(ms)
-const VOLUME = 0.16;        // BGM 전체 볼륨(작게, 효과음보다 낮게)
+const VOLUME = 0.16;        // 합성 BGM 전체 볼륨(작게, 효과음보다 낮게)
+
+// 로비 곡. 파일 자체가 꽉 찬 음량(평균 약 -16dB)이라 합성 BGM 과 비슷하게 들리도록 낮춘다.
+const LOBBY_SRC = 'assets/audio/bgm-lobby.m4a';
+const LOBBY_VOLUME = 0.3;
+const FADE_IN = 1.2;
+const FADE_OUT = 0.6;
 
 const midi = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -28,8 +36,13 @@ const MELODY = [
 const LOOP = 32;
 
 let ctx = null;
-let master = null;
-let playing = false;
+let master = null;          // 합성 BGM 출력
+let playing = false;        // BGM 이 켜져 있는지(장면과 무관)
+let scene = 'lobby';        // 'lobby' | 'game'
+let synthRunning = false;
+let lobbyEl = null;
+let lobbyGain = null;
+let lobbyPauseTimer = null;
 let timerId = null;
 let nextTime = 0;
 let step = 0;
@@ -98,29 +111,102 @@ export function isBgmMuted() {
   return localStorage.getItem(MUTE_KEY) === '1';
 }
 
+function fade(gainNode, to, seconds) {
+  const now = ctx.currentTime;
+  gainNode.gain.cancelScheduledValues(now);
+  gainNode.gain.setValueAtTime(Math.max(0.0001, gainNode.gain.value), now);
+  gainNode.gain.exponentialRampToValueAtTime(Math.max(0.0001, to), now + seconds);
+}
+
+// ── 게임 중: 합성 BGM ──
+function startSynth() {
+  if (synthRunning) return;
+  synthRunning = true;
+  step = 0;
+  nextTime = ctx.currentTime + 0.1;
+  fade(master, VOLUME, FADE_IN);
+  timerId = setInterval(scheduler, TICK);
+}
+
+function stopSynth() {
+  if (!synthRunning) return;
+  synthRunning = false;
+  if (timerId) { clearInterval(timerId); timerId = null; }
+  fade(master, 0, FADE_OUT);
+}
+
+// ── 로비: 파일 재생 ──
+// iOS 는 <audio> 의 volume 을 무시하므로, 요소를 WebAudio 에 연결해 게인으로 음량·페이드를 준다.
+function ensureLobby() {
+  if (lobbyEl) return;
+  lobbyEl = new Audio(LOBBY_SRC);
+  lobbyEl.loop = true;
+  lobbyEl.preload = 'auto';
+  lobbyEl.setAttribute('playsinline', '');
+  lobbyGain = ctx.createGain();
+  lobbyGain.gain.value = 0.0001;
+  ctx.createMediaElementSource(lobbyEl).connect(lobbyGain);
+  lobbyGain.connect(ctx.destination);
+}
+
+function startLobby() {
+  ensureLobby();
+  if (lobbyPauseTimer) { clearTimeout(lobbyPauseTimer); lobbyPauseTimer = null; }
+  lobbyEl.play().catch((err) => console.warn('로비 BGM 재생 실패:', err));
+  fade(lobbyGain, LOBBY_VOLUME, FADE_IN);
+}
+
+function stopLobby() {
+  if (!lobbyEl) return;
+  fade(lobbyGain, 0, FADE_OUT);
+  // 페이드가 끝난 뒤 멈춘다. 멈춘 위치에서 다음에 이어서 재생된다.
+  if (lobbyPauseTimer) clearTimeout(lobbyPauseTimer);
+  lobbyPauseTimer = setTimeout(() => {
+    lobbyPauseTimer = null;
+    lobbyEl.pause();
+  }, FADE_OUT * 1000 + 50);
+}
+
+function applyScene() {
+  if (scene === 'lobby') {
+    stopSynth();
+    startLobby();
+  } else {
+    stopLobby();
+    startSynth();
+  }
+}
+
 export function startBgm() {
   if (playing || isBgmMuted()) return;
-  const c = getCtx();
-  if (!c) return;
+  if (!getCtx()) return;
   playing = true;
-  step = 0;
-  nextTime = c.currentTime + 0.1;
-  master.gain.cancelScheduledValues(c.currentTime);
-  master.gain.setValueAtTime(0.0001, c.currentTime);
-  master.gain.exponentialRampToValueAtTime(VOLUME, c.currentTime + 1.2); // 부드럽게 페이드인
-  timerId = setInterval(scheduler, TICK);
+  applyScene();
 }
 
 export function stopBgm() {
   if (!playing) return;
   playing = false;
-  if (timerId) { clearInterval(timerId); timerId = null; }
-  if (ctx && master) {
-    const now = ctx.currentTime;
-    master.gain.cancelScheduledValues(now);
-    master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), now);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.4); // 부드럽게 페이드아웃
-  }
+  if (!ctx) return;
+  stopSynth();
+  stopLobby();
+}
+
+// 장면 전환: 'lobby'(시작 화면) 또는 'game'(플레이 중). 켜져 있으면 곡을 교차 페이드한다.
+export function setBgmScene(next) {
+  if (next === scene) return;
+  scene = next;
+  if (playing && getCtx()) applyScene();
+}
+
+// 앱이 백그라운드로 가면 로비 곡을 멈추고, 돌아오면 이어서 튼다.
+// (합성 BGM 은 타이머가 멈추므로 따로 처리할 필요가 없다)
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!lobbyEl || !playing || scene !== 'lobby') return;
+    if (document.hidden) lobbyEl.pause();
+    else lobbyEl.play().catch(() => {});
+  });
 }
 
 // 음소거 토글. 켜면 재생 시작, 끄면 정지 + 설정 저장. 반환값 = 음소거 여부.
