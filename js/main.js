@@ -5,7 +5,7 @@ import { initAppCheck } from './appcheck.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
 import { playClickSound, setSfxMuted } from './audio.js';
-import { startBgm, toggleBgm, isBgmMuted } from './bgm.js';
+import { startBgm, toggleBgm, isBgmMuted, setBgmScene } from './bgm.js';
 import {
   initAds,
   adsAvailable,
@@ -435,6 +435,7 @@ function startGame() {
 
 function beginGame() {
   ensureGame();
+  setBgmScene('game');
   startScreen.classList.add('hidden');
   tutorialScreen?.classList.add('hidden');
   gameoverScreen.classList.add('hidden');
@@ -546,6 +547,7 @@ function goToMenu() {
   refreshMenuRecords();
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
   startScreen.classList.remove('hidden');
+  setBgmScene('lobby');
   showBanner(); // 메인 메뉴에서 배너 노출
 }
 
