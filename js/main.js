@@ -15,7 +15,7 @@ import {
 } from './ads.js';
 import { addCoins } from './meta.js';
 import { onGameFinished } from './review.js';
-import { SKINS, ownsSkin, getEquippedSkin, equipSkin, grantSeasonalSkins } from './skins.js';
+import { SKINS, ownsSkin, getEquippedSkin, equipSkin, grantSeasonalSkins, buySkin } from './skins.js';
 import { setPlayerSkin } from './player.js';
 import { TIERS, TAGS } from './orb.js';
 import { t, applyStaticI18n, getLang, setLang, LANGS } from './i18n.js';
@@ -233,22 +233,35 @@ function renderSkins() {
   shopList.appendChild(title);
 
   const equipped = getEquippedSkin();
+  const coins = getCoins();
   for (const skin of SKINS) {
     const owned = ownsSkin(skin.id);
     const isEquipped = owned && skin.id === equipped;
+    const forSale = !owned && skin.price != null;
+    const affordable = forSale && coins >= skin.price;
+    const locked = !owned && !forSale; // 기간 한정 등, 지금은 얻을 수 없음
+
+    let buttonHtml;
+    if (isEquipped) buttonHtml = t('skin.equipped');
+    else if (owned) buttonHtml = t('skin.equip');
+    else if (forSale) buttonHtml = `<img class="coin-ico" src="assets/coin.png" alt=""> ${skin.price.toLocaleString()}`;
+    else buttonHtml = t('skin.locked');
+    const clickable = (owned && !isEquipped) || affordable;
+
     const row = document.createElement('div');
     row.className = `shop-item${owned ? '' : ' shop-item--locked'}`;
-    const buttonText = !owned ? t('skin.locked') : isEquipped ? t('skin.equipped') : t('skin.equip');
     row.innerHTML = `
       <span class="skin-preview skin-preview--${skin.id}" aria-hidden="true"></span>
       <span class="shop-info">
         <span class="shop-label">${t(`skin.${skin.id}.label`)}</span>
-        <span class="shop-desc">${owned ? t(`skin.${skin.id}.desc`) : t('skin.lockedDesc')}</span>
+        <span class="shop-desc">${locked ? t('skin.lockedDesc') : t(`skin.${skin.id}.desc`)}</span>
       </span>
-      <button class="shop-buy${isEquipped ? ' is-equipped' : ''}" ${!owned || isEquipped ? 'disabled' : ''}>${buttonText}</button>
+      <button class="shop-buy${isEquipped ? ' is-equipped' : ''}" ${clickable ? '' : 'disabled'}>${buttonHtml}</button>
     `;
-    if (owned && !isEquipped) {
+    if (clickable) {
       row.querySelector('.shop-buy').addEventListener('click', () => {
+        // 사면 바로 입힌다.
+        if (forSale && !buySkin(skin.id).ok) return;
         if (equipSkin(skin.id)) setPlayerSkin(skin.id);
         renderShop();
       });
