@@ -101,7 +101,7 @@ import {
   COIN_PER_RAINBOW,
 } from './config.js';
 
-// 낮은 고도에서 깔리는 픽셀 하늘 배경(있으면 사용, 고도가 오르면 동적 하늘로 전환).
+// 이미지 로딩 실패 시 기존 배경을 유지한다.
 let skyBgImg = null;
 let skyBgReady = false;
 if (typeof Image !== 'undefined') {
@@ -109,6 +109,33 @@ if (typeof Image !== 'undefined') {
   skyBgImg.onload = () => { skyBgReady = true; };
   skyBgImg.onerror = () => { skyBgReady = false; };
   skyBgImg.src = 'assets/sky-bg.png';
+}
+
+// 같은 크기의 다섯 세로 패널: 낮, 노을, 황혼, 밤, 우주.
+const PIXEL_SKY_STOPS = [0, 0.28, 0.5, 0.72, 1];
+let pixelSkyReady = false;
+let pixelSkySource = null;
+const pixelSky = typeof Image !== 'undefined' ? new Image() : null;
+if (pixelSky) {
+  pixelSky.onload = () => {
+    pixelSkyReady = pixelSky.naturalWidth >= 5 && pixelSky.naturalHeight > 0;
+    if (!pixelSkyReady) return;
+    // Flatten generated alpha once so adjacent skies cannot show through dark pixels.
+    pixelSkySource = document.createElement('canvas');
+    pixelSkySource.width = pixelSky.naturalWidth;
+    pixelSkySource.height = pixelSky.naturalHeight;
+    const skyContext = pixelSkySource.getContext('2d');
+    const colors = ['#85bcec', '#f4ab8b', '#7763a9', '#1b2550', '#090f26'];
+    colors.forEach((color, index) => {
+      skyContext.fillStyle = color;
+      const left = Math.round(index * pixelSky.naturalWidth / 5);
+      const right = Math.round((index + 1) * pixelSky.naturalWidth / 5);
+      skyContext.fillRect(left, 0, right - left, pixelSky.naturalHeight);
+    });
+    skyContext.drawImage(pixelSky, 0, 0);
+  };
+  pixelSky.onerror = () => { pixelSkyReady = false; };
+  pixelSky.src = 'assets/sky-pixel-atlas.png';
 }
 
 export class Game {
@@ -1573,6 +1600,12 @@ export class Game {
     const w = this.worldWidth;
     const altitude = Math.min(this.score / 800, 1);
 
+    if (pixelSkyReady) {
+      this._drawPixelSky(ctx, altitude, w, h);
+      if (altitude > 0.55 && !this.reduceMotion) this._drawShootingStars(ctx, altitude);
+      return;
+    }
+
     ctx.fillStyle = this._skyGradient(altitude, h);
     ctx.fillRect(0, 0, w, h);
 
@@ -1631,6 +1664,31 @@ export class Game {
         this._drawDecorCloud(ctx, dec.x, dec.y, dec.scale * 30 * GAME_SCALE, cloudA);
       }
     }
+  }
+
+  _drawPixelSky(ctx, altitude, w, h) {
+    let index = 0;
+    while (index < PIXEL_SKY_STOPS.length - 2 && altitude > PIXEL_SKY_STOPS[index + 1]) index++;
+    const progress = Math.max(0, Math.min(1,
+      (altitude - PIXEL_SKY_STOPS[index]) / (PIXEL_SKY_STOPS[index + 1] - PIXEL_SKY_STOPS[index])));
+    const blend = progress * progress * (3 - 2 * progress);
+    const panelWidth = Math.floor(pixelSky.naturalWidth / 5) - 6;
+    const panelHeight = pixelSky.naturalHeight;
+    // Cover each panel without stretching pixels or sampling its neighbours.
+    const scale = Math.max(w / panelWidth, h / panelHeight);
+    const sw = w / scale;
+    const sh = h / scale;
+    const sx = 3 + (panelWidth - sw) / 2;
+    const sy = 0;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 1;
+    ctx.drawImage(pixelSkySource, Math.round(index * pixelSky.naturalWidth / 5) + sx, sy, sw, sh, 0, 0, w, h);
+    if (blend > 0) {
+      ctx.globalAlpha = blend;
+      ctx.drawImage(pixelSkySource, Math.round((index + 1) * pixelSky.naturalWidth / 5) + sx, sy, sw, sh, 0, 0, w, h);
+    }
+    ctx.restore();
   }
 
   _drawSun(ctx, x, y, r, alpha) {
@@ -1705,19 +1763,16 @@ export class Game {
 
       const a = Math.sin((s.life / s.maxLife) * Math.PI) * visible;
       if (a > 0) {
-        const tailX = s.x - Math.cos(s.angle) * s.len;
-        const tailY = s.y - Math.sin(s.angle) * s.len;
-        const grad = ctx.createLinearGradient(s.x, s.y, tailX, tailY);
-        grad.addColorStop(0, `rgba(255,255,255,${a})`);
-        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        const pixel = 2 * GAME_SCALE;
+        const steps = Math.max(1, Math.ceil(s.len / pixel));
         ctx.save();
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 2 * GAME_SCALE;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(tailX, tailY);
-        ctx.stroke();
+        ctx.fillStyle = '#fff4dc';
+        for (let step = steps; step >= 0; step--) {
+          ctx.globalAlpha = a * (1 - step / (steps + 1));
+          const x = Math.round((s.x - Math.cos(s.angle) * step * pixel) / pixel) * pixel;
+          const y = Math.round((s.y - Math.sin(s.angle) * step * pixel) / pixel) * pixel;
+          ctx.fillRect(x, y, pixel, pixel);
+        }
         ctx.restore();
       }
 

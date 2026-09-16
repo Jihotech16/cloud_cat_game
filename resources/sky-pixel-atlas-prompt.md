@@ -1,0 +1,8 @@
+# Pixel sky atlas
+
+Generated with the built-in image generation tool. Asset: `assets/sky-pixel-atlas.png`.
+Five equal-width panels, sampled independently with nearest-neighbour rendering. Altitude stops: 0, 224, 400, 576, 800.
+
+## Prompt
+
+Use case: stylized-concept. Create ONE production game background atlas PNG, landscape 1280x768, exactly FIVE equal-width full-height vertical panels side by side, no gutters, no borders, no labels. Each panel is a portrait sky background for a cute pixel-art cat cloud-jumping game. Left to right: 1 pastel blue daytime sky with small pale yellow pixel sun upper right and sparse ivory cloud banks at edges; 2 peach apricot sunset sky with small warm sun upper right, muted rose clouds at edges; 3 lavender violet twilight with pink lower sky and sparse tiny stars; 4 deep muted indigo night sky with a small cream crescent moon upper right, sparse stars and violet wisps at edges; 5 deep navy outer space with a small muted lavender ringed planet upper left and sparse stars. Cohesive authentic hand placed 16-bit pixel art, chunky crisp square pixels, stepped silhouettes, limited harmonious palette, very restrained dithering and subtle horizontal color bands, no smooth gradients or blur. Each panel center 65 percent mostly empty and calm so white platforms and cat stay clearly readable. Clouds are distant subtle scenery, never isolated foreground platforms. No ground, buildings, characters, text, interface, watermarks. Five panels each exactly 256 pixels wide, boundaries x=256,512,768,1024. Every panel independently fills full height. Restrained detail, cozy dreamy atmosphere.
