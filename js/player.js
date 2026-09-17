@@ -10,6 +10,7 @@ const JUMPING_FRAME_COUNT = 4;
 // 대기 애니메이션(4프레임): 눈을 뜨고 머물다가 짧게 깜빡인다.
 const IDLE_FRAME_DURATIONS = [1100, 550, 120, 650];
 const IDLE_CYCLE_MS = IDLE_FRAME_DURATIONS.reduce((sum, ms) => sum + ms, 0);
+const IDLE_SHEET_FEET_Y = 112; // 대기 시트는 세 복장 모두 발끝이 이 줄에 맞춰져 있다
 
 // 복장(스킨)별 스프라이트. 모든 시트는 128px 정사각 프레임 규격을 따른다.
 // 대기 그림은 idleSheet(4프레임 깜빡임) → idle(한 장) → 준비 동작 첫 프레임 순으로 쓴다.
@@ -47,6 +48,9 @@ const SKIN_SPRITES = {
     idleSheet: 'assets/cat-cloud-pajamas-idle-sheet.png',
     idleSheetDx: 0,
     idleSheetDy: 1,
+    // 잠옷 대기 시트는 고양이가 작게 그려져 있다(눈 사이 26px, 점프 준비 31px·점프 30px).
+    // 서 있다 뛰는 순간 커져 보이지 않도록 발끝 기준으로 키운다.
+    idleSheetScale: 1.15,
     idle: null,
     ready: 'assets/cat-cloud-pajamas-jumpready.png',
     jumping: 'assets/cat-cloud-pajamas-jumping.png',
@@ -253,12 +257,16 @@ export class Player {
       const sheetSet = pick('idleSheet');
       if (sheetSet.idleSheet.ready) {
         const frame = animate ? this._getIdleFrame() : 0;
+        const { idleSheetDx = 0, idleSheetDy = 0, idleSheetScale = 1 } = sheetSet.def;
+        // 발끝 위치는 그대로 두고 가운데를 기준으로 키운다.
+        const feetY = -size / 2 + (IDLE_SHEET_FEET_Y + idleSheetDy) * unit;
+        const drawSize = size * idleSheetScale;
         ctx.drawImage(
           sheetSet.idleSheet.img,
           frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE,
-          -size / 2 + sheetSet.def.idleSheetDx * unit,
-          -size / 2 + sheetSet.def.idleSheetDy * unit,
-          size, size,
+          idleSheetDx * unit - drawSize / 2,
+          feetY - IDLE_SHEET_FEET_Y * unit * idleSheetScale,
+          drawSize, drawSize,
         );
         return true;
       }
