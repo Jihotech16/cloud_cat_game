@@ -58,6 +58,16 @@ assert.equal(witchDraw[0], witchIdle);
 assert.equal(witchDraw[1], 2 * 128, 'skin sheet uses same frame timing');
 const unit = Player.DISPLAY_SIZE / 128;
 assert.equal(witchDraw[5], -Player.DISPLAY_SIZE / 2 + 2 * unit, 'witch sheet shifted by idleSheetDx');
+assert.equal(witchDraw[6], -Player.DISPLAY_SIZE / 2 + 1 * unit, 'unscaled sheet keeps feet offset');
+// 잠옷: 1.15배로 키워도 발끝(시트 y 112 + 보정 1) 위치는 그대로
+setPlayerSkin('pajamas');
+const pajamaIdle = images.find(image => image.src === 'assets/cat-cloud-pajamas-idle-sheet.png');
+pajamaIdle.naturalWidth = 512; pajamaIdle.naturalHeight = 128; pajamaIdle.onload();
+const pj = render();
+assert.equal(pj[0], pajamaIdle);
+assert.ok(Math.abs(pj[7] - Player.DISPLAY_SIZE * 1.15) < 1e-9, 'pajama idle drawn 1.15x');
+const feet = (draw, scale) => draw[6] + 112 * unit * scale;
+assert.ok(Math.abs(feet(pj, 1.15) - feet(witchDraw, 1)) < 1e-9, 'scaled sheet keeps the same feet line');
 setPlayerSkin('default');
 assert.equal(render()[5], -Player.DISPLAY_SIZE / 2 + 9 * unit, 'default sheet aligned to ready frame');
 console.log('PASS: idle loading, frame timing, loop, charge, jump, landing, per-skin sheets');
