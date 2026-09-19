@@ -98,6 +98,9 @@ const shopScreen = document.getElementById('shop-screen');
 const shopList = document.getElementById('shop-list');
 const shopCoinsEl = document.getElementById('shop-coins');
 const shopModeEl = document.getElementById('shop-mode');
+const shopTitleEl = document.getElementById('shop-title');
+const shopTitleIcoEl = document.getElementById('shop-title-ico');
+const btnCharacters = document.getElementById('btn-characters');
 const btnShopClose = document.getElementById('btn-shop-close');
 
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -363,13 +366,26 @@ function consumeArmed() {
   return used;
 }
 
+// 상점은 두 갈래로 연다. 'skins' = 캐릭터(복장), 'items' = 소모품 + 강화.
+let shopSection = 'items';
+
 function renderShop() {
   const coins = getCoins();
   shopCoinsEl.textContent = coins.toLocaleString();
   menuCoinsEl.textContent = coins.toLocaleString();
-  if (shopModeEl) shopModeEl.textContent = t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
+  if (shopTitleEl) shopTitleEl.textContent = t(shopSection === 'skins' ? 'shop.titleSkins' : 'shop.titleItems');
+  if (shopTitleIcoEl) shopTitleIcoEl.src = shopSection === 'skins' ? 'assets/cat.png' : 'assets/shop-cart.png';
+  // 모드 표시는 모드마다 목록이 달라지는 아이템 쪽에서만 의미가 있다.
+  if (shopModeEl) {
+    shopModeEl.textContent = shopSection === 'skins'
+      ? ''
+      : t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
+  }
   shopList.innerHTML = '';
-  renderSkins();
+  if (shopSection === 'skins') {
+    renderSkins();
+    return;
+  }
   renderConsumables();
   shopSectionTitle(t('shop.upgrades'));
   // 고른 모드에서 효과가 있는 강화만 보여준다.
@@ -405,7 +421,8 @@ function renderShop() {
   }
 }
 
-function openShop() {
+function openShop(section = 'items') {
+  shopSection = section;
   renderShop();
   shopList.scrollTop = 0; // 맨 위(복장)부터 보이게
   shopScreen.classList.remove('hidden');
@@ -746,8 +763,9 @@ modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
 });
 
-btnShop?.addEventListener('click', openShop);
-btnShopGameover?.addEventListener('click', openShop);
+btnShop?.addEventListener('click', () => openShop('items'));
+btnShopGameover?.addEventListener('click', () => openShop('items'));
+btnCharacters?.addEventListener('click', () => openShop('skins'));
 btnShopClose?.addEventListener('click', closeShop);
 
 btnReroll?.addEventListener('click', () => game?.rerollReward());
@@ -784,7 +802,11 @@ window.addEventListener('pointerdown', () => {
 }, { once: true });
 
 function updateMuteBtn() {
-  if (btnMute) btnMute.textContent = isBgmMuted() ? t('sound.off') : t('sound.on');
+  if (!btnMute) return;
+  const muted = isBgmMuted();
+  btnMute.textContent = muted ? '🔇' : '🔊';
+  btnMute.setAttribute('aria-label', muted ? t('sound.off') : t('sound.on'));
+  btnMute.title = muted ? t('sound.off') : t('sound.on');
 }
 btnMute?.addEventListener('click', () => {
   toggleBgm();

@@ -104,10 +104,13 @@
         <div id="consumable-arm" class="consumable-arm"></div>
         <button id="btn-start" class="btn-primary" data-i18n="start.btnStart">게임 시작</button>
         <div class="menu-actions">
+          <button id="btn-characters" class="btn-secondary"><img class="cart-ico" src="assets/cat.png" alt=""> <span data-i18n="start.characters">캐릭터</span></button>
           <button id="btn-shop" class="btn-secondary"><img class="cart-ico" src="assets/shop-cart.png" alt=""> <span data-i18n="start.shop">상점</span></button>
-          <button id="btn-mute" class="btn-secondary">🔊 Sound on</button>
         </div>
-        <p class="wallet"><img class="coin-ico" src="assets/coin.png" alt=""> <strong id="menu-coins">0</strong></p>
+        <div class="wallet-row">
+          <p class="wallet"><img class="coin-ico" src="assets/coin.png" alt=""> <strong id="menu-coins">0</strong></p>
+          <button id="btn-mute" class="icon-btn" aria-label="Sound">🔊</button>
+        </div>
         <div class="records">
           <p class="best-record"><span data-i18n="start.myBest">내 최고 기록</span>: <strong id="menu-best">0</strong>m</p>
           <p class="best-record global-record"><span data-i18n="start.globalBest">전체 최고 기록</span>: <strong id="menu-global-best">0</strong>m</p>
@@ -170,7 +173,7 @@
 
     <div id="shop-screen" class="overlay hidden">
       <div class="panel">
-        <h2 class="title"><img class="cart-ico" src="assets/shop-cart.png" alt=""> <span data-i18n="shop.title">상점</span></h2>
+        <h2 class="title"><img id="shop-title-ico" class="cart-ico" src="assets/shop-cart.png" alt=""> <span id="shop-title">상점</span></h2>
         <p class="shop-mode"><span id="shop-mode"></span></p>
         <p class="subtitle"><span data-i18n="shop.coinsHeld">보유 코인:</span> <img class="coin-ico" src="assets/coin.png" alt=""> <strong id="shop-coins">0</strong></p>
         <div id="shop-list" class="shop-list"></div>

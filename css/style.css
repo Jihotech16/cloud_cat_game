@@ -1297,6 +1297,30 @@ img.reward-icon {
   color: #fff;
 }
 
+/* 코인 + 사운드 한 줄 */
+.wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(110, 198, 255, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* 보유 코인 — 상점 버튼 안에 넣으면 자릿수가 늘 때 버튼이 비좁아져 따로 뺐다. */
 .wallet {
   display: inline-flex;
