@@ -110,6 +110,10 @@ export const FEATHER_DURATION = 6 * 60;
 export const FEATHER_MAX_FALL = 4 * GAME_SCALE; // 깃털 시 최대 낙하 속도
 
 // 코인 (메타 성장)
+// 일반 모드는 오브가 없어서 거리로 코인을 준다. 어드벤처는 오브를 전부 먹으면 3.65m 당 1코인이지만
+// 실제 플레이에서는 6~8m 당 1코인 수준이라(124m/25코인, 294m/36코인 기록 기준) 그 사이로 맞췄다.
+export const CLASSIC_METERS_PER_COIN = 6;
+
 export const COIN_PER_ORB = 1;
 export const COIN_PER_RAINBOW = 5;
 

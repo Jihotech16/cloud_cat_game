@@ -99,6 +99,7 @@ import {
   FEATHER_MAX_FALL,
   COIN_PER_ORB,
   COIN_PER_RAINBOW,
+  CLASSIC_METERS_PER_COIN,
 } from './config.js';
 
 // 이미지 로딩 실패 시 기존 배경을 유지한다.
@@ -1500,7 +1501,7 @@ export class Game {
     hapticHeavy();
     // 이번 판 코인 중 아직 적립하지 않은 만큼만 메타 저장소에 누적한다.
     // (광고 이어하기로 판이 이어지면 _gameOver 가 두 번 불리므로 중복 적립 방지)
-    const earned = this.mode === 'adventure' ? this.coins : 0;
+    const earned = this._earnedCoins();
     const delta = Math.max(0, earned - this.coinsBanked);
     if (delta > 0) {
       addCoins(delta);
@@ -1510,6 +1511,12 @@ export class Game {
     // 광고 이어하기: 판당 1회만 제공
     const canRevive = !this.usedAdRevive;
     this.callbacks.onGameOver?.(this.score, isNewRecord, earned, { canRevive });
+  }
+
+  // 이번 판에 번 코인. 어드벤처는 오브·보상으로 모은 코인, 일반 모드는 올라간 거리로 계산한다.
+  _earnedCoins() {
+    if (this.mode === 'adventure') return this.coins;
+    return Math.floor(this.score / CLASSIC_METERS_PER_COIN);
   }
 
   // 광고 시청 성공 후 그 자리에서 부활해 이어서 플레이한다(판당 1회).
@@ -1552,7 +1559,7 @@ export class Game {
   abandonRun() {
     if (this.state !== 'paused' && this.state !== 'playing') return;
     if (this._loopId) cancelAnimationFrame(this._loopId);
-    const earned = this.mode === 'adventure' ? this.coins : 0;
+    const earned = this._earnedCoins();
     const delta = Math.max(0, earned - this.coinsBanked);
     if (delta > 0) {
       addCoins(delta);
