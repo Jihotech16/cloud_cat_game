@@ -1259,6 +1259,44 @@ img.reward-icon {
   white-space: nowrap;
 }
 
+/* 시작 화면: 갖고 있는 소모품을 켜고 시작하는 칩 */
+.consumable-arm {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 2px;
+}
+
+.consumable-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(110, 198, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  color: #5b6b78;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.consumable-chip .chip-ico {
+  height: 1.2em;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+.consumable-chip.armed {
+  background: linear-gradient(135deg, #ffd24a, #f5a623);
+  border-color: rgba(245, 166, 35, 0.6);
+  color: #fff;
+}
+
 /* 보유 코인 — 상점 버튼 안에 넣으면 자릿수가 늘 때 버튼이 비좁아져 따로 뺐다. */
 .wallet {
   display: inline-flex;

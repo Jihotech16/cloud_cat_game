@@ -2,6 +2,7 @@ import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
 import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
+import { BalloonWhale } from './whale.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
 import { t, getFont } from './i18n.js';
@@ -100,6 +101,7 @@ import {
   COIN_PER_ORB,
   COIN_PER_RAINBOW,
   CLASSIC_METERS_PER_COIN,
+  BOOSTER_JUMP_MULT,
 } from './config.js';
 
 // 이미지 로딩 실패 시 기존 배경을 유지한다.
@@ -173,7 +175,9 @@ export class Game {
     this.frame = 0;
     this.coins = 0;
     this.airJumpsLeft = 0;
-    this.shield = false;
+    this.shields = 0; // 남은 보호막 개수(영구 강화·소모품·보상이 더해진다)
+    this.consumables = {};
+    this.boosterCharges = 0;
     this.jumpLevel = 0;
     this.doubleJumpLevel = 0;
     this.magnetLevel = 0;
@@ -321,7 +325,16 @@ export class Game {
       const perfect = rel >= PERFECT_LO && rel <= PERFECT_HI;
       if (perfect) jumpMult *= PERFECT_JUMP_MULT;
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
-      this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
+      // 소모품 '출발 부스터': 그 판의 첫 점프만 크게 솟는다.
+      let boosterMult = 1;
+      if (this.boosterCharges > 0) {
+        this.boosterCharges -= 1;
+        boosterMult = BOOSTER_JUMP_MULT;
+        this._spawnParticles(this.player.x, this.player.y + this.player.height * 0.4, '#ff8a3d', 18);
+        playBoostSound();
+        hapticHeavy();
+      }
+      this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost * boosterMult);
       if (perfect) this._onPerfect();
       playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
       hapticLight();
@@ -494,7 +507,7 @@ export class Game {
   }
 
   _isPlayerOnCloud(cloud) {
-    const half = (cloud.width * this._cloudScale()) / 2;
+    const half = (cloud.width * (cloud.type === CLOUD_TYPES.WHALE ? 1 : this._cloudScale())) / 2;
     return (
       this.player.right > cloud.x - half + CLOUD_COLLISION_INSET &&
       this.player.left < cloud.x + half - CLOUD_COLLISION_INSET
@@ -602,8 +615,9 @@ export class Game {
     this.airJumpsLeft = this.doubleJumpLevel;
   }
 
-  start(mode = 'classic') {
+  start(mode = 'classic', consumables = {}) {
     this.mode = mode;
+    this.consumables = consumables;
     this.state = 'ready';
     this.score = 0;
     this.cameraY = 0;
@@ -612,6 +626,7 @@ export class Game {
     this.orbs = [];
     this.hazards = [];
     this.particles = [];
+    this.platformSpawnCount = 0;
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
     this.rewardCount = 0;
@@ -620,7 +635,7 @@ export class Game {
     this.frame = 0;
     this.coins = 0;
     this.airJumpsLeft = 0;
-    this.shield = false;
+    this.shields = 0;
     this.jumpLevel = 0;
     this.doubleJumpLevel = 0;
     this.magnetLevel = 0;
@@ -650,7 +665,10 @@ export class Game {
     const meta = this.callbacks.getStartBonuses?.() ?? {};
     this.jumpLevel = meta.jumpLevel ?? 0;
     this.scoreLevel = meta.scoreLevel ?? 0;
-    this.shield = !!meta.shield;
+    // 보호막은 소모품으로만 갖고 시작한다(영구 강화에서 제외).
+    // 소모품은 시작 화면에서 켜고 시작할 때 main.js 가 이미 한 개 차감해 넘겨준다.
+    this.shields = this.consumables.shieldItem ? 1 : 0;
+    this.boosterCharges = this.consumables.booster ? 1 : 0;
     if (this.mode === 'adventure') {
       this.gauge = Math.min(this.gaugeNeeded, meta.gaugeFill ?? 0);
     }
@@ -683,7 +701,7 @@ export class Game {
     let y = startY;
     for (let i = 0; i < 24; i++) {
       y -= this._cloudGap();
-      const cloud = this._placeCloud(y, pickCloudType(0), randomCloudWidth());
+      const cloud = this._placeCloud(y, this._nextPlatformType(0), randomCloudWidth());
       this.clouds.push(cloud);
       y = cloud.y;
     }
@@ -722,8 +740,13 @@ export class Game {
   // 가로로 피할 자리가 없으면(움직이는 구름이 이웃이거나 화면이 좁을 때) 겹치지 않을
   // 만큼만 위로 올린다. 올리는 폭은 CLOUD_OVERLAP_MAX_PUSH 로 제한해서, 기본 충전 점프
   // (약 260px)로 닿지 못할 만큼 간격이 벌어지는 일은 없게 한다.
+  _nextPlatformType(score) {
+    this.platformSpawnCount += 1;
+    return this.platformSpawnCount % 12 === 8 ? CLOUD_TYPES.WHALE : pickCloudType(score);
+  }
+
   _placeCloud(y, type, width) {
-    const cloud = new Cloud(0, y, type, width);
+    const cloud = type === CLOUD_TYPES.WHALE ? new BalloonWhale(0, y) : new Cloud(0, y, type, width);
     const neighbors = this.clouds.slice(-CLOUD_OVERLAP_NEIGHBORS);
     const randomX = () => Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
 
@@ -733,6 +756,9 @@ export class Game {
     }
 
     const push = this._overlapPush(cloud, neighbors);
+    if (type === CLOUD_TYPES.WHALE && push > CLOUD_OVERLAP_MAX_PUSH) {
+      return this._placeCloud(y, CLOUD_TYPES.NORMAL, width);
+    }
     if (push <= CLOUD_OVERLAP_MAX_PUSH) cloud.y -= push;
     return cloud;
   }
@@ -761,7 +787,7 @@ export class Game {
     while (y > spawnAbove) {
       const gap = this._cloudGap();
       y -= gap;
-      const cloud = this._placeCloud(y, pickCloudType(this.score), this._cloudSpawnWidth());
+      const cloud = this._placeCloud(y, this._nextPlatformType(this.score), this._cloudSpawnWidth());
       this.clouds.push(cloud);
       y = cloud.y;
       this.highestSpawnedY = y;
@@ -845,8 +871,8 @@ export class Game {
       this._addShake(4);
       return;
     }
-    if (this.shield) {
-      this.shield = false;
+    if (this.shields > 0) {
+      this.shields -= 1;
       h.dead = true;
       this._spawnParticles(h.x, h.y, '#ffd24a', 16);
       this.player.vy = -JUMP_FORCE * 0.8; // 살짝 튕겨 회피
@@ -862,12 +888,36 @@ export class Game {
     }
   }
 
+  _checkWhales(previous) {
+    if (this.player.groundedCloud || this.effects.rocket > 0) return;
+    let nearest = null;
+    for (const whale of this.clouds) {
+      if (whale.type !== CLOUD_TYPES.WHALE || whale.top > this.cameraY + this.worldHeight) continue;
+      const hit = whale.contact(this.player, previous);
+      if (hit && (!nearest || hit.time < nearest.hit.time)) nearest = { whale, hit };
+    }
+    if (!nearest) return;
+    const { whale, hit } = nearest;
+    whale.wake();
+    if (hit.side === 'top') {
+      this._landOnCloud(whale);
+    } else {
+      whale.deflect(this.player, hit);
+      this.charge = 0;
+      this.chargeHold = 0;
+      this.callbacks.onCharge?.(0, false);
+      playBounceSound();
+      hapticLight();
+    }
+  }
+
   _checkLanding() {
     if (this.player.groundedCloud || this.player.vy <= 0) return;
 
     const viewportBottom = this.cameraY + this.worldHeight;
 
     for (const cloud of this.clouds) {
+      if (cloud.type === CLOUD_TYPES.WHALE) continue; // Solid collision handles all four sides.
       if (cloud.broken) continue;
       // 페이즈 구름이 투명(비실체) 상태면 통과한다.
       if (!cloud.isSolid) continue;
@@ -903,7 +953,9 @@ export class Game {
       return;
     }
 
-    if (cloud.type === CLOUD_TYPES.MOVING) {
+    if (cloud.type === CLOUD_TYPES.WHALE) {
+      this.player.x += cloud.deltaX;
+    } else if (cloud.type === CLOUD_TYPES.MOVING) {
       this.player.x += cloud.vx;
     }
 
@@ -996,11 +1048,13 @@ export class Game {
     } else if (this.player.groundedCloud) {
       this._updateGrounded();
     } else {
+      const previous = { x: this.player.x, y: this.player.y };
       this.player.update(GRAVITY * this.mods.gravityMult, this.worldWidth, ts);
       // 깃털(일시) 또는 황금 깃털(전설·상시): 낙하 속도 제한
       if ((this.effects.feather > 0 || this.legend.goldFeather) && this.player.vy > FEATHER_MAX_FALL) {
         this.player.vy = FEATHER_MAX_FALL;
       }
+      this._checkWhales(previous);
       this._checkLanding();
     }
 
@@ -1027,8 +1081,8 @@ export class Game {
 
     const overLine = this.worldHeight + GAME_OVER_MARGIN + this.synergy.fallBonus;
     if (this.player.y - this.cameraY > overLine) {
-      if (this.shield) {
-        this.shield = false;
+      if (this.shields > 0) {
+        this.shields -= 1;
         this._revive();
         playShieldSound();
         this.callbacks.onEffects?.(this.getEffects());
@@ -1045,8 +1099,8 @@ export class Game {
       && this.frame % SYN_SCORE_AUTOGROW_FRAMES === 0) {
       this.scoreLevel += 1;
     }
-    if (this.synergy.shieldRegen && !this.shield && this.frame % SYN_SHIELD_REGEN_FRAMES === 0) {
-      this.shield = true;
+    if (this.synergy.shieldRegen && this.shields === 0 && this.frame % SYN_SHIELD_REGEN_FRAMES === 0) {
+      this.shields = 1;
       this.callbacks.onEffects?.(this.getEffects());
     }
     // 전설 '로켓 엔진': 약 12초마다 자동 로켓 부스트
@@ -1314,7 +1368,7 @@ export class Game {
   // 현재 선택지를 만들어 콜백으로 전달(리롤 시 재호출).
   _emitRewardChoices() {
     // 이미 보호막이 있으면 중복 제공하지 않는다(낭비 방지).
-    const exclude = this.shield ? ['shield'] : [];
+    const exclude = this.shields > 0 ? ['shield'] : [];
     // 더블 점프가 최대(3회)면 더 이상 제공하지 않는다.
     if (this.doubleJumpLevel >= DOUBLE_JUMP_MAX_LEVEL) exclude.push('doubleJump');
     // 유니크(전설·트레이드오프)는 이미 획득했으면 제외한다.
@@ -1373,7 +1427,7 @@ export class Game {
     if (this.state !== 'reward') return;
 
     switch (id) {
-      case 'shield': this.shield = true; break;
+      case 'shield': this.shields += 1; break;
       case 'scoreX2': this.effects.scoreX2 = REWARD_DURATION; break;
       case 'slowmo': this.effects.slowmo = SLOWMO_DURATION; break;
       case 'bigcloud': this.effects.bigcloud = BIGCLOUD_DURATION; break;
@@ -1467,7 +1521,7 @@ export class Game {
 
   getEffects() {
     return {
-      shield: this.shield,
+      shield: this.shields > 0,
       scoreX2: this.effects.scoreX2 > 0,
       slowmo: this.effects.slowmo > 0,
       bigcloud: this.effects.bigcloud > 0,
@@ -1868,7 +1922,7 @@ export class Game {
 
     this.player.draw(this.ctx, this.cameraY);
 
-    if (this.shield) {
+    if (this.shields > 0) {
       this._drawShield();
     }
 
