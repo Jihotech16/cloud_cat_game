@@ -85,6 +85,7 @@ const btnShopGameover = document.getElementById('btn-shop-gameover');
 const shopScreen = document.getElementById('shop-screen');
 const shopList = document.getElementById('shop-list');
 const shopCoinsEl = document.getElementById('shop-coins');
+const shopModeEl = document.getElementById('shop-mode');
 const btnShopClose = document.getElementById('btn-shop-close');
 
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -278,9 +279,11 @@ function renderShop() {
   const coins = getCoins();
   shopCoinsEl.textContent = coins.toLocaleString();
   menuCoinsEl.textContent = coins.toLocaleString();
+  if (shopModeEl) shopModeEl.textContent = t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
   shopList.innerHTML = '';
   renderSkins();
-  for (const up of UPGRADES) {
+  // 고른 모드에서 효과가 있는 강화만 보여준다.
+  for (const up of UPGRADES.filter((u) => (u.modes ?? ['classic', 'adventure']).includes(selectedMode))) {
     const level = getUpgradeLevel(up.id);
     const cost = nextCost(up.id);
     const maxed = cost === null;

@@ -4,11 +4,13 @@ const UPG_KEY = 'cloudCat_upgrades';
 
 // 상점 업그레이드 정의. cost(level)=현재 레벨에서 다음 레벨 구매 비용.
 // 능력치는 레벨 10까지, 비용은 레벨이 오를수록 제곱으로 크게 증가한다.
+// modes: 이 강화가 효과 있는 모드. 시작 게이지는 오브로 차는 게이지·보상 카드가 있는
+// 어드벤처에서만 의미가 있어 일반 모드 상점에는 내보내지 않는다.
 export const UPGRADES = [
-  { id: 'startJump', icon: 'assets/rocket.png', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2 },
-  { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2 },
-  { id: 'startGauge', icon: 'assets/star.png', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2 },
-  { id: 'startShield', icon: '🛡️', label: '시작 보호막', desc: '매 판 보호막을 갖고 시작', max: 1, cost: () => 1500 },
+  { id: 'startJump', icon: 'assets/rocket.png', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2, modes: ['classic', 'adventure'] },
+  { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2, modes: ['classic', 'adventure'] },
+  { id: 'startGauge', icon: 'assets/star.png', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2, modes: ['adventure'] },
+  { id: 'startShield', icon: '🛡️', label: '시작 보호막', desc: '매 판 보호막을 갖고 시작', max: 1, cost: () => 1500, modes: ['classic', 'adventure'] },
 ];
 
 function readInt(key) {

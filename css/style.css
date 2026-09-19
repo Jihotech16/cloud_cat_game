@@ -442,6 +442,14 @@ img.shop-icon {
   appearance: none;
 }
 
+/* 상점 상단: 지금 고른 모드 표시 */
+.shop-mode {
+  margin-top: -6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-dark);
+}
+
 /* 상점 안 구역 제목(복장 / 강화) */
 .shop-section-title {
   margin: 6px 2px 0;
