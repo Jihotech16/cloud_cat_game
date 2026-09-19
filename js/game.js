@@ -645,12 +645,13 @@ export class Game {
     this.coinsBanked = 0;
     this.usedAdRevive = false;
 
-    // 어드벤처 모드에서만 상점 영구 업그레이드 적용
+    // 상점 영구 업그레이드는 두 모드 모두 적용한다.
+    // 단 시작 게이지는 오브·보상 카드가 있는 어드벤처에서만 의미가 있다.
+    const meta = this.callbacks.getStartBonuses?.() ?? {};
+    this.jumpLevel = meta.jumpLevel ?? 0;
+    this.scoreLevel = meta.scoreLevel ?? 0;
+    this.shield = !!meta.shield;
     if (this.mode === 'adventure') {
-      const meta = this.callbacks.getStartBonuses?.() ?? {};
-      this.jumpLevel = meta.jumpLevel ?? 0;
-      this.scoreLevel = meta.scoreLevel ?? 0;
-      this.shield = !!meta.shield;
       this.gauge = Math.min(this.gaugeNeeded, meta.gaugeFill ?? 0);
     }
 
