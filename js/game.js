@@ -2,6 +2,9 @@ import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
 import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
+import { BalloonWhale } from './whale.js';
+import { CoinPickup } from './coin.js';
+import { LetterToken, LETTERS } from './letters.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
 import { t, getFont } from './i18n.js';
@@ -61,6 +64,9 @@ import {
   HAZARD_SPEED,
   HAZARD_SPEED_MIN_FACTOR,
   HAZARD_START_SCORE,
+  WHALE_START_SCORE,
+  WHALE_CHANCE,
+  WHALE_MIN_GAP,
   ORB_RADIUS,
   ORB_SPAWN_GAP,
   ORB_RAINBOW_CHANCE,
@@ -99,6 +105,16 @@ import {
   FEATHER_MAX_FALL,
   COIN_PER_ORB,
   COIN_PER_RAINBOW,
+  CLASSIC_METERS_PER_COIN,
+  COIN_PICKUP_VALUE,
+  COIN_PICKUP_GAP,
+  COIN_PICKUP_CHANCE,
+  LETTER_GAP_METERS,
+  LETTER_SCORE_BONUS,
+  LETTER_SCORE_STEP,
+  LETTER_DUPLICATE_COINS,
+  ZAP_COOLDOWN_FRAMES,
+  BOOSTER_JUMP_MULT,
 } from './config.js';
 
 // 이미지 로딩 실패 시 기존 배경을 유지한다.
@@ -172,7 +188,9 @@ export class Game {
     this.frame = 0;
     this.coins = 0;
     this.airJumpsLeft = 0;
-    this.shield = false;
+    this.shields = 0; // 남은 보호막 개수(영구 강화·소모품·보상이 더해진다)
+    this.consumables = {};
+    this.boosterCharges = 0;
     this.jumpLevel = 0;
     this.doubleJumpLevel = 0;
     this.magnetLevel = 0;
@@ -229,6 +247,8 @@ export class Game {
     const setHolding = (holding) => {
       if (this.state !== 'ready' && this.state !== 'playing') return;
       this.input.holding = holding;
+      if (!holding) this.input.clientX = null;
+      this._syncDirectionCloud();
       const charging = holding && !!this.player?.groundedCloud;
       this.callbacks.onCharge?.(this.charge, charging);
     };
@@ -246,22 +266,44 @@ export class Game {
       if (this.state !== 'ready' && this.state !== 'playing') return;
       e.preventDefault();
       setHolding(true);
+      this.input.clientX = e.touches[0]?.clientX ?? null;
+      this._syncDirectionCloud();
+    }, { passive: false });
+
+    this.touchRoot.addEventListener('touchmove', (e) => {
+      if (!this.input.holding || (this.state !== 'ready' && this.state !== 'playing')) return;
+      e.preventDefault();
+      this.input.clientX = e.touches[0]?.clientX ?? null;
+      this._syncDirectionCloud();
     }, { passive: false });
 
     this.touchRoot.addEventListener('touchend', (e) => {
       const stillHolding = e.touches.length > 0;
       if (!stillHolding && this.input.holding) {
+        this.input.clientX = e.changedTouches[0]?.clientX ?? this.input.clientX;
+        this._syncDirectionCloud();
         onRelease();
       }
+      if (stillHolding) this.input.clientX = e.touches[0].clientX;
       setHolding(stillHolding);
     });
     this.touchRoot.addEventListener('touchcancel', (e) => {
       const stillHolding = e.touches.length > 0;
-      if (!stillHolding && this.input.holding) {
-        onRelease();
-      }
+      if (stillHolding) this.input.clientX = e.touches[0].clientX;
       setHolding(stillHolding);
     });
+  }
+
+  _syncDirectionCloud() {
+    const cloud = this.player?.groundedCloud;
+    if (cloud?.type !== CLOUD_TYPES.DIRECTION) return;
+    if (!this.input.holding || !Number.isFinite(this.input.clientX)) {
+      cloud.directionChoice = 0;
+      return;
+    }
+    const rect = this.canvas.getBoundingClientRect();
+    cloud.directionChoice = this.input.clientX < rect.left + rect.width / 2 ? -1 : 1;
+    this.player.facing = cloud.directionChoice;
   }
 
   _initDecor() {
@@ -298,7 +340,11 @@ export class Game {
     if (cloud) {
       if (cloud.broken) return;
 
-      if (Math.abs(this.player.vx) < 0.01) {
+      if (cloud.type === CLOUD_TYPES.DIRECTION && cloud.directionChoice !== 0) {
+        this.player.facing = cloud.directionChoice;
+        this.player.vx = cloud.directionChoice * this.player.baseSpeed;
+        this.startFromLeft = false;
+      } else if (Math.abs(this.player.vx) < 0.01) {
         if (this.startFromLeft) {
           this.player.vx = -this.player.baseSpeed;
           this.player.facing = -1;
@@ -320,7 +366,17 @@ export class Game {
       const perfect = rel >= PERFECT_LO && rel <= PERFECT_HI;
       if (perfect) jumpMult *= PERFECT_JUMP_MULT;
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
-      this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost);
+      // 소모품 '출발 부스터': 그 판의 첫 점프만 크게 솟는다.
+      let boosterMult = 1;
+      if (this.boosterCharges > 0) {
+        this.boosterCharges -= 1;
+        boosterMult = BOOSTER_JUMP_MULT;
+        this._spawnParticles(this.player.x, this.player.y + this.player.height * 0.4, '#ff8a3d', 18);
+        playBoostSound();
+        hapticHeavy();
+      }
+      this.player.bounce(JUMP_FORCE * jumpMult * upgrade * cloudBoost * boosterMult);
+      if (cloud.type === CLOUD_TYPES.DIRECTION) cloud.directionChoice = 0;
       if (perfect) this._onPerfect();
       playJumpSound(this.charge); // 충전이 클수록 음이 높아짐
       hapticLight();
@@ -337,6 +393,8 @@ export class Game {
       if (cloud.type === CLOUD_TYPES.BREAKING) {
         cloud.broken = true;
         playBreakSound();
+      } else if (cloud.type === CLOUD_TYPES.GLASS) {
+        cloud.startGlassFade();
       }
       return;
     }
@@ -493,7 +551,7 @@ export class Game {
   }
 
   _isPlayerOnCloud(cloud) {
-    const half = (cloud.width * this._cloudScale()) / 2;
+    const half = (cloud.width * (cloud.type === CLOUD_TYPES.WHALE ? 1 : this._cloudScale())) / 2;
     return (
       this.player.right > cloud.x - half + CLOUD_COLLISION_INSET &&
       this.player.left < cloud.x + half - CLOUD_COLLISION_INSET
@@ -601,8 +659,9 @@ export class Game {
     this.airJumpsLeft = this.doubleJumpLevel;
   }
 
-  start(mode = 'classic') {
+  start(mode = 'classic', consumables = {}) {
     this.mode = mode;
+    this.consumables = consumables;
     this.state = 'ready';
     this.score = 0;
     this.cameraY = 0;
@@ -611,6 +670,16 @@ export class Game {
     this.orbs = [];
     this.hazards = [];
     this.particles = [];
+    this.platformSpawnCount = 0;
+    this.sinceWhale = 0;
+    this.lastZapFrame = -999;
+    this.coinPickups = [];
+    this.highestCoinY = 0;
+    this.letters = [];
+    this.highestLetterY = 0;
+    this.nextLetter = 0;          // 다음에 놓을 글자 후보(0=P … 4=G)
+    this.collectedLetters = new Set(); // 이번 세트에서 모은 글자(인덱스)
+    this.letterSets = 0;          // 완성한 세트 수
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
     this.rewardCount = 0;
@@ -619,7 +688,7 @@ export class Game {
     this.frame = 0;
     this.coins = 0;
     this.airJumpsLeft = 0;
-    this.shield = false;
+    this.shields = 0;
     this.jumpLevel = 0;
     this.doubleJumpLevel = 0;
     this.magnetLevel = 0;
@@ -644,12 +713,16 @@ export class Game {
     this.coinsBanked = 0;
     this.usedAdRevive = false;
 
-    // 어드벤처 모드에서만 상점 영구 업그레이드 적용
+    // 상점 영구 업그레이드는 두 모드 모두 적용한다.
+    // 단 시작 게이지는 오브·보상 카드가 있는 어드벤처에서만 의미가 있다.
+    const meta = this.callbacks.getStartBonuses?.() ?? {};
+    this.jumpLevel = meta.jumpLevel ?? 0;
+    this.scoreLevel = meta.scoreLevel ?? 0;
+    // 보호막은 소모품으로만 갖고 시작한다(영구 강화에서 제외).
+    // 소모품은 시작 화면에서 켜고 시작할 때 main.js 가 이미 한 개 차감해 넘겨준다.
+    this.shields = this.consumables.shieldItem ? 1 : 0;
+    this.boosterCharges = this.consumables.booster ? 1 : 0;
     if (this.mode === 'adventure') {
-      const meta = this.callbacks.getStartBonuses?.() ?? {};
-      this.jumpLevel = meta.jumpLevel ?? 0;
-      this.scoreLevel = meta.scoreLevel ?? 0;
-      this.shield = !!meta.shield;
       this.gauge = Math.min(this.gaugeNeeded, meta.gaugeFill ?? 0);
     }
 
@@ -681,7 +754,7 @@ export class Game {
     let y = startY;
     for (let i = 0; i < 24; i++) {
       y -= this._cloudGap();
-      const cloud = this._placeCloud(y, pickCloudType(0), randomCloudWidth());
+      const cloud = this._placeCloud(y, this._nextPlatformType(0), randomCloudWidth());
       this.clouds.push(cloud);
       y = cloud.y;
     }
@@ -689,7 +762,16 @@ export class Game {
     this.highestSpawnedY = this.clouds.reduce((min, c) => (c.y < min ? c.y : min), startY);
     this.highestOrbY = startY;
     this.highestHazardY = startY;
+    this.highestCoinY = startY;
+    this.coinPickups = [];
+    this.highestLetterY = startY;
+    this.letters = [];
+    this.nextLetter = 0;
+    this.collectedLetters = new Set();
+    this.letterSets = 0;
     this._spawnOrbs(); // 시작 화면(대기 상태)부터 오브가 보이도록 미리 생성
+    this._spawnCoinPickups(); // 코인도 시작부터 보이게
+    this._spawnLetters();
 
     this._initDecor();
     this.input = { holding: false };
@@ -720,8 +802,19 @@ export class Game {
   // 가로로 피할 자리가 없으면(움직이는 구름이 이웃이거나 화면이 좁을 때) 겹치지 않을
   // 만큼만 위로 올린다. 올리는 폭은 CLOUD_OVERLAP_MAX_PUSH 로 제한해서, 기본 충전 점프
   // (약 260px)로 닿지 못할 만큼 간격이 벌어지는 일은 없게 한다.
+  _nextPlatformType(score) {
+    this.platformSpawnCount += 1;
+    this.sinceWhale += 1;
+    const canWhale = score >= WHALE_START_SCORE && this.sinceWhale >= WHALE_MIN_GAP;
+    if (canWhale && Math.random() < WHALE_CHANCE) {
+      this.sinceWhale = 0;
+      return CLOUD_TYPES.WHALE;
+    }
+    return pickCloudType(score);
+  }
+
   _placeCloud(y, type, width) {
-    const cloud = new Cloud(0, y, type, width);
+    const cloud = type === CLOUD_TYPES.WHALE ? new BalloonWhale(0, y) : new Cloud(0, y, type, width);
     const neighbors = this.clouds.slice(-CLOUD_OVERLAP_NEIGHBORS);
     const randomX = () => Math.random() * (this.worldWidth - CLOUD_SPAWN_PADDING) + CLOUD_SPAWN_MARGIN_X;
 
@@ -731,6 +824,9 @@ export class Game {
     }
 
     const push = this._overlapPush(cloud, neighbors);
+    if (type === CLOUD_TYPES.WHALE && push > CLOUD_OVERLAP_MAX_PUSH) {
+      return this._placeCloud(y, CLOUD_TYPES.NORMAL, width);
+    }
     if (push <= CLOUD_OVERLAP_MAX_PUSH) cloud.y -= push;
     return cloud;
   }
@@ -759,15 +855,110 @@ export class Game {
     while (y > spawnAbove) {
       const gap = this._cloudGap();
       y -= gap;
-      const cloud = this._placeCloud(y, pickCloudType(this.score), this._cloudSpawnWidth());
+      const cloud = this._placeCloud(y, this._nextPlatformType(this.score), this._cloudSpawnWidth());
       this.clouds.push(cloud);
       y = cloud.y;
       this.highestSpawnedY = y;
     }
 
     const cullBelow = this.cameraY + this.worldHeight + CULL_BELOW_PADDING;
-    this.clouds = this.clouds.filter((c) => c.y < cullBelow);
+    this.clouds = this.clouds.filter((c) => c.y < cullBelow && !c.dead);
     this.orbs = this.orbs.filter((o) => !o.collected && o.y < cullBelow);
+    this.coinPickups = this.coinPickups.filter((c) => c.y < cullBelow);
+    this.letters = this.letters.filter((tk) => tk.y < cullBelow);
+  }
+
+  // 코인: 두 모드 모두, 일정 간격마다 확률로 하나씩 띄운다.
+  _spawnCoinPickups() {
+    const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
+    while (this.highestCoinY > spawnAbove) {
+      this.highestCoinY -= COIN_PICKUP_GAP * (0.7 + Math.random() * 0.6);
+      if (Math.random() > COIN_PICKUP_CHANCE) continue;
+      const margin = this.worldWidth * 0.12;
+      const x = margin + Math.random() * (this.worldWidth - margin * 2);
+      this.coinPickups.push(new CoinPickup(x, this.highestCoinY));
+    }
+  }
+
+  // 글자: 순서대로 하나씩, 좌우로 흩어지게 놓는다.
+  _spawnLetters() {
+    const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
+    const gap = LETTER_GAP_METERS * SCORE_DIVISOR;
+    while (this.highestLetterY > spawnAbove) {
+      this.highestLetterY -= gap * (0.85 + Math.random() * 0.3);
+      const index = this.nextLetter;
+      const margin = this.worldWidth * 0.14;
+      const x = margin + Math.random() * (this.worldWidth - margin * 2);
+      this.letters.push(new LetterToken(x, this.highestLetterY, index));
+      this.nextLetter = (index + 1) % LETTERS.length;
+    }
+  }
+
+  // 글자를 먹었는지 확인한다. 다섯 글자를 다 모으면 로켓 + 점수 보너스.
+  _collectLetters() {
+    const reach = this.player.width * 0.32;
+    for (const token of this.letters) {
+      if (token.collected) continue;
+      if (Math.hypot(this.player.x - token.x, this.player.y - token.y) > token.r + reach) continue;
+      token.collected = true;
+      const duplicate = this.collectedLetters.has(token.index);
+      this._spawnParticles(token.x, token.y, '#ffd24a', duplicate ? 8 : 12);
+      playCollectSound();
+      hapticLight();
+      if (duplicate) {
+        // 이미 모은 글자는 진행도에 더해지지 않는 대신 코인을 조금 준다.
+        this.coins += LETTER_DUPLICATE_COINS;
+        this.callbacks.onCoins?.(this._currentCoins());
+        this._addFloatText(token.x, token.y, `+${LETTER_DUPLICATE_COINS}`, '#f5a623', 0.8);
+        continue;
+      }
+      this.collectedLetters.add(token.index);
+      this._addFloatText(token.x, token.y, LETTERS[token.index].toUpperCase(), '#f5a623', 0.8);
+      this.callbacks.onLetters?.([...this.collectedLetters]);
+      if (this.collectedLetters.size >= LETTERS.length) this._completeLetterSet();
+    }
+    this.letters = this.letters.filter((tk) => !tk.collected);
+  }
+
+  _completeLetterSet() {
+    this.letterSets += 1;
+    this.collectedLetters.clear();
+    this.letters = []; // 남아 있던 글자는 치우고 새 세트를 시작한다
+    this.callbacks.onLetters?.([]);
+    // 보상: 로켓 발사 + 점수. 세트를 거듭할수록 점수가 커진다.
+    this.effects.rocket = ROCKET_DURATION;
+    this.callbacks.onEffects?.(this.getEffects());
+    const bonus = LETTER_SCORE_BONUS + (this.letterSets - 1) * LETTER_SCORE_STEP;
+    this.score += bonus;
+    this.callbacks.onScore?.(this.score);
+    this._addFloatText(this.player.x, this.player.y - this.player.height, `POING! +${bonus}`, '#ff8fab', 1.3);
+    this._showBanner('POING!');
+    playRocketSound();
+    hapticSuccess();
+    this._addShake(6, 22);
+  }
+
+  // 코인을 주웠는지 확인한다(몸이 닿으면 획득).
+  _collectCoinPickups() {
+    const reach = this.player.width * 0.32;
+    for (const coin of this.coinPickups) {
+      if (coin.collected) continue;
+      if (Math.hypot(this.player.x - coin.x, this.player.y - coin.y) > coin.r + reach) continue;
+      coin.collected = true;
+      this.coins += COIN_PICKUP_VALUE;
+      this.callbacks.onCoins?.(this._currentCoins());
+      this._spawnParticles(coin.x, coin.y, '#ffd24a', 10);
+      this._addFloatText(coin.x, coin.y, `+${COIN_PICKUP_VALUE}`, '#f5a623', 0.8);
+      playCollectSound();
+      hapticLight();
+    }
+    this.coinPickups = this.coinPickups.filter((c) => !c.collected);
+  }
+
+  // 지금까지 이번 판에서 번 코인(일반 모드는 올라간 거리도 코인이 된다).
+  _currentCoins() {
+    if (this.mode === 'adventure') return this.coins;
+    return this.coins + Math.floor(this.score / CLASSIC_METERS_PER_COIN);
   }
 
   // 오브를 맵 전체에 일정한 세로 간격으로 골고루 뿌린다. (어드벤처 모드 전용)
@@ -793,7 +984,7 @@ export class Game {
     }
     const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
     const t = Math.min(1, this.score / 800);
-    const gap = this.worldHeight * (0.95 - 0.5 * t); // 고도0: ~1화면, 고도1: ~0.45화면
+    const gap = this.worldHeight * (1.4 - 0.55 * t); // 고도0: ~1.4화면, 고도1: ~0.85화면
     // 가시 속도: 최저는 항상 느리게 유지하고, 고도가 오르면 "상한"만 높아진다.
     // → 각 가시마다 [느림 ~ 상한] 사이를 랜덤으로 골라, 높은 곳에서도 느린 가시가 섞인다.
     const speedFloor = HAZARD_SPEED_MIN_FACTOR;
@@ -843,8 +1034,8 @@ export class Game {
       this._addShake(4);
       return;
     }
-    if (this.shield) {
-      this.shield = false;
+    if (this.shields > 0) {
+      this.shields -= 1;
       h.dead = true;
       this._spawnParticles(h.x, h.y, '#ffd24a', 16);
       this.player.vy = -JUMP_FORCE * 0.8; // 살짝 튕겨 회피
@@ -860,12 +1051,85 @@ export class Game {
     }
   }
 
+  // 번개: 공중에서 줄기에 닿으면 상승이 끊기고 그대로 떨어진다(구름 위에 서 있는 건 안전).
+  _checkLightning(previous = null) {
+    if (this.player.groundedCloud) return;
+    if (this.frame - this.lastZapFrame < ZAP_COOLDOWN_FRAMES) return;
+    const scale = this._cloudScale();
+    const halfW = this.player.width * 0.28;
+    // 한 프레임에 18px 넘게 움직이는데 번개 줄기는 13px 남짓이라, 지금 위치만 보면
+    // 빠른 점프가 줄기를 뚫고 지나간다. 직전 위치까지 포함한 경로로 판정한다.
+    const prevY = previous ? previous.y : this.player.y;
+    const prevX = previous ? previous.x : this.player.x;
+    const dy = this.player.y - prevY;
+    const top = Math.min(this.player.y, prevY) - this.player.height * 0.3;
+    const bottom = Math.max(this.player.y, prevY) + (this.player.bottom - this.player.y);
+    const left = Math.min(this.player.x, prevX) - halfW;
+    const right = Math.max(this.player.x, prevX) + halfW;
+    for (const cloud of this.clouds) {
+      if (cloud.type !== CLOUD_TYPES.THUNDER || !cloud.isStriking(this.frame)) continue;
+      const zone = cloud.strikeZone(scale);
+      if (!zone) continue;
+      const hitX = right > zone.left && left < zone.right;
+      const hitY = bottom > zone.top && top < zone.bottom;
+      if (!hitX || !hitY) continue;
+      this._zap(dy);
+      return;
+    }
+  }
+
+  _zap(dy = 0) {
+    this.lastZapFrame = this.frame;
+    // 솟구치다 맞았으면 줄기 아래쪽으로 되돌려, 뚫고 올라간 것처럼 보이지 않게 한다.
+    if (dy < 0) this.player.y = Math.max(this.player.y, this.player.y - dy * 0.5);
+    // 위로 가던 힘을 끊어 그대로 떨어뜨린다.
+    this.player.vy = Math.max(this.player.vy, 1.5);
+    this.player.jumpPeakVy = 0;
+    this.player.trail.length = 0;
+    this.player.charging = false;
+    this.player.chargeLevel = 0;
+    this._spawnParticles(this.player.x, this.player.y, '#ffe08a', 16);
+    this._addShake(6);
+    playHazardSound();
+    hapticMedium();
+    if (this.combo > 0) {
+      this._addFloatText(this.player.x, this.player.y - this.player.height * 0.7, t('combo.break'), '#9aa7b0', 0.9);
+      this.combo = 0;
+      this.callbacks.onCombo?.(0, 1);
+    }
+  }
+
+  _checkWhales(previous) {
+    if (this.player.groundedCloud || this.effects.rocket > 0) return;
+    let nearest = null;
+    for (const whale of this.clouds) {
+      if (whale.type !== CLOUD_TYPES.WHALE || whale.fleeing) continue; // 달아나는 고래는 통과
+      if (whale.top > this.cameraY + this.worldHeight) continue;
+      const hit = whale.contact(this.player, previous);
+      if (hit && (!nearest || hit.time < nearest.hit.time)) nearest = { whale, hit };
+    }
+    if (!nearest) return;
+    const { whale, hit } = nearest;
+    whale.wake();
+    if (hit.side === 'top') {
+      this._landOnCloud(whale);
+    } else {
+      whale.deflect(this.player, hit);
+      this.charge = 0;
+      this.chargeHold = 0;
+      this.callbacks.onCharge?.(0, false);
+      playBounceSound();
+      hapticLight();
+    }
+  }
+
   _checkLanding() {
     if (this.player.groundedCloud || this.player.vy <= 0) return;
 
     const viewportBottom = this.cameraY + this.worldHeight;
 
     for (const cloud of this.clouds) {
+      if (cloud.type === CLOUD_TYPES.WHALE) continue; // Solid collision handles all four sides.
       if (cloud.broken) continue;
       // 페이즈 구름이 투명(비실체) 상태면 통과한다.
       if (!cloud.isSolid) continue;
@@ -901,7 +1165,9 @@ export class Game {
       return;
     }
 
-    if (cloud.type === CLOUD_TYPES.MOVING) {
+    if (cloud.type === CLOUD_TYPES.WHALE) {
+      this.player.x += cloud.deltaX;
+    } else if (cloud.type === CLOUD_TYPES.MOVING) {
       this.player.x += cloud.vx;
     }
 
@@ -946,14 +1212,18 @@ export class Game {
       let burstMult = this.effects.scoreX2 > 0 ? REWARD_SCORE_MULT : 1;
       // 시그니처 페어: 점수배율+로켓 → 로켓 중 점수 추가 2배
       if (this.effects.rocket > 0 && this.taken.has('scoreMul')) burstMult *= 2;
+      const beforeCoins = this._currentCoins();
       this.score += Math.round(delta * permMult * burstMult * this._comboMult());
       this.callbacks.onScore?.(this.score);
+      const afterCoins = this._currentCoins();
+      if (afterCoins !== beforeCoins) this.callbacks.onCoins?.(afterCoins);
       this._checkZone();
     }
   }
 
   _syncPlayerChargeAnim() {
     if (!this.player) return;
+    this._syncDirectionCloud();
     const onCloud = this.state === 'ready' || !!this.player.groundedCloud;
     this.player.charging = onCloud && this.input.holding;
     this.player.chargeLevel = this.charge;
@@ -994,18 +1264,25 @@ export class Game {
     } else if (this.player.groundedCloud) {
       this._updateGrounded();
     } else {
+      const previous = { x: this.player.x, y: this.player.y };
       this.player.update(GRAVITY * this.mods.gravityMult, this.worldWidth, ts);
       // 깃털(일시) 또는 황금 깃털(전설·상시): 낙하 속도 제한
       if ((this.effects.feather > 0 || this.legend.goldFeather) && this.player.vy > FEATHER_MAX_FALL) {
         this.player.vy = FEATHER_MAX_FALL;
       }
+      this._checkWhales(previous);
+      this._checkLightning(previous);
       this._checkLanding();
     }
 
     this._spawnClouds();
     this._spawnOrbs();
+    this._spawnCoinPickups();
+    this._spawnLetters();
     this._spawnHazards();
     this._updateOrbs();
+    this._collectCoinPickups();
+    this._collectLetters();
     this._updateHazards();
     if (this.state !== 'playing' && this.state !== 'ready') return; // 장애물로 게임오버
     this._updateParticles();
@@ -1025,8 +1302,8 @@ export class Game {
 
     const overLine = this.worldHeight + GAME_OVER_MARGIN + this.synergy.fallBonus;
     if (this.player.y - this.cameraY > overLine) {
-      if (this.shield) {
-        this.shield = false;
+      if (this.shields > 0) {
+        this.shields -= 1;
         this._revive();
         playShieldSound();
         this.callbacks.onEffects?.(this.getEffects());
@@ -1043,8 +1320,8 @@ export class Game {
       && this.frame % SYN_SCORE_AUTOGROW_FRAMES === 0) {
       this.scoreLevel += 1;
     }
-    if (this.synergy.shieldRegen && !this.shield && this.frame % SYN_SHIELD_REGEN_FRAMES === 0) {
-      this.shield = true;
+    if (this.synergy.shieldRegen && this.shields === 0 && this.frame % SYN_SHIELD_REGEN_FRAMES === 0) {
+      this.shields = 1;
       this.callbacks.onEffects?.(this.getEffects());
     }
     // 전설 '로켓 엔진': 약 12초마다 자동 로켓 부스트
@@ -1312,7 +1589,7 @@ export class Game {
   // 현재 선택지를 만들어 콜백으로 전달(리롤 시 재호출).
   _emitRewardChoices() {
     // 이미 보호막이 있으면 중복 제공하지 않는다(낭비 방지).
-    const exclude = this.shield ? ['shield'] : [];
+    const exclude = this.shields > 0 ? ['shield'] : [];
     // 더블 점프가 최대(3회)면 더 이상 제공하지 않는다.
     if (this.doubleJumpLevel >= DOUBLE_JUMP_MAX_LEVEL) exclude.push('doubleJump');
     // 유니크(전설·트레이드오프)는 이미 획득했으면 제외한다.
@@ -1371,7 +1648,7 @@ export class Game {
     if (this.state !== 'reward') return;
 
     switch (id) {
-      case 'shield': this.shield = true; break;
+      case 'shield': this.shields += 1; break;
       case 'scoreX2': this.effects.scoreX2 = REWARD_DURATION; break;
       case 'slowmo': this.effects.slowmo = SLOWMO_DURATION; break;
       case 'bigcloud': this.effects.bigcloud = BIGCLOUD_DURATION; break;
@@ -1465,7 +1742,7 @@ export class Game {
 
   getEffects() {
     return {
-      shield: this.shield,
+      shield: this.shields > 0,
       scoreX2: this.effects.scoreX2 > 0,
       slowmo: this.effects.slowmo > 0,
       bigcloud: this.effects.bigcloud > 0,
@@ -1500,7 +1777,7 @@ export class Game {
     hapticHeavy();
     // 이번 판 코인 중 아직 적립하지 않은 만큼만 메타 저장소에 누적한다.
     // (광고 이어하기로 판이 이어지면 _gameOver 가 두 번 불리므로 중복 적립 방지)
-    const earned = this.mode === 'adventure' ? this.coins : 0;
+    const earned = this._earnedCoins();
     const delta = Math.max(0, earned - this.coinsBanked);
     if (delta > 0) {
       addCoins(delta);
@@ -1510,6 +1787,11 @@ export class Game {
     // 광고 이어하기: 판당 1회만 제공
     const canRevive = !this.usedAdRevive;
     this.callbacks.onGameOver?.(this.score, isNewRecord, earned, { canRevive });
+  }
+
+  // 이번 판에 번 코인. 어드벤처는 오브·보상으로 모은 코인, 일반 모드는 올라간 거리로 계산한다.
+  _earnedCoins() {
+    return this._currentCoins();
   }
 
   // 광고 시청 성공 후 그 자리에서 부활해 이어서 플레이한다(판당 1회).
@@ -1552,7 +1834,7 @@ export class Game {
   abandonRun() {
     if (this.state !== 'paused' && this.state !== 'playing') return;
     if (this._loopId) cancelAnimationFrame(this._loopId);
-    const earned = this.mode === 'adventure' ? this.coins : 0;
+    const earned = this._earnedCoins();
     const delta = Math.max(0, earned - this.coinsBanked);
     if (delta > 0) {
       addCoins(delta);
@@ -1848,6 +2130,12 @@ export class Game {
       cloud.draw(this.ctx, this.cameraY, cloudScale, altitude, this.frame);
     }
 
+    for (const coin of this.coinPickups) {
+      coin.draw(this.ctx, this.cameraY, this.frame);
+    }
+    for (const token of this.letters) {
+      token.draw(this.ctx, this.cameraY, this.frame);
+    }
     for (const orb of this.orbs) {
       orb.draw(this.ctx, this.cameraY, this.frame);
     }
@@ -1860,7 +2148,7 @@ export class Game {
 
     this.player.draw(this.ctx, this.cameraY);
 
-    if (this.shield) {
+    if (this.shields > 0) {
       this._drawShield();
     }
 

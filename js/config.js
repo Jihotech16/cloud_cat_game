@@ -110,6 +110,26 @@ export const FEATHER_DURATION = 6 * 60;
 export const FEATHER_MAX_FALL = 4 * GAME_SCALE; // 깃털 시 최대 낙하 속도
 
 // 코인 (메타 성장)
+// 일반 모드는 오브가 없어서 거리로 코인을 준다. 어드벤처는 오브를 전부 먹으면 3.65m 당 1코인이지만
+// 실제 플레이에서는 6~8m 당 1코인 수준이라(124m/25코인, 294m/36코인 기록 기준) 그 사이로 맞췄다.
+export const CLASSIC_METERS_PER_COIN = 6;
+
+// 게임 중 주울 수 있는 코인(발바닥 금화). 두 모드 모두 등장한다.
+export const COIN_PICKUP_RADIUS = 11 * GAME_SCALE;
+export const COIN_PICKUP_VALUE = 3;      // 하나당 코인
+export const COIN_PICKUP_GAP = 320;      // 세로 간격(월드 px, 아래 확률과 함께 빈도를 정한다)
+export const COIN_PICKUP_CHANCE = 0.55;  // 간격마다 실제로 놓을 확률
+
+// P·O·I·N·G 글자: 순서대로 하나씩 등장하고, 다섯 글자를 모으면 로켓 + 점수 보너스.
+export const LETTER_RADIUS = 13 * GAME_SCALE;
+export const LETTER_GAP_METERS = 35;      // 글자 사이 높이 차(다섯 글자 = 약 175m)
+export const LETTER_SCORE_BONUS = 120;    // 한 세트 완성 시 점수(세트가 늘수록 커진다)
+export const LETTER_SCORE_STEP = 60;      // 세트마다 추가되는 점수
+export const LETTER_DUPLICATE_COINS = 2;  // 이미 모은 글자를 또 먹었을 때 주는 코인
+
+// 소모품 '출발 부스터': 그 판의 첫 점프만 이 배율로 세게 뛴다.
+export const BOOSTER_JUMP_MULT = 2.5;
+
 export const COIN_PER_ORB = 1;
 export const COIN_PER_RAINBOW = 5;
 
@@ -118,3 +138,13 @@ export const HAZARD_RADIUS = 13 * GAME_SCALE;
 export const HAZARD_SPEED = 1.3 * GAME_SCALE * GAME_SPEED; // 좌우 드리프트(고도 최고 기준)
 export const HAZARD_SPEED_MIN_FACTOR = 0.35; // 낮은 고도에서의 속도 비율(천천히 시작)
 export const HAZARD_START_SCORE = 60; // 이 점수부터 등장(초반은 안전)
+
+// 풍선 고래: 시작부터 나오면 길을 막아 답답해서 이 점수부터 등장.
+// 고정 간격이 아니라 발판마다 확률을 굴린다. 다만 연달아 나오면 길이 막히므로
+// 한 마리가 나온 뒤에는 최소 WHALE_MIN_GAP 개의 발판을 건너뛴다.
+// 번개에 맞은 뒤 잠깐은 다시 맞지 않는다(한 번 번쩍일 때 여러 번 맞지 않도록).
+export const ZAP_COOLDOWN_FRAMES = 40;
+
+export const WHALE_START_SCORE = 150;
+export const WHALE_CHANCE = 0.09;
+export const WHALE_MIN_GAP = 6;

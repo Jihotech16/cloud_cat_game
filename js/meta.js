@@ -4,12 +4,64 @@ const UPG_KEY = 'cloudCat_upgrades';
 
 // 상점 업그레이드 정의. cost(level)=현재 레벨에서 다음 레벨 구매 비용.
 // 능력치는 레벨 10까지, 비용은 레벨이 오를수록 제곱으로 크게 증가한다.
+// modes: 이 강화가 효과 있는 모드. 시작 게이지는 오브로 차는 게이지·보상 카드가 있는
+// 어드벤처에서만 의미가 있어 일반 모드 상점에는 내보내지 않는다.
 export const UPGRADES = [
-  { id: 'startJump', icon: 'assets/rocket.png', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2 },
-  { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2 },
-  { id: 'startGauge', icon: 'assets/star.png', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2 },
-  { id: 'startShield', icon: '🛡️', label: '시작 보호막', desc: '매 판 보호막을 갖고 시작', max: 1, cost: () => 1500 },
+  { id: 'startJump', icon: 'assets/rocket.png', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2, modes: ['classic', 'adventure'] },
+  { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2, modes: ['classic', 'adventure'] },
+  { id: 'startGauge', icon: 'assets/star.png', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2, modes: ['adventure'] },
 ];
+
+// 소모품(판당 1회용). 상점에서 사서 시작 화면에서 켜고 시작하면 한 개 소모된다.
+export const CONSUMABLES = [
+  { id: 'booster', icon: 'assets/rocket.png', price: 120 },
+  { id: 'shieldItem', icon: '🛡️', price: 200 },
+];
+
+const CONSUM_KEY = 'cloudCat_consumables';
+
+function readConsumables() {
+  try {
+    const obj = JSON.parse(localStorage.getItem(CONSUM_KEY) ?? '{}');
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeConsumables(obj) {
+  try {
+    localStorage.setItem(CONSUM_KEY, JSON.stringify(obj));
+  } catch {
+    // 저장이 막혀 있으면 이번 실행 동안만 유지된다.
+  }
+}
+
+export function getConsumableCount(id) {
+  const n = readConsumables()[id];
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+export function buyConsumable(id) {
+  const item = CONSUMABLES.find((c) => c.id === id);
+  if (!item) return { ok: false, reason: 'unknown' };
+  if (getCoins() < item.price) return { ok: false, reason: 'notEnoughCoins' };
+  addCoins(-item.price);
+  const owned = readConsumables();
+  owned[id] = getConsumableCount(id) + 1;
+  writeConsumables(owned);
+  return { ok: true, count: owned[id] };
+}
+
+// 한 개 쓴다. 갖고 있지 않으면 false.
+export function useConsumable(id) {
+  const count = getConsumableCount(id);
+  if (count <= 0) return false;
+  const owned = readConsumables();
+  owned[id] = count - 1;
+  writeConsumables(owned);
+  return true;
+}
 
 function readInt(key) {
   const n = parseInt(localStorage.getItem(key) ?? '0', 10);
@@ -72,6 +124,5 @@ export function getStartBonuses() {
     jumpLevel: getUpgradeLevel('startJump'),
     scoreLevel: getUpgradeLevel('startScore'),
     gaugeFill: getUpgradeLevel('startGauge') * 9, // 레벨당 게이지 9% (최대 10레벨 = 90%)
-    shield: getUpgradeLevel('startShield') > 0,
   };
 }

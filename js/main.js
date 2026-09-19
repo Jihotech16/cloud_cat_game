@@ -21,6 +21,10 @@ import { TIERS, TAGS } from './orb.js';
 import { t, applyStaticI18n, getLang, setLang, LANGS } from './i18n.js';
 import {
   getCoins,
+  CONSUMABLES,
+  getConsumableCount,
+  buyConsumable,
+  useConsumable,
   getStartBonuses,
   UPGRADES,
   getUpgradeLevel,
@@ -45,6 +49,14 @@ if (typeof ResizeObserver !== 'undefined') {
   }).observe(hud);
 }
 const startScreen = document.getElementById('start-screen');
+const menuCatImage = document.getElementById('menu-cat-image');
+const menuCatSources = {
+  classic: 'assets/cat%20background.png',
+  adventure: 'assets/cat-adventure-menu.png',
+};
+// Warm the second illustration so switching modes doesn't leave a blank preview.
+const adventureMenuPreload = new Image();
+adventureMenuPreload.src = menuCatSources.adventure;
 const gameoverScreen = document.getElementById('gameover-screen');
 
 const scoreEl = document.getElementById('score');
@@ -85,6 +97,10 @@ const btnShopGameover = document.getElementById('btn-shop-gameover');
 const shopScreen = document.getElementById('shop-screen');
 const shopList = document.getElementById('shop-list');
 const shopCoinsEl = document.getElementById('shop-coins');
+const shopModeEl = document.getElementById('shop-mode');
+const shopTitleEl = document.getElementById('shop-title');
+const shopTitleIcoEl = document.getElementById('shop-title-ico');
+const btnCharacters = document.getElementById('btn-characters');
 const btnShopClose = document.getElementById('btn-shop-close');
 
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -144,6 +160,7 @@ function refreshMenuRecords() {
 
 function setMode(mode) {
   selectedMode = mode;
+  if (menuCatImage) menuCatImage.src = menuCatSources[mode] ?? menuCatSources.classic;
   modeButtons.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
@@ -201,6 +218,23 @@ function updateCombo(combo = 0, mult = 1) {
   comboEl.classList.add('bump');
 }
 
+// POING 진행도: 먹은 글자 수만큼 앞에서부터 선명해진다.
+const poingProgressEl = document.getElementById('poing-progress');
+function updateLetters(collected = []) {
+  if (!poingProgressEl) return;
+  const got = new Set(collected);
+  if (!poingProgressEl.children.length) {
+    for (let i = 0; i < 5; i++) {
+      const span = document.createElement('span');
+      span.className = 'poing-letter';
+      // 다섯 칸짜리 시트에서 i 번째 글자만 보이게 한다.
+      span.style.backgroundPosition = `${(i / 4) * 100}% 0`;
+      poingProgressEl.appendChild(span);
+    }
+  }
+  [...poingProgressEl.children].forEach((el, i) => el.classList.toggle('got', got.has(i)));
+}
+
 function updateSynergy(state = {}) {
   if (!synergyEl) return;
   const badges = [];
@@ -226,10 +260,7 @@ function updateSynergy(state = {}) {
 }
 
 function renderSkins() {
-  const title = document.createElement('div');
-  title.className = 'shop-section-title';
-  title.textContent = t('shop.skins');
-  shopList.appendChild(title);
+  shopSectionTitle(t('shop.skins'));
 
   const equipped = getEquippedSkin();
   const coins = getCoins();
@@ -243,7 +274,7 @@ function renderSkins() {
     let buttonHtml;
     if (isEquipped) buttonHtml = t('skin.equipped');
     else if (owned) buttonHtml = t('skin.equip');
-    else if (forSale) buttonHtml = `<img class="coin-ico" src="assets/coin.png" alt=""> ${skin.price.toLocaleString()}`;
+    else if (forSale) buttonHtml = `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${skin.price.toLocaleString()}`;
     else buttonHtml = t('skin.locked');
     const clickable = (owned && !isEquipped) || affordable;
 
@@ -268,19 +299,114 @@ function renderSkins() {
     shopList.appendChild(row);
   }
 
-  const upgradesTitle = document.createElement('div');
-  upgradesTitle.className = 'shop-section-title';
-  upgradesTitle.textContent = t('shop.upgrades');
-  shopList.appendChild(upgradesTitle);
 }
+
+function shopSectionTitle(text) {
+  const title = document.createElement('div');
+  title.className = 'shop-section-title';
+  title.textContent = text;
+  shopList.appendChild(title);
+}
+
+// 소모품: 여러 개 살 수 있고, 시작 화면에서 켜고 시작하면 한 개 쓴다.
+function renderConsumables() {
+  shopSectionTitle(t('shop.consumables'));
+
+  const coins = getCoins();
+  for (const item of CONSUMABLES) {
+    const owned = getConsumableCount(item.id);
+    const affordable = coins >= item.price;
+    const iconHtml = item.icon.endsWith('.png')
+      ? `<img class="shop-icon" src="${item.icon}" alt="">`
+      : `<span class="shop-icon">${item.icon}</span>`;
+    const row = document.createElement('div');
+    row.className = 'shop-item';
+    row.innerHTML = `
+      ${iconHtml}
+      <span class="shop-info">
+        <span class="shop-label">${t(`item.${item.id}.label`)} <em>${t('item.owned', { n: owned })}</em></span>
+        <span class="shop-desc">${t(`item.${item.id}.desc`)}</span>
+      </span>
+      <button class="shop-buy" ${affordable ? '' : 'disabled'}>
+        <img class="coin-ico" src="assets/coin-paw.png" alt=""> ${item.price.toLocaleString()}
+      </button>
+    `;
+    if (affordable) {
+      row.querySelector('.shop-buy').addEventListener('click', () => {
+        if (buyConsumable(item.id).ok) {
+          renderShop();
+          renderConsumableArm();
+        }
+      });
+    }
+    shopList.appendChild(row);
+  }
+}
+
+// 시작 화면에서 이번 판에 쓸 소모품을 켜고 끈다(갖고 있는 것만 보인다).
+const armed = {};
+const consumableArmEl = document.getElementById('consumable-arm');
+function renderConsumableArm() {
+  if (!consumableArmEl) return;
+  consumableArmEl.innerHTML = '';
+  for (const item of CONSUMABLES) {
+    const owned = getConsumableCount(item.id);
+    if (owned <= 0) {
+      armed[item.id] = false;
+      continue;
+    }
+    const chip = document.createElement('button');
+    chip.className = `consumable-chip${armed[item.id] ? ' armed' : ''}`;
+    chip.type = 'button';
+    const iconHtml = item.icon.endsWith('.png')
+      ? `<img class="chip-ico" src="${item.icon}" alt="">`
+      : `<span class="chip-ico">${item.icon}</span>`;
+    chip.innerHTML = `${iconHtml} ${t('item.arm', { name: t(`item.${item.id}.label`), n: owned })}`;
+    chip.title = t('item.armedHint');
+    chip.addEventListener('click', () => {
+      armed[item.id] = !armed[item.id];
+      playClickSound();
+      renderConsumableArm();
+    });
+    consumableArmEl.appendChild(chip);
+  }
+}
+
+// 판을 시작할 때 켜 둔 소모품을 실제로 차감하고, 이번 판에 적용할 목록을 돌려준다.
+function consumeArmed() {
+  const used = {};
+  for (const item of CONSUMABLES) {
+    if (armed[item.id] && useConsumable(item.id)) used[item.id] = true;
+    armed[item.id] = false;
+  }
+  renderConsumableArm();
+  return used;
+}
+
+// 상점은 두 갈래로 연다. 'skins' = 캐릭터(복장), 'items' = 소모품 + 강화.
+let shopSection = 'items';
 
 function renderShop() {
   const coins = getCoins();
   shopCoinsEl.textContent = coins.toLocaleString();
   menuCoinsEl.textContent = coins.toLocaleString();
+  if (shopTitleEl) shopTitleEl.textContent = t(shopSection === 'skins' ? 'shop.titleSkins' : 'shop.titleItems');
+  if (shopTitleIcoEl) shopTitleIcoEl.src = shopSection === 'skins' ? 'assets/cat.png' : 'assets/shop-cart.png';
+  // 모드 표시는 모드마다 목록이 달라지는 아이템 쪽에서만 의미가 있다.
+  if (shopModeEl) {
+    shopModeEl.textContent = shopSection === 'skins'
+      ? ''
+      : t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
+  }
   shopList.innerHTML = '';
-  renderSkins();
-  for (const up of UPGRADES) {
+  if (shopSection === 'skins') {
+    renderSkins();
+    return;
+  }
+  renderConsumables();
+  shopSectionTitle(t('shop.upgrades'));
+  // 고른 모드에서 효과가 있는 강화만 보여준다.
+  for (const up of UPGRADES.filter((u) => (u.modes ?? ['classic', 'adventure']).includes(selectedMode))) {
     const level = getUpgradeLevel(up.id);
     const cost = nextCost(up.id);
     const maxed = cost === null;
@@ -299,7 +425,7 @@ function renderShop() {
         <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
       </span>
       <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin.png" alt=""> ${cost.toLocaleString()}`}
+        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost.toLocaleString()}`}
       </button>
     `;
     if (!maxed && affordable) {
@@ -312,7 +438,8 @@ function renderShop() {
   }
 }
 
-function openShop() {
+function openShop(section = 'items') {
+  shopSection = section;
   renderShop();
   shopList.scrollTop = 0; // 맨 위(복장)부터 보이게
   shopScreen.classList.remove('hidden');
@@ -367,11 +494,11 @@ function showRewardChoices(choices, info = {}) {
 
   if (btnReroll) {
     const cost = info.rerollCost ?? 0;
-    btnReroll.innerHTML = `${t('reward.reroll')} (<img class="coin-ico" src="assets/coin.png" alt=""> ${cost})`;
+    btnReroll.innerHTML = `${t('reward.reroll')} (<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost})`;
     btnReroll.disabled = (info.coins ?? 0) < cost;
   }
   if (btnSkip) {
-    btnSkip.innerHTML = `${t('reward.skip')} (+<img class="coin-ico" src="assets/coin.png" alt=""> ${info.skipReward ?? 0})`;
+    btnSkip.innerHTML = `${t('reward.skip')} (+<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${info.skipReward ?? 0})`;
   }
 
   rewardScreen.classList.remove('hidden');
@@ -392,6 +519,9 @@ function ensureGame() {
     },
     onEffects(effects) {
       updateEffects(effects);
+    },
+    onLetters(collected) {
+      updateLetters(collected);
     },
     onSynergy(state) {
       updateSynergy(state);
@@ -487,6 +617,7 @@ function startGame() {
 
 function beginGame() {
   ensureGame();
+  updateLetters([]);
   setBgmScene('game');
   startScreen.classList.add('hidden');
   tutorialScreen?.classList.add('hidden');
@@ -510,7 +641,7 @@ function beginGame() {
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');
   updateHudRecords(selectedMode);
   // 플레이 중에도 배너를 유지한다. 겹치지 않게 #app 이 배너 몫을 비워 둔다.
-  game.start(selectedMode);
+  game.start(selectedMode, consumeArmed());
 }
 
 // 보상형 광고로 코인 2배 받기 버튼 준비.
@@ -598,6 +729,7 @@ function goToMenu() {
   btnPause?.classList.add('hidden');
   refreshMenuRecords();
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
+  renderConsumableArm();
   startScreen.classList.remove('hidden');
   setBgmScene('lobby');
   showBanner(); // 메인 메뉴에서 배너 노출
@@ -652,8 +784,9 @@ modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
 });
 
-btnShop?.addEventListener('click', openShop);
-btnShopGameover?.addEventListener('click', openShop);
+btnShop?.addEventListener('click', () => openShop('items'));
+btnShopGameover?.addEventListener('click', () => openShop('items'));
+btnCharacters?.addEventListener('click', () => openShop('skins'));
 btnShopClose?.addEventListener('click', closeShop);
 
 btnReroll?.addEventListener('click', () => game?.rerollReward());
@@ -690,7 +823,11 @@ window.addEventListener('pointerdown', () => {
 }, { once: true });
 
 function updateMuteBtn() {
-  if (btnMute) btnMute.textContent = isBgmMuted() ? t('sound.off') : t('sound.on');
+  if (!btnMute) return;
+  const muted = isBgmMuted();
+  btnMute.textContent = muted ? '🔇' : '🔊';
+  btnMute.setAttribute('aria-label', muted ? t('sound.off') : t('sound.on'));
+  btnMute.title = muted ? t('sound.off') : t('sound.on');
 }
 btnMute?.addEventListener('click', () => {
   toggleBgm();
@@ -713,6 +850,7 @@ function renderLangSelector() {
       updateMuteBtn();
       setMode(selectedMode); // 모드 힌트 갱신
       refreshMenuRecords();
+      renderConsumableArm();
       renderLangSelector();
     });
     el.appendChild(b);
@@ -735,6 +873,7 @@ async function boot() {
   setSfxMuted(isBgmMuted()); // 저장된 음소거 설정을 효과음에도 반영
   updateMuteBtn();
   setMode(selectedMode);
+  renderConsumableArm();
   await initScores();
   setMode(selectedMode); // 점수 로드 후 기록 갱신
   updateLayout();

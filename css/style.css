@@ -197,6 +197,30 @@ img.gauge-icon {
   50% { box-shadow: 0 0 10px 3px rgba(255, 200, 60, 0.95); }
 }
 
+/* POING 수집 진행도: 먹은 글자만 선명해진다 */
+.poing-progress {
+  display: flex;
+  gap: 4px;
+}
+
+.poing-letter {
+  width: 26px;
+  height: 26px;
+  background-image: url('../assets/poing-items-sheet.png');
+  background-repeat: no-repeat;
+  background-size: 500% 100%;
+  image-rendering: pixelated;
+  opacity: 0.32;
+  filter: grayscale(0.7);
+  transition: opacity 0.15s ease, filter 0.15s ease, transform 0.15s ease;
+}
+
+.poing-letter.got {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.12);
+}
+
 .synergy {
   display: flex;
   gap: 6px;
@@ -311,8 +335,26 @@ img.gauge-icon {
 }
 
 /* 어드벤처 전용 HUD 요소는 해당 모드에서만 표시 */
-#app:not(.mode-adventure) .gauge,
-#app:not(.mode-adventure) .coin-hud,
+/* 일반 모드: 게이지 막대와 별은 숨기고(오브가 없으니) 코인 표시는 남긴다. */
+#app:not(.mode-adventure) .gauge-icon,
+#app:not(.mode-adventure) .gauge-track {
+  display: none;
+}
+
+#app:not(.mode-adventure) .gauge {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  justify-content: flex-end;
+}
+
+#app:not(.mode-adventure) .coin-hud {
+  background: var(--panel-bg);
+  border-radius: 14px;
+  padding: 6px 12px;
+  box-shadow: var(--shadow);
+}
+
 #app:not(.mode-adventure) #effects {
   display: none;
 }
@@ -440,6 +482,14 @@ img.shop-icon {
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* 상점 상단: 지금 고른 모드 표시 */
+.shop-mode {
+  margin-top: -6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-dark);
 }
 
 /* 상점 안 구역 제목(복장 / 강화) */
@@ -1249,6 +1299,83 @@ img.reward-icon {
   padding-left: 12px;
   padding-right: 12px;
   white-space: nowrap;
+}
+
+/* 시작 화면: 갖고 있는 소모품을 켜고 시작하는 칩 */
+.consumable-arm {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 10px 0 2px;
+}
+
+.consumable-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(110, 198, 255, 0.5);
+  background: rgba(255, 255, 255, 0.8);
+  color: #5b6b78;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.consumable-chip .chip-ico {
+  height: 1.2em;
+  width: auto;
+  image-rendering: pixelated;
+}
+
+.consumable-chip.armed {
+  background: linear-gradient(135deg, #ffd24a, #f5a623);
+  border-color: rgba(245, 166, 35, 0.6);
+  color: #fff;
+}
+
+/* 코인 + 사운드 한 줄 */
+.wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(110, 198, 255, 0.5);
+  background: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 보유 코인 — 상점 버튼 안에 넣으면 자릿수가 늘 때 버튼이 비좁아져 따로 뺐다. */
+.wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(255, 210, 74, 0.18);
+  border: 2px solid rgba(245, 166, 35, 0.35);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* 네이티브 앱에서는 "홈 화면에 추가" 안내가 의미 없다(이미 앱). */
