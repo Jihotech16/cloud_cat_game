@@ -27,3 +27,6 @@ vendor/*/node_modules/
 
 # 벤더링한 플러그인의 안드로이드 빌드 산출물
 vendor/*/android/build/
+
+# 확인용 미리보기 이미지(저장소에 넣지 않는다)
+output/

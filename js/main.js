@@ -218,6 +218,23 @@ function updateCombo(combo = 0, mult = 1) {
   comboEl.classList.add('bump');
 }
 
+// POING 진행도: 먹은 글자 수만큼 앞에서부터 선명해진다.
+const poingProgressEl = document.getElementById('poing-progress');
+function updateLetters(collected = []) {
+  if (!poingProgressEl) return;
+  const got = new Set(collected);
+  if (!poingProgressEl.children.length) {
+    for (let i = 0; i < 5; i++) {
+      const span = document.createElement('span');
+      span.className = 'poing-letter';
+      // 다섯 칸짜리 시트에서 i 번째 글자만 보이게 한다.
+      span.style.backgroundPosition = `${(i / 4) * 100}% 0`;
+      poingProgressEl.appendChild(span);
+    }
+  }
+  [...poingProgressEl.children].forEach((el, i) => el.classList.toggle('got', got.has(i)));
+}
+
 function updateSynergy(state = {}) {
   if (!synergyEl) return;
   const badges = [];
@@ -257,7 +274,7 @@ function renderSkins() {
     let buttonHtml;
     if (isEquipped) buttonHtml = t('skin.equipped');
     else if (owned) buttonHtml = t('skin.equip');
-    else if (forSale) buttonHtml = `<img class="coin-ico" src="assets/coin.png" alt=""> ${skin.price.toLocaleString()}`;
+    else if (forSale) buttonHtml = `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${skin.price.toLocaleString()}`;
     else buttonHtml = t('skin.locked');
     const clickable = (owned && !isEquipped) || affordable;
 
@@ -311,7 +328,7 @@ function renderConsumables() {
         <span class="shop-desc">${t(`item.${item.id}.desc`)}</span>
       </span>
       <button class="shop-buy" ${affordable ? '' : 'disabled'}>
-        <img class="coin-ico" src="assets/coin.png" alt=""> ${item.price.toLocaleString()}
+        <img class="coin-ico" src="assets/coin-paw.png" alt=""> ${item.price.toLocaleString()}
       </button>
     `;
     if (affordable) {
@@ -408,7 +425,7 @@ function renderShop() {
         <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
       </span>
       <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin.png" alt=""> ${cost.toLocaleString()}`}
+        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost.toLocaleString()}`}
       </button>
     `;
     if (!maxed && affordable) {
@@ -477,11 +494,11 @@ function showRewardChoices(choices, info = {}) {
 
   if (btnReroll) {
     const cost = info.rerollCost ?? 0;
-    btnReroll.innerHTML = `${t('reward.reroll')} (<img class="coin-ico" src="assets/coin.png" alt=""> ${cost})`;
+    btnReroll.innerHTML = `${t('reward.reroll')} (<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost})`;
     btnReroll.disabled = (info.coins ?? 0) < cost;
   }
   if (btnSkip) {
-    btnSkip.innerHTML = `${t('reward.skip')} (+<img class="coin-ico" src="assets/coin.png" alt=""> ${info.skipReward ?? 0})`;
+    btnSkip.innerHTML = `${t('reward.skip')} (+<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${info.skipReward ?? 0})`;
   }
 
   rewardScreen.classList.remove('hidden');
@@ -502,6 +519,9 @@ function ensureGame() {
     },
     onEffects(effects) {
       updateEffects(effects);
+    },
+    onLetters(collected) {
+      updateLetters(collected);
     },
     onSynergy(state) {
       updateSynergy(state);
@@ -597,6 +617,7 @@ function startGame() {
 
 function beginGame() {
   ensureGame();
+  updateLetters([]);
   setBgmScene('game');
   startScreen.classList.add('hidden');
   tutorialScreen?.classList.add('hidden');

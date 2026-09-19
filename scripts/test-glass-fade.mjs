@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+const images = [];
+globalThis.Image = class { constructor() { images.push(this); } };
+const { Cloud, CLOUD_TYPES } = await import('../js/cloud.js');
+const sprite = images.find(img => img.src === 'assets/cloud-glass-sheet.png');
+sprite.naturalWidth = 512;
+sprite.naturalHeight = 33;
+sprite.onload();
+const glass = new Cloud(100, 100, CLOUD_TYPES.GLASS);
+for (let i = 0; i < 180; i++) glass.update(390);
+assert.equal(glass.broken, false, 'waiting on platform must not trigger fade');
+assert.equal(glass.isSolid, true);
+glass.startGlassFade();
+assert.equal(glass.isSolid, false, 'cannot reland after takeoff');
+let draws = 0;
+const ctx = { save() {}, restore() {}, drawImage() { draws++; } };
+glass.draw(ctx, 0);
+assert.equal(ctx.globalAlpha, 0.78);
+let previousAlpha = ctx.globalAlpha;
+for (let i = 0; i < 30; i++) {
+  glass.update(390);
+  glass.draw(ctx, 0);
+  assert.ok(ctx.globalAlpha <= previousAlpha);
+  previousAlpha = ctx.globalAlpha;
+}
+assert.ok(Math.abs(ctx.globalAlpha - 0.39) < 1e-8);
+glass.startGlassFade();
+assert.equal(glass.breakTimer, 30, 'cannot restart fade');
+for (let i = 0; i < 60; i++) glass.update(390, 0.5);
+assert.equal(glass.dead, true);
+const before = draws;
+glass.draw(ctx, 0);
+assert.equal(draws, before, 'fully faded platform must not render');
+const normal = new Cloud(100, 100);
+normal.startGlassFade();
+assert.equal(normal.broken, false);
+console.log('PASS: no idle expiry, takeoff fade, smooth opacity, no relanding, slowmo, complete removal');

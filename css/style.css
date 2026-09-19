@@ -197,6 +197,30 @@ img.gauge-icon {
   50% { box-shadow: 0 0 10px 3px rgba(255, 200, 60, 0.95); }
 }
 
+/* POING 수집 진행도: 먹은 글자만 선명해진다 */
+.poing-progress {
+  display: flex;
+  gap: 4px;
+}
+
+.poing-letter {
+  width: 26px;
+  height: 26px;
+  background-image: url('../assets/poing-items-sheet.png');
+  background-repeat: no-repeat;
+  background-size: 500% 100%;
+  image-rendering: pixelated;
+  opacity: 0.32;
+  filter: grayscale(0.7);
+  transition: opacity 0.15s ease, filter 0.15s ease, transform 0.15s ease;
+}
+
+.poing-letter.got {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.12);
+}
+
 .synergy {
   display: flex;
   gap: 6px;
@@ -311,8 +335,26 @@ img.gauge-icon {
 }
 
 /* 어드벤처 전용 HUD 요소는 해당 모드에서만 표시 */
-#app:not(.mode-adventure) .gauge,
-#app:not(.mode-adventure) .coin-hud,
+/* 일반 모드: 게이지 막대와 별은 숨기고(오브가 없으니) 코인 표시는 남긴다. */
+#app:not(.mode-adventure) .gauge-icon,
+#app:not(.mode-adventure) .gauge-track {
+  display: none;
+}
+
+#app:not(.mode-adventure) .gauge {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  justify-content: flex-end;
+}
+
+#app:not(.mode-adventure) .coin-hud {
+  background: var(--panel-bg);
+  border-radius: 14px;
+  padding: 6px 12px;
+  box-shadow: var(--shadow);
+}
+
 #app:not(.mode-adventure) #effects {
   display: none;
 }
