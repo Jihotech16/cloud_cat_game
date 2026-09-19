@@ -148,8 +148,7 @@ function setMode(mode) {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
   if (modeHint) modeHint.textContent = t(`mode.${mode}`);
-  // 어드벤처 전용 UI(상점)는 해당 모드에서만 노출
-  btnShop?.classList.toggle('hidden', mode !== 'adventure');
+  // 상점은 두 모드 모두에서 연다. 복장은 모드와 상관없고, 강화만 어드벤처 전용이다.
   refreshMenuRecords();
 }
 
