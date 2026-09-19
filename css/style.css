@@ -1259,6 +1259,21 @@ img.reward-icon {
   white-space: nowrap;
 }
 
+/* 보유 코인 — 상점 버튼 안에 넣으면 자릿수가 늘 때 버튼이 비좁아져 따로 뺐다. */
+.wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(255, 210, 74, 0.18);
+  border: 2px solid rgba(245, 166, 35, 0.35);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* 네이티브 앱에서는 "홈 화면에 추가" 안내가 의미 없다(이미 앱). */
 .is-native .pwa-only {
   display: none;
