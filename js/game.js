@@ -882,6 +882,7 @@ export class Game {
 
   // 글자: 순서대로 하나씩, 좌우로 흩어지게 놓는다.
   _spawnLetters() {
+    if (this.mode !== 'adventure') return; // 일반 모드는 순수 점프만 — POING 글자 없음
     const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
     const gap = LETTER_GAP_METERS * SCORE_DIVISOR;
     while (this.highestLetterY > spawnAbove) {

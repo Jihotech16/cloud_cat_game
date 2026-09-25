@@ -348,6 +348,7 @@ img.gauge-icon {
 
 /* 어드벤처 전용 HUD 요소는 해당 모드에서만 표시 */
 /* 일반 모드: 게이지 막대와 별은 숨기고(오브가 없으니) 코인 표시는 남긴다. */
+#app:not(.mode-adventure) .poing-progress,
 #app:not(.mode-adventure) .gauge-icon,
 #app:not(.mode-adventure) .gauge-track {
   display: none;
