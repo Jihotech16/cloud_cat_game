@@ -514,6 +514,95 @@ img.shop-icon {
   text-align: left;
 }
 
+/* 고양이 메뉴 */
+.cats-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  font-family: inherit;
+  background: rgba(110, 198, 255, 0.1);
+  border: 2px solid rgba(110, 198, 255, 0.35);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.cat-card.is-equipped {
+  border-color: #7ed6a5;
+  background: rgba(126, 214, 165, 0.15);
+}
+
+.cat-card .skin-preview {
+  width: 56px;
+  height: 56px;
+}
+
+.cat-card-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2d3436;
+  text-align: center;
+}
+
+.cat-card-status {
+  font-size: 0.72rem;
+  color: #636e72;
+  white-space: nowrap;
+}
+
+.cat-card.is-locked .skin-preview,
+.cat-detail.is-locked .skin-preview {
+  filter: grayscale(1) brightness(0.9);
+  opacity: 0.6;
+}
+
+.cat-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.cat-detail .skin-preview {
+  width: 96px;
+  height: 96px;
+}
+
+.cat-detail-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.shop-empty {
+  padding: 12px;
+  border: 2px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  font-size: 0.85rem;
+  color: #95a5a6;
+  text-align: center;
+}
+
+#btn-cats-back {
+  margin-bottom: 8px;
+}
+
 /* 복장 미리보기: 준비 동작 시트의 첫 프레임(선 자세)만 보여준다 */
 .skin-preview {
   display: inline-block;

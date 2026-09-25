@@ -176,11 +176,22 @@
 
     <div id="shop-screen" class="overlay hidden">
       <div class="panel">
-        <h2 class="title"><img id="shop-title-ico" class="cart-ico" src="assets/shop-cart.png" alt=""> <span id="shop-title">상점</span></h2>
+        <h2 class="title"><img class="cart-ico" src="assets/shop-cart.png" alt=""> <span id="shop-title">상점</span></h2>
         <p class="shop-mode"><span id="shop-mode"></span></p>
         <p class="subtitle"><span data-i18n="shop.coinsHeld">보유 코인:</span> <img class="coin-ico" src="assets/coin-paw.png" alt=""> <strong id="shop-coins">0</strong></p>
         <div id="shop-list" class="shop-list"></div>
         <button id="btn-shop-close" class="btn-primary" data-i18n="shop.close">닫기</button>
+      </div>
+    </div>
+
+    <!-- 고양이 메뉴: 목록에서 고양이를 누르면 상세(입기·구매·전용 특성 강화)로 들어간다 -->
+    <div id="cats-screen" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title"><img class="cart-ico" src="assets/cat.png" alt=""> <span data-i18n="cats.title">고양이</span></h2>
+        <p class="subtitle"><span data-i18n="shop.coinsHeld">보유 코인:</span> <img class="coin-ico" src="assets/coin-paw.png" alt=""> <strong id="cats-coins">0</strong></p>
+        <div id="cats-body" class="cats-body"></div>
+        <button id="btn-cats-back" class="btn-secondary hidden" data-i18n="cats.back">← 목록으로</button>
+        <button id="btn-cats-close" class="btn-primary" data-i18n="shop.close">닫기</button>
       </div>
     </div>
 
