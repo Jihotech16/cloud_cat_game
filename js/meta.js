@@ -127,20 +127,18 @@ export function nextCost(id, cat) {
   return def.cost(level);
 }
 
-// 1.7 까지는 점프·점수 강화가 공통이었다. 한 번만, 그 레벨을 당시 가지고 있던 고양이 모두에게
-// 그대로 옮겨 준다(이미 산 강화가 입은 고양이에 따라 사라지지 않게).
+// 1.7 까지는 점프·점수 강화가 공통이었다. 한 번만, 그 레벨을 기본 고양이에게 옮긴다.
+// 다른 고양이는 각자 0 부터 따로 올린다.
 const PER_CAT_MIGRATED_KEY = 'cloudCat_upgradesPerCatV1';
-export function migratePerCatUpgrades(ownedCats) {
+export function migratePerCatUpgrades() {
   try {
     if (localStorage.getItem(PER_CAT_MIGRATED_KEY)) return;
     const ups = readUpgrades();
     for (const def of UPGRADES.filter((u) => u.perCat)) {
       const legacy = ups[def.id] ?? 0;
       if (legacy > 0) {
-        for (const cat of ownedCats) {
-          const key = levelKey(def, cat);
-          ups[key] = Math.max(ups[key] ?? 0, legacy);
-        }
+        const key = levelKey(def, 'default');
+        ups[key] = Math.max(ups[key] ?? 0, legacy);
       }
       delete ups[def.id];
     }

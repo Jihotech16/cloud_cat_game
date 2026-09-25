@@ -963,8 +963,7 @@ async function boot() {
 // 기간 한정 복장 지급(10월 = 마녀 고양이). 이번에 처음 받았으면 선물 창을 띄운다.
 const giftScreen = document.getElementById('gift-screen');
 function showSeasonalGift() {
-  // 기간 한정 지급 전에 옮겨야 새로 받은 고양이에게까지 예전 강화가 복사되지 않는다.
-  migratePerCatUpgrades(SKINS.filter((skin) => ownsSkin(skin.id)).map((skin) => skin.id));
+  migratePerCatUpgrades();
   const granted = grantSeasonalSkins();
   if (!granted.includes('witch') || !giftScreen) return;
   giftScreen.classList.remove('hidden');
