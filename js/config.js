@@ -148,6 +148,13 @@ export const BUBBLE_HIT_RADIUS = 20 * GAME_SCALE; // 비눗방울 크기만큼 �
 export const BUBBLE_EXIT_PREP_FRAMES = 10;       // 뒷다리를 모으는 준비(그동안은 계속 떠 있다)
 export const BUBBLE_EXIT_JUMP_MULT = 1.5;        // 뛰어나가는 점프 세기(JUMP_FORCE 배율)
 
+// 밧줄 고양이: 구름 위에 서 있으면 조준 화살표가 고양이 둘레를 돈다. 누르면 그 방향으로 갈고리를 쏘고,
+// 구름에 걸리면 누르고 있는 동안 점프 게이지가 차며, 떼면 그 세기로 갈고리 쪽으로 날아간다.
+export const GRAPPLE_AIM_PERIOD = 144;             // 화살표 한 바퀴(프레임)
+export const GRAPPLE_HOOK_SPEED = 16 * GAME_SCALE; // 갈고리 날아가는 속도(프레임당)
+export const GRAPPLE_MAX_LENGTH = 0.5;             // 최대 밧줄 길이(화면 높이 비율)
+export const GRAPPLE_AIM_RADIUS = 34 * GAME_SCALE; // 화살표가 도는 반지름
+
 // 소모품 '출발 부스터': 그 판의 첫 점프만 이 배율로 세게 뛴다.
 export const BOOSTER_JUMP_MULT = 2.5;
 

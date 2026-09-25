@@ -20,6 +20,8 @@ export const SKINS = [
   { id: 'witch', season: 'halloween' },
   // 비눗방울 고양이: 비눗방울물을 모아 큰 비눗방울을 타고 떠오르는 전용 특성(game.js).
   { id: 'bubble', price: 1000 },
+  // 밧줄 고양이: 갈고리를 쏴서 구름에 걸고 그 방향으로 날아간다(방향을 고를 수 있는 고양이, game.js).
+  { id: 'grapple', price: 1500 },
 ];
 
 export function isHalloweenSeason(date = new Date()) {

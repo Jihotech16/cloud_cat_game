@@ -54,6 +54,10 @@ import {
   BUBBLE_HIT_RADIUS,
   BUBBLE_EXIT_PREP_FRAMES,
   BUBBLE_EXIT_JUMP_MULT,
+  GRAPPLE_AIM_PERIOD,
+  GRAPPLE_HOOK_SPEED,
+  GRAPPLE_MAX_LENGTH,
+  GRAPPLE_AIM_RADIUS,
   COIN_BONUS_STEP,
   PERFECT_HI,
   PERFECT_JUMP_MULT,
@@ -141,6 +145,12 @@ if (typeof Image !== 'undefined') {
   skyBgImg.src = 'assets/sky-bg.png';
 }
 
+// 밧줄 고양이의 갈고리(32px, 오른쪽을 향한 그림)와 밧줄(32×8, 가로로 이어 붙이는 무늬).
+const grappleHookImg = typeof Image !== 'undefined' ? new Image() : null;
+const grappleRopeImg = typeof Image !== 'undefined' ? new Image() : null;
+if (grappleHookImg) grappleHookImg.src = 'assets/grapple-hook.png';
+if (grappleRopeImg) grappleRopeImg.src = 'assets/grapple-rope.png';
+
 // 같은 크기의 다섯 세로 패널: 낮, 노을, 황혼, 밤, 우주.
 const PIXEL_SKY_STOPS = [0, 0.28, 0.5, 0.72, 1];
 let pixelSkyReady = false;
@@ -199,6 +209,8 @@ export class Game {
     this.bubble = null;
     this.bubbleGrace = 0;
     this.cat = 'default';
+    this.hook = null;
+    this.aimAngle = 0;
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
     this.rewardCount = 0;
@@ -270,7 +282,8 @@ export class Game {
       this.input.holding = holding;
       if (!holding) this.input.clientX = null;
       this._syncDirectionCloud();
-      const charging = holding && !!this.player?.groundedCloud;
+      const charging = holding && !!this.player?.groundedCloud
+        && (this.cat !== 'grapple' || this.hook?.state === 'hooked');
       this.callbacks.onCharge?.(this.charge, charging);
     };
 
@@ -286,9 +299,11 @@ export class Game {
     this.touchRoot.addEventListener('touchstart', (e) => {
       if (this.state !== 'ready' && this.state !== 'playing') return;
       e.preventDefault();
+      const wasHolding = this.input.holding;
       setHolding(true);
       this.input.clientX = e.touches[0]?.clientX ?? null;
       this._syncDirectionCloud();
+      if (!wasHolding && this.cat === 'grapple') this._grapplePress();
     }, { passive: false });
 
     this.touchRoot.addEventListener('touchmove', (e) => {
@@ -352,6 +367,10 @@ export class Game {
 
   _tryJump() {
     if (!this.player) return;
+    if (this.cat === 'grapple') {
+      this._grappleRelease(); // 밧줄 고양이는 밧줄로만 움직인다
+      return;
+    }
     if (this.bubble?.phase === 'float') {
       this._jumpOutOfBubble(); // 떠 있는 동안 누르면 방울을 터뜨리며 뛰어나간다
       return;
@@ -806,6 +825,9 @@ export class Game {
     this._setBubble(null);
     this.bubbleGrace = 0;
     this.callbacks.onSoap?.(0, this.cat === 'bubble');
+    this.hook = null;
+    this.aimAngle = -Math.PI / 2;
+    this.player.grappleAnim = null;
     this.highestLetterY = startY;
     this.letters = [];
     this.nextLetter = 0;
@@ -922,6 +944,231 @@ export class Game {
       const x = margin + Math.random() * (this.worldWidth - margin * 2);
       this.coinPickups.push(new CoinPickup(x, this.highestCoinY));
     }
+  }
+
+  // ── 밧줄 고양이 ──
+  // hook: null | { x, y, dx, dy, dist, state: 'out' | 'back' | 'hooked', cloud, offX, offY, t }
+  _grappleOrigin() {
+    // 발사기는 고양이 앞발 높이, 바라보는 쪽에 있다.
+    return { x: this.player.x + this.player.facing * -6 * GAME_SCALE, y: this.player.y + 6 * GAME_SCALE };
+  }
+
+  _grapplePress() {
+    if (this.state === 'ready') this.state = 'playing';
+    if (this.state !== 'playing' || this.hook || !this.player.groundedCloud) return;
+    const dx = Math.cos(this.aimAngle);
+    const dy = Math.sin(this.aimAngle);
+    if (Math.abs(dx) > 0.05) this.player.facing = dx < 0 ? -1 : 1;
+    const o = this._grappleOrigin();
+    this.hook = { x: o.x, y: o.y, dx, dy, dist: 0, state: 'out', cloud: null, offX: 0, offY: 0, t: 0 };
+    this.charge = 0;
+    this.chargeHold = 0;
+    playJumpSound(0.2);
+    hapticLight();
+  }
+
+  // 손을 떼면: 갈고리가 걸려 있고 게이지를 모았으면 그쪽으로 날아간다.
+  _grappleRelease() {
+    const hook = this.hook;
+    const cloud = this.player.groundedCloud;
+    if (!hook || hook.state !== 'hooked' || !cloud || this.charge <= 0) return;
+
+    // 고양이 몸 가운데가 아니라 발이 구름 윗면에 닿도록, 갈고리보다 조금 위를 향해 날아간다.
+    const o = this._grappleOrigin();
+    let dx = hook.x - o.x;
+    let dy = hook.y - this.player.height * 0.8 - o.y;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len;
+    dy /= len;
+
+    const evolveJump = this.jumpLevel >= 5 ? 1.25 : 1;
+    const upgrade = (1 + this.jumpLevel * JUMP_LEVEL_STEP)
+      * this.synergy.jumpForceMult * this.mods.jumpForceMult * evolveJump;
+    let jumpMult = JUMP_MIN_MULT + this.charge * CHARGE_JUMP_BONUS;
+    const cap = this._chargeMax();
+    const rel = cap > 0 ? this.charge / cap : 0;
+    const perfect = rel >= this.perfectLo && rel <= PERFECT_HI;
+    if (perfect) jumpMult *= PERFECT_JUMP_MULT;
+    const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
+    let boosterMult = 1;
+    if (this.boosterCharges > 0) {
+      this.boosterCharges -= 1;
+      boosterMult = BOOSTER_JUMP_MULT;
+      playBoostSound();
+    }
+    const power = JUMP_FORCE * jumpMult * upgrade * cloudBoost * boosterMult;
+    this.player.bounce(power);
+    this.player.vx = dx * power;
+    this.player.vy = dy * power;
+    if (Math.abs(dx) > 0.05) this.player.facing = dx < 0 ? -1 : 1;
+    if (perfect) this._onPerfect();
+    playJumpSound(this.charge);
+    hapticLight();
+    this.charge = 0;
+    this.chargeHold = 0;
+    this.callbacks.onCharge?.(0, false);
+    this.hook = null;
+    this.player.grappleAnim = null;
+
+    if (cloud.type === CLOUD_TYPES.BREAKING) {
+      cloud.broken = true;
+      playBreakSound();
+    } else if (cloud.type === CLOUD_TYPES.GLASS) {
+      cloud.startGlassFade();
+    }
+  }
+
+  // 갈고리가 닿은 구름. 서 있는 구름·고래·사라진 구름은 제외.
+  _grappleHitCloud(x, y) {
+    const scale = this._cloudScale();
+    for (const cloud of this.clouds) {
+      if (cloud === this.player.groundedCloud || cloud.broken || !cloud.isSolid) continue;
+      if (cloud.type === CLOUD_TYPES.WHALE) continue;
+      // 구름 그림의 발판 부분(윗면 조금 위 ~ 몸통 가운데)에 닿아야 걸린다.
+      const half = (cloud.width * scale) / 2 - CLOUD_COLLISION_INSET;
+      const top = cloud.top - 6 * GAME_SCALE;
+      const bottom = cloud.top + cloud.drawHeight * 0.3;
+      if (Math.abs(x - cloud.x) <= half && y >= top && y <= bottom) return cloud;
+    }
+    return null;
+  }
+
+  _updateGrapple(ts) {
+    const grounded = !!this.player.groundedCloud;
+    // 조준 화살표: 구름 위에서 갈고리가 없을 때만 돈다.
+    if (grounded && !this.hook) {
+      this.aimAngle = (this.aimAngle + (Math.PI * 2 / GRAPPLE_AIM_PERIOD) * ts) % (Math.PI * 2);
+    }
+    const hook = this.hook;
+    if (!hook) return;
+    hook.t += ts;
+    this.player.grappleAnim = { t: hook.t };
+    if (!grounded) { // 발밑 구름이 사라지면 밧줄도 놓친다
+      this.hook = null;
+      this.player.grappleAnim = null;
+      return;
+    }
+    const o = this._grappleOrigin();
+    if (hook.state === 'out') {
+      // 빠르게 날아가므로 얇은 구름을 건너뛰지 않게 몇 번에 나눠 움직이며 검사한다.
+      // 발사 직후 고양이와 겹친 구름에 바로 걸리지 않게 조금 날아간 뒤부터 검사한다.
+      const total = GRAPPLE_HOOK_SPEED * ts;
+      const parts = Math.max(1, Math.ceil(total / (6 * GAME_SCALE)));
+      let hit = null;
+      for (let i = 0; i < parts && !hit; i++) {
+        const step = total / parts;
+        hook.x += hook.dx * step;
+        hook.y += hook.dy * step;
+        hook.dist += step;
+        if (hook.dist > 24 * GAME_SCALE) hit = this._grappleHitCloud(hook.x, hook.y);
+      }
+      if (hit) {
+        hook.state = 'hooked';
+        hook.cloud = hit;
+        hook.offX = hook.x - hit.x;
+        hook.offY = hook.y - hit.y;
+        hapticMedium();
+        this._spawnParticles(hook.x, hook.y, '#ffffff', 6);
+        // 이미 누르고 있으면 바로 게이지가 차기 시작한다.
+        if (this.input.holding) this.callbacks.onCharge?.(this.charge, true);
+      } else if (hook.dist >= this.worldHeight * GRAPPLE_MAX_LENGTH
+        || hook.x < 0 || hook.x > this.worldWidth) {
+        hook.state = 'back';
+      }
+    } else if (hook.state === 'hooked') {
+      const c = hook.cloud;
+      if (!c || c.broken || !c.isSolid || !this.clouds.includes(c)) {
+        hook.state = 'back';
+      } else {
+        hook.x = c.x + hook.offX;
+        hook.y = c.y + hook.offY;
+      }
+    }
+    if (hook.state === 'back') {
+      const dx = o.x - hook.x;
+      const dy = o.y - hook.y;
+      const d = Math.hypot(dx, dy);
+      const step = GRAPPLE_HOOK_SPEED * 1.5 * ts;
+      if (d <= step) {
+        this.hook = null;
+        this.player.grappleAnim = null;
+        this.charge = 0;
+        this.callbacks.onCharge?.(0, false);
+      } else {
+        hook.x += (dx / d) * step;
+        hook.y += (dy / d) * step;
+      }
+    }
+  }
+
+  _drawGrapple() {
+    const ctx = this.ctx;
+    const cam = this.cameraY;
+    if (this.hook) {
+      const o = this._grappleOrigin();
+      const hx = this.hook.x;
+      const hy = this.hook.y;
+      const ang = Math.atan2(hy - o.y, hx - o.x);
+      const len = Math.hypot(hx - o.x, hy - o.y);
+      const s = 0.75 * GAME_SCALE;
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(o.x, o.y - cam);
+      ctx.rotate(ang);
+      if (grappleRopeImg?.complete && grappleRopeImg.naturalWidth) {
+        const tile = 32 * s;
+        for (let d = 0; d < len; d += tile) {
+          const w = Math.min(tile, len - d);
+          ctx.drawImage(grappleRopeImg, 0, 0, (w / tile) * 32, 8, d, -4 * s, w, 8 * s);
+        }
+      } else {
+        ctx.strokeStyle = '#c89b5a';
+        ctx.lineWidth = 3 * s;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(len, 0);
+        ctx.stroke();
+      }
+      if (grappleHookImg?.complete && grappleHookImg.naturalWidth) {
+        const hs = 32 * s;
+        ctx.drawImage(grappleHookImg, len - hs * 0.35, -hs / 2, hs, hs);
+      }
+      ctx.restore();
+      return;
+    }
+    // 조준 화살표: 구름 위에 서 있을 때 고양이 둘레를 돈다.
+    if (!this.player.groundedCloud && this.state !== 'ready') return;
+    const cx = this.player.x;
+    const cy = this.player.y - cam;
+    const a = this.aimAngle;
+    const r = GRAPPLE_AIM_RADIUS;
+    const tipX = cx + Math.cos(a) * (r + 10 * GAME_SCALE);
+    const tipY = cy + Math.sin(a) * (r + 10 * GAME_SCALE);
+    const baseX = cx + Math.cos(a) * r;
+    const baseY = cy + Math.sin(a) * r;
+    const nx = -Math.sin(a) * 7 * GAME_SCALE;
+    const ny = Math.cos(a) * 7 * GAME_SCALE;
+    ctx.save();
+    // 점선 궤적(조준선)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+    for (let i = 1; i <= 3; i++) {
+      const d = r * (0.45 + i * 0.18);
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * d * 0.62, cy + Math.sin(a) * d * 0.62, 1.6 * GAME_SCALE, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(baseX + nx, baseY + ny);
+    ctx.lineTo(baseX - nx, baseY - ny);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#2f8f86';
+    ctx.lineWidth = 2 * GAME_SCALE;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    ctx.fill();
+    ctx.restore();
   }
 
   // ── 비눗방울 고양이 ──
@@ -1364,7 +1611,7 @@ export class Game {
       return;
     }
 
-    if (this.input.holding) {
+    if (this.input.holding && (this.cat !== 'grapple' || this.hook?.state === 'hooked')) {
       this._advanceCharge();
     }
   }
@@ -1397,7 +1644,7 @@ export class Game {
     if (!this.player) return;
     this._syncDirectionCloud();
     const onCloud = this.state === 'ready' || !!this.player.groundedCloud;
-    this.player.charging = onCloud && this.input.holding;
+    this.player.charging = onCloud && this.input.holding && this.cat !== 'grapple';
     this.player.chargeLevel = this.charge;
   }
 
@@ -1406,9 +1653,10 @@ export class Game {
 
     if (this.state === 'ready') {
       this._snapToStartCloud();
-      if (this.input.holding) {
+      if (this.input.holding && this.cat !== 'grapple') {
         this._advanceCharge();
       }
+      if (this.cat === 'grapple') this._updateGrapple(1);
       this._syncPlayerChargeAnim();
       this.player.tickAnim(); // 시작 대기 중에도 깜빡임이 흐르도록
       return;
@@ -1448,6 +1696,8 @@ export class Game {
       this._checkLightning(previous);
       this._checkLanding();
     }
+
+    if (this.cat === 'grapple') this._updateGrapple(ts);
 
     this._spawnClouds();
     this._spawnOrbs();
@@ -1898,6 +2148,8 @@ export class Game {
   // 보호막으로 부활: 화면 중앙으로 끌어올리고 받쳐줄 구름을 둔다.
   _revive() {
     this._setBubble(null);
+    this.hook = null;
+    this.player.grappleAnim = null;
     const reviveY = this.cameraY + this.worldHeight * 0.4;
     this.clouds.push(new Cloud(
       this.worldWidth / 2,
@@ -2326,6 +2578,7 @@ export class Game {
 
     this._drawParticles();
 
+    if (this.cat === 'grapple') this._drawGrapple();
     this.player.draw(this.ctx, this.cameraY);
 
     if (this.shields > 0) {
@@ -2351,7 +2604,8 @@ export class Game {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.shadowColor = 'rgba(45, 52, 54, 0.25)';
     ctx.shadowBlur = 6;
-    ctx.fillText(t('game.readyHint'), this.worldWidth / 2, this.worldHeight - 48 * GAME_SCALE);
+    ctx.fillText(t(this.cat === 'grapple' ? 'game.readyHintGrapple' : 'game.readyHint'),
+      this.worldWidth / 2, this.worldHeight - 48 * GAME_SCALE);
     ctx.restore();
   }
 
