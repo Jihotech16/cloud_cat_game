@@ -85,8 +85,12 @@ const SKIN_SPRITES = {
     jumpingDy: 3,
   },
   // 구름 잠옷 고양이도 수면모자 때문에 발끝이 2~4px 낮다(발끝 y 115, 기본 112~115).
+  // 대기 중에는 스르르 잠든다(8프레임): 0~4 졸다가 눈을 감고(한 번), 5~7 새근새근 숨쉬기(반복).
+  // 수면 시트는 예전 깜빡임 시트와 같은 자리·크기로 그려져 있어 보정값을 그대로 쓴다.
   pajamas: {
-    idleSheet: 'assets/cat-cloud-pajamas-idle-sheet.png',
+    idleSheet: 'assets/cat-cloud-pajamas-sleep-sheet.png',
+    idleDurations: [1800, 400, 400, 400, 500, 700, 700, 700],
+    idleLoopFrom: 5,
     idleSheetDx: 0,
     idleSheetDy: 1,
     // 잠옷 대기 시트는 고양이가 작게 그려져 있다(눈 사이 26px, 점프 준비 31px·점프 30px).
@@ -281,8 +285,11 @@ export class Player {
     if (this.charging || this._isInAir()) {
       this.idleElapsedMs = 0;
     } else {
-      this.idleElapsedMs = (this.idleElapsedMs + (1000 / 60) * timeScale)
-        % sumMs(idleDurationsOf(spritesFor(currentSkin).idleSheet.ready ? spritesFor(currentSkin).def : SKIN_SPRITES.default));
+      // 반복 구간이 있는 시트(잠들기)는 처음 한 번만 끝까지 가고 이후엔 _getIdleFrame 이 반복시키므로
+      // 시간을 계속 쌓는다(너무 커지지 않게만 자른다).
+      const def = spritesFor(currentSkin).idleSheet.ready ? spritesFor(currentSkin).def : SKIN_SPRITES.default;
+      const next = this.idleElapsedMs + (1000 / 60) * timeScale;
+      this.idleElapsedMs = def.idleLoopFrom != null ? Math.min(next, 3600000) : next % sumMs(idleDurationsOf(def));
     }
     // 0을 향해 부드럽게 복귀
     this.squash *= Math.pow(0.72, timeScale);
@@ -299,8 +306,14 @@ export class Player {
   }
 
   _getIdleFrame(def) {
-    const frame = frameAt(idleDurationsOf(def), this.idleElapsedMs);
-    return frame < 0 ? 0 : frame;
+    const durations = idleDurationsOf(def);
+    const frame = frameAt(durations, this.idleElapsedMs);
+    if (frame >= 0) return frame;
+    if (def.idleLoopFrom == null) return 0;
+    // 처음 한 바퀴가 끝나면 idleLoopFrom 부터 끝까지만 반복한다.
+    const loop = durations.slice(def.idleLoopFrom);
+    const f = frameAt(loop, (this.idleElapsedMs - sumMs(durations)) % sumMs(loop));
+    return def.idleLoopFrom + Math.max(0, f);
   }
 
   // 비눗방울 특수 동작: 그릴 시트와 프레임. 없거나 끝났으면 null(보통 그림으로 그린다).
