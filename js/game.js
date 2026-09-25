@@ -41,6 +41,8 @@ import {
   CHARGE_EASE_MIN,
   CHARGE_HOLD_FRAMES,
   PERFECT_LO,
+  PERFECT_LO_STEP,
+  COIN_BONUS_STEP,
   PERFECT_HI,
   PERFECT_JUMP_MULT,
   PERFECT_SCORE_BONUS,
@@ -187,6 +189,8 @@ export class Game {
     this.rawClimb = 0;
     this.frame = 0;
     this.coins = 0;
+    this.coinMult = 1;
+    this.perfectLo = PERFECT_LO;
     this.airJumpsLeft = 0;
     this.shields = 0; // 남은 보호막 개수(영구 강화·소모품·보상이 더해진다)
     this.consumables = {};
@@ -363,7 +367,7 @@ export class Game {
       // 퍼펙트 차지: 상한 대비 스윗스팟 구간에서 떼면 점프력·점수 보너스
       const cap = this._chargeMax();
       const rel = cap > 0 ? this.charge / cap : 0;
-      const perfect = rel >= PERFECT_LO && rel <= PERFECT_HI;
+      const perfect = rel >= this.perfectLo && rel <= PERFECT_HI;
       if (perfect) jumpMult *= PERFECT_JUMP_MULT;
       const cloudBoost = cloud.type === CLOUD_TYPES.BOOST ? BOOST_JUMP_MULT : 1;
       // 소모품 '출발 부스터': 그 판의 첫 점프만 크게 솟는다.
@@ -718,6 +722,8 @@ export class Game {
     const meta = this.callbacks.getStartBonuses?.() ?? {};
     this.jumpLevel = meta.jumpLevel ?? 0;
     this.scoreLevel = meta.scoreLevel ?? 0;
+    this.coinMult = 1 + (meta.coinLevel ?? 0) * COIN_BONUS_STEP;
+    this.perfectLo = PERFECT_LO - (meta.perfectLevel ?? 0) * PERFECT_LO_STEP;
     // 보호막은 소모품으로만 갖고 시작한다(영구 강화에서 제외).
     // 소모품은 시작 화면에서 켜고 시작할 때 main.js 가 이미 한 개 차감해 넘겨준다.
     this.shields = this.consumables.shieldItem ? 1 : 0;
@@ -882,6 +888,7 @@ export class Game {
 
   // 글자: 순서대로 하나씩, 좌우로 흩어지게 놓는다.
   _spawnLetters() {
+    if (this.mode !== 'adventure') return; // 일반 모드는 순수 점프만 — POING 글자 없음
     const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
     const gap = LETTER_GAP_METERS * SCORE_DIVISOR;
     while (this.highestLetterY > spawnAbove) {
@@ -957,8 +964,10 @@ export class Game {
 
   // 지금까지 이번 판에서 번 코인(일반 모드는 올라간 거리도 코인이 된다).
   _currentCoins() {
-    if (this.mode === 'adventure') return this.coins;
-    return this.coins + Math.floor(this.score / CLASSIC_METERS_PER_COIN);
+    const base = this.mode === 'adventure'
+      ? this.coins
+      : this.coins + Math.floor(this.score / CLASSIC_METERS_PER_COIN);
+    return Math.floor(base * this.coinMult); // 고양이별 '코인 보너스' 강화
   }
 
   // 오브를 맵 전체에 일정한 세로 간격으로 골고루 뿌린다. (어드벤처 모드 전용)

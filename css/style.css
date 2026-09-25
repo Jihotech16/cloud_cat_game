@@ -197,6 +197,18 @@ img.gauge-icon {
   50% { box-shadow: 0 0 10px 3px rgba(255, 200, 60, 0.95); }
 }
 
+/* 한 줄: 왼쪽 POING 진행도, 오른쪽 오브 게이지(일반 모드는 코인만) */
+.gauge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gauge-row .gauge {
+  flex: 1;
+  min-width: 0;
+}
+
 /* POING 수집 진행도: 먹은 글자만 선명해진다 */
 .poing-progress {
   display: flex;
@@ -299,21 +311,27 @@ img.gauge-icon {
 
 /* 모드 선택 */
 .mode-select {
+  /* 모드 선택은 버튼이 아니라 탭(알약 모양 스위치)처럼 보이게 해서
+     바로 위 분홍 '게임 시작' 버튼과 헷갈리지 않게 한다. */
   display: flex;
-  gap: 8px;
+  gap: 4px;
   margin: 14px 0 6px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(110, 198, 255, 0.45);
+  border-radius: 999px;
 }
 
 .mode-btn {
   flex: 1;
-  padding: 11px 8px;
+  padding: 9px 8px;
   font-family: inherit;
   font-size: 0.92rem;
   font-weight: 700;
   color: #636e72;
-  background: rgba(110, 198, 255, 0.1);
-  border: 2px solid rgba(110, 198, 255, 0.35);
-  border-radius: 14px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
   cursor: pointer;
   transition: all 0.12s;
   -webkit-appearance: none;
@@ -322,9 +340,8 @@ img.gauge-icon {
 
 .mode-btn.active {
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  border-color: transparent;
-  box-shadow: 0 3px 10px rgba(232, 93, 138, 0.35);
+  background: linear-gradient(135deg, #6ec6ff, #3a9ee8);
+  box-shadow: 0 2px 8px rgba(58, 158, 232, 0.35);
 }
 
 .mode-hint {
@@ -336,6 +353,7 @@ img.gauge-icon {
 
 /* 어드벤처 전용 HUD 요소는 해당 모드에서만 표시 */
 /* 일반 모드: 게이지 막대와 별은 숨기고(오브가 없으니) 코인 표시는 남긴다. */
+#app:not(.mode-adventure) .poing-progress,
 #app:not(.mode-adventure) .gauge-icon,
 #app:not(.mode-adventure) .gauge-track {
   display: none;
@@ -499,6 +517,185 @@ img.shop-icon {
   font-weight: 700;
   color: #636e72;
   text-align: left;
+}
+
+/* 고양이 메뉴 */
+.cats-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  font-family: inherit;
+  background: rgba(110, 198, 255, 0.1);
+  border: 2px solid rgba(110, 198, 255, 0.35);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.cat-card.is-equipped {
+  border-color: #7ed6a5;
+  background: rgba(126, 214, 165, 0.15);
+}
+
+.cat-card .skin-preview {
+  width: 56px;
+  height: 56px;
+}
+
+.cat-card-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2d3436;
+  text-align: center;
+}
+
+.cat-card-status {
+  font-size: 0.72rem;
+  color: #636e72;
+  white-space: nowrap;
+}
+
+.cat-card.is-locked .skin-preview,
+.cat-detail.is-locked .skin-preview {
+  filter: grayscale(1) brightness(0.9);
+  opacity: 0.6;
+}
+
+.cat-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.cat-detail .skin-preview {
+  width: 96px;
+  height: 96px;
+}
+
+.cat-detail-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #2d3436;
+}
+
+.shop-empty {
+  padding: 12px;
+  border: 2px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  font-size: 0.85rem;
+  color: #95a5a6;
+  text-align: center;
+}
+
+/* 상점·고양이 메뉴의 작은 안내 문구 */
+.shop-hint {
+  margin: 0 2px;
+  font-size: 0.72rem;
+  color: #95a5a6;
+  text-align: left;
+}
+
+/* 고양이 상세의 뒤로 버튼: 화면 왼쪽 위 */
+#btn-cats-back {
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  width: auto;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+/* 설정 화면 */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2d3436;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(110, 198, 255, 0.35);
+  border-radius: 14px;
+}
+
+.settings-row--stack {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.settings-row--stack .lang-select {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+.settings-link {
+  text-decoration: none;
+}
+
+html:not(.is-native) .native-only {
+  display: none;
+}
+
+.switch {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #cfd8dc;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  -webkit-appearance: none;
+}
+
+.switch[aria-checked='true'] {
+  background: #7ed6a5;
+}
+
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.switch[aria-checked='true'] .switch-knob {
+  transform: translateX(22px);
 }
 
 /* 복장 미리보기: 준비 동작 시트의 첫 프레임(선 자세)만 보여준다 */
@@ -889,11 +1086,72 @@ img.reward-icon {
   display: none;
 }
 
-/* 시작 화면: 업로드한 픽셀 하늘 배경 */
+/* 메뉴 화면(시작·고양이·상점·튜토리얼)은 팝업이 아니라 화면 전체를 쓴다.
+   게임 중에 뜨는 일시정지·게임오버·보상·선물은 기존 팝업(.panel) 그대로. */
+.overlay--full {
+  background: linear-gradient(180deg, #d6eeff 0%, #eef8ff 40%, #ffffff 100%);
+  backdrop-filter: none;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom), calc(12px + var(--banner-reserve))) max(16px, env(safe-area-inset-left));
+}
+
+.overlay--full > .panel {
+  display: flex;
+  flex-direction: column;
+  max-width: 440px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 8px 4px;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* 닫기 버튼은 화면 아래쪽에 붙고, 목록이 길어 스크롤해도 늘 보인다 */
+.overlay--full > .panel {
+  position: relative;
+}
+
+.overlay--full > .panel > .btn-primary:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+  /* 버튼 둘레를 배경 아래쪽 색(흰색)으로 덮어 스크롤된 목록이 버튼 밑으로 비치지 않게 */
+  box-shadow: 0 4px 16px rgba(232, 93, 138, 0.4), 0 0 0 16px #ffffff;
+}
+
+/* 전체 화면에서는 목록이 따로 스크롤되지 않고 화면째 스크롤된다 */
+.overlay--full .shop-list {
+  max-height: none;
+  overflow: visible;
+}
+
+/* 시작 화면: 픽셀 하늘 배경 위에 내용을 바로 올리고 세로 가운데 정렬 */
 #start-screen {
   background: #b9c2d6 url('../assets/sky-bg.png') center / cover no-repeat;
   image-rendering: pixelated;
-  backdrop-filter: none;
+}
+
+#start-screen > .panel {
+  justify-content: center;
+}
+
+/* 흰 패널이 없어졌으니 하늘 위에서도 읽히도록 버튼은 불투명하게, 옅은 글자는 진하게 */
+.overlay--full .btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#start-screen .touch-hint.sub,
+#start-screen .install-hint,
+#start-screen .mode-hint {
+  color: #5d6d7e;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .panel {
@@ -1422,6 +1680,20 @@ img.reward-icon {
   .install-hint,
   .lang-label {
     margin-top: 8px;
+  }
+}
+
+/* iPhone SE(667pt) 급: 전체 화면 시작 메뉴가 스크롤 없이 들어가게 조금 더 줄인다 */
+@media (max-height: 700px) {
+  .overlay--full > .panel {
+    padding: 0 4px;
+  }
+  .cat-preview {
+    max-width: 120px;
+    margin: 2px auto 8px;
+  }
+  .controls {
+    margin-bottom: 10px;
   }
 }
 

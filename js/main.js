@@ -4,7 +4,8 @@ import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initAppCheck } from './appcheck.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
-import { playClickSound, setSfxMuted } from './audio.js';
+import { playClickSound, setSfxMuted, isSfxMuted } from './audio.js';
+import { isHapticsOn, setHapticsOn } from './haptics.js';
 import { startBgm, toggleBgm, isBgmMuted, setBgmScene } from './bgm.js';
 import {
   initAds,
@@ -14,6 +15,7 @@ import {
   showRewardedAd,
 } from './ads.js';
 import { addCoins } from './meta.js';
+import { PERFECT_LO, PERFECT_HI, PERFECT_LO_STEP } from './config.js';
 import { onGameFinished } from './review.js';
 import { SKINS, ownsSkin, getEquippedSkin, equipSkin, grantSeasonalSkins, buySkin } from './skins.js';
 import { setPlayerSkin } from './player.js';
@@ -30,6 +32,7 @@ import {
   getUpgradeLevel,
   nextCost,
   buyUpgrade,
+  migratePerCatUpgrades,
 } from './meta.js';
 
 const app = document.getElementById('app');
@@ -71,7 +74,7 @@ const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
 const shareLabel = document.getElementById('share-label');
-const btnMute = document.getElementById('btn-mute');
+const btnSettings = document.getElementById('btn-settings');
 const btnRewardCoins = document.getElementById('btn-reward-coins');
 const btnMenu = document.getElementById('btn-menu');
 const btnRevive = document.getElementById('btn-revive');
@@ -99,8 +102,8 @@ const shopList = document.getElementById('shop-list');
 const shopCoinsEl = document.getElementById('shop-coins');
 const shopModeEl = document.getElementById('shop-mode');
 const shopTitleEl = document.getElementById('shop-title');
-const shopTitleIcoEl = document.getElementById('shop-title-ico');
 const btnCharacters = document.getElementById('btn-characters');
+const chargePerfectEl = document.querySelector('.charge-perfect');
 const btnShopClose = document.getElementById('btn-shop-close');
 
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -259,48 +262,6 @@ function updateSynergy(state = {}) {
   synergyEl.innerHTML = badges.join('');
 }
 
-function renderSkins() {
-  shopSectionTitle(t('shop.skins'));
-
-  const equipped = getEquippedSkin();
-  const coins = getCoins();
-  for (const skin of SKINS) {
-    const owned = ownsSkin(skin.id);
-    const isEquipped = owned && skin.id === equipped;
-    const forSale = !owned && skin.price != null;
-    const affordable = forSale && coins >= skin.price;
-    const locked = !owned && !forSale; // 기간 한정 등, 지금은 얻을 수 없음
-
-    let buttonHtml;
-    if (isEquipped) buttonHtml = t('skin.equipped');
-    else if (owned) buttonHtml = t('skin.equip');
-    else if (forSale) buttonHtml = `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${skin.price.toLocaleString()}`;
-    else buttonHtml = t('skin.locked');
-    const clickable = (owned && !isEquipped) || affordable;
-
-    const row = document.createElement('div');
-    row.className = `shop-item${owned ? '' : ' shop-item--locked'}`;
-    row.innerHTML = `
-      <span class="skin-preview skin-preview--${skin.id}" aria-hidden="true"></span>
-      <span class="shop-info">
-        <span class="shop-label">${t(`skin.${skin.id}.label`)}</span>
-        <span class="shop-desc">${locked ? t('skin.lockedDesc') : t(`skin.${skin.id}.desc`)}</span>
-      </span>
-      <button class="shop-buy${isEquipped ? ' is-equipped' : ''}" ${clickable ? '' : 'disabled'}>${buttonHtml}</button>
-    `;
-    if (clickable) {
-      row.querySelector('.shop-buy').addEventListener('click', () => {
-        // 사면 바로 입힌다.
-        if (forSale && !buySkin(skin.id).ok) return;
-        if (equipSkin(skin.id)) setPlayerSkin(skin.id);
-        renderShop();
-      });
-    }
-    shopList.appendChild(row);
-  }
-
-}
-
 function shopSectionTitle(text) {
   const title = document.createElement('div');
   title.className = 'shop-section-title';
@@ -383,71 +344,187 @@ function consumeArmed() {
   return used;
 }
 
-// 상점은 두 갈래로 연다. 'skins' = 캐릭터(복장), 'items' = 소모품 + 강화.
-let shopSection = 'items';
-
+// 상점: 소모품 + 강화. 고양이(복장)는 고양이 메뉴에서 따로 다룬다.
 function renderShop() {
   const coins = getCoins();
   shopCoinsEl.textContent = coins.toLocaleString();
   menuCoinsEl.textContent = coins.toLocaleString();
-  if (shopTitleEl) shopTitleEl.textContent = t(shopSection === 'skins' ? 'shop.titleSkins' : 'shop.titleItems');
-  if (shopTitleIcoEl) shopTitleIcoEl.src = shopSection === 'skins' ? 'assets/cat.png' : 'assets/shop-cart.png';
-  // 모드 표시는 모드마다 목록이 달라지는 아이템 쪽에서만 의미가 있다.
-  if (shopModeEl) {
-    shopModeEl.textContent = shopSection === 'skins'
-      ? ''
-      : t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
-  }
+  if (shopTitleEl) shopTitleEl.textContent = t('shop.titleItems');
+  if (shopModeEl) shopModeEl.textContent = t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
   shopList.innerHTML = '';
-  if (shopSection === 'skins') {
-    renderSkins();
-    return;
-  }
   renderConsumables();
-  shopSectionTitle(t('shop.upgrades'));
-  // 고른 모드에서 효과가 있는 강화만 보여준다.
-  for (const up of UPGRADES.filter((u) => (u.modes ?? ['classic', 'adventure']).includes(selectedMode))) {
-    const level = getUpgradeLevel(up.id);
-    const cost = nextCost(up.id);
-    const maxed = cost === null;
-    const affordable = !maxed && coins >= cost;
-
-    const iconHtml = up.icon.endsWith('.png')
-      ? `<img class="shop-icon" src="${up.icon}" alt="">`
-      : `<span class="shop-icon">${up.icon}</span>`;
-
-    const row = document.createElement('div');
-    row.className = 'shop-item';
-    row.innerHTML = `
-      ${iconHtml}
-      <span class="shop-info">
-        <span class="shop-label">${t(`upgrade.${up.id}.label`)} <em>Lv.${level}/${up.max}</em></span>
-        <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
-      </span>
-      <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost.toLocaleString()}`}
-      </button>
-    `;
-    if (!maxed && affordable) {
-      row.querySelector('.shop-buy').addEventListener('click', () => {
-        const res = buyUpgrade(up.id);
-        if (res.ok) renderShop();
-      });
-    }
-    shopList.appendChild(row);
+  // 공통 강화 중 고른 모드에서 효과가 있는 것만. 고양이별 강화는 고양이 메뉴에서 산다.
+  const common = UPGRADES.filter((u) => !u.perCat && (u.modes ?? ['classic', 'adventure']).includes(selectedMode));
+  if (common.length) {
+    shopSectionTitle(t('shop.upgrades'));
+    for (const up of common) shopList.appendChild(upgradeRow(up, coins, null, true, renderShop));
   }
+  const hint = document.createElement('p');
+  hint.className = 'shop-hint';
+  hint.textContent = t('shop.catUpgradesHint');
+  shopList.appendChild(hint);
 }
 
-function openShop(section = 'items') {
-  shopSection = section;
+// 강화 한 줄. cat 은 perCat 강화일 때 대상 고양이, enabled=false 면 구매 버튼을 막는다(안 가진 고양이).
+function upgradeRow(up, coins, cat, enabled, onBought) {
+  const level = getUpgradeLevel(up.id, cat);
+  const cost = nextCost(up.id, cat);
+  const maxed = cost === null;
+  const canBuy = enabled && !maxed && coins >= cost;
+
+  const iconHtml = up.icon.endsWith('.png')
+    ? `<img class="shop-icon" src="${up.icon}" alt="">`
+    : `<span class="shop-icon">${up.icon}</span>`;
+
+  const row = document.createElement('div');
+  row.className = 'shop-item';
+  row.innerHTML = `
+    ${iconHtml}
+    <span class="shop-info">
+      <span class="shop-label">${t(`upgrade.${up.id}.label`)} <em>Lv.${level}/${up.max}</em></span>
+      <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
+    </span>
+    <button class="shop-buy" ${canBuy ? '' : 'disabled'}>
+      ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost.toLocaleString()}`}
+    </button>
+  `;
+  if (canBuy) {
+    row.querySelector('.shop-buy').addEventListener('click', () => {
+      if (buyUpgrade(up.id, cat).ok) onBought();
+    });
+  }
+  return row;
+}
+
+function openShop() {
   renderShop();
-  shopList.scrollTop = 0; // 맨 위(복장)부터 보이게
+  shopList.scrollTop = 0;
   shopScreen.classList.remove('hidden');
 }
 
 function closeShop() {
   shopScreen.classList.add('hidden');
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
+}
+
+// ── 고양이 메뉴 ──
+// 목록(catsView = null)에서 고양이를 누르면 그 고양이 상세(catsView = 복장 id)로 들어간다.
+// 상세에서는 입기·구매, 그리고 고양이 전용 특성 강화를 한다(전용 특성은 아직 준비 중).
+const catsScreen = document.getElementById('cats-screen');
+const catsBody = document.getElementById('cats-body');
+const catsCoinsEl = document.getElementById('cats-coins');
+const btnCatsBack = document.getElementById('btn-cats-back');
+const btnCatsClose = document.getElementById('btn-cats-close');
+let catsView = null;
+
+function skinState(skin, coins) {
+  const owned = ownsSkin(skin.id);
+  const isEquipped = owned && skin.id === getEquippedSkin();
+  const forSale = !owned && skin.price != null;
+  return {
+    owned,
+    isEquipped,
+    forSale,
+    affordable: forSale && coins >= skin.price,
+    locked: !owned && !forSale, // 기간 한정 등, 지금은 얻을 수 없음
+  };
+}
+
+function skinStatusHtml(skin, st) {
+  if (st.isEquipped) return t('skin.equipped');
+  if (st.owned) return t('skin.equip');
+  if (st.forSale) return `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${skin.price.toLocaleString()}`;
+  return t('skin.locked');
+}
+
+function renderCats() {
+  const coins = getCoins();
+  catsCoinsEl.textContent = coins.toLocaleString();
+  menuCoinsEl.textContent = coins.toLocaleString();
+  catsBody.innerHTML = '';
+  btnCatsBack.classList.toggle('hidden', catsView === null);
+  if (catsView === null) renderCatList(coins);
+  else renderCatDetail(SKINS.find((s) => s.id === catsView), coins);
+}
+
+function renderCatList(coins) {
+  const grid = document.createElement('div');
+  grid.className = 'cat-grid';
+  for (const skin of SKINS) {
+    const st = skinState(skin, coins);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `cat-card${st.isEquipped ? ' is-equipped' : ''}${st.owned ? '' : ' is-locked'}`;
+    card.innerHTML = `
+      <span class="skin-preview skin-preview--${skin.id}" aria-hidden="true"></span>
+      <span class="cat-card-name">${t(`skin.${skin.id}.label`)}</span>
+      <span class="cat-card-status">${skinStatusHtml(skin, st)}</span>
+    `;
+    card.addEventListener('click', () => {
+      playClickSound();
+      catsView = skin.id;
+      renderCats();
+    });
+    grid.appendChild(card);
+  }
+  catsBody.appendChild(grid);
+}
+
+function renderCatDetail(skin, coins) {
+  const st = skinState(skin, coins);
+  const clickable = (st.owned && !st.isEquipped) || st.affordable;
+
+  const head = document.createElement('div');
+  head.className = `cat-detail${st.owned ? '' : ' is-locked'}`;
+  head.innerHTML = `
+    <span class="skin-preview skin-preview--${skin.id}" aria-hidden="true"></span>
+    <span class="cat-detail-name">${t(`skin.${skin.id}.label`)}</span>
+    <span class="shop-desc">${st.locked ? t('skin.lockedDesc') : t(`skin.${skin.id}.desc`)}</span>
+    <button class="shop-buy${st.isEquipped ? ' is-equipped' : ''}" ${clickable ? '' : 'disabled'}>${skinStatusHtml(skin, st)}</button>
+  `;
+  if (clickable) {
+    head.querySelector('.shop-buy').addEventListener('click', () => {
+      // 사면 바로 입힌다.
+      if (st.forSale && !buySkin(skin.id).ok) return;
+      if (equipSkin(skin.id)) setPlayerSkin(skin.id);
+      renderCats();
+    });
+  }
+  catsBody.appendChild(head);
+
+  // 이 고양이의 강화(점프·점수 등). 가진 고양이만 살 수 있다.
+  const upTitle = document.createElement('div');
+  upTitle.className = 'shop-section-title';
+  upTitle.textContent = t('cats.upgrades');
+  catsBody.appendChild(upTitle);
+  for (const up of UPGRADES.filter((u) => u.perCat)) {
+    catsBody.appendChild(upgradeRow(up, coins, skin.id, st.owned, renderCats));
+  }
+  if (!st.owned) {
+    const note = document.createElement('p');
+    note.className = 'shop-hint';
+    note.textContent = t('cats.upgradesLocked');
+    catsBody.appendChild(note);
+  }
+
+  const title = document.createElement('div');
+  title.className = 'shop-section-title';
+  title.textContent = t('cats.traits');
+  catsBody.appendChild(title);
+  const empty = document.createElement('div');
+  empty.className = 'shop-empty';
+  empty.textContent = t('cats.traitsSoon');
+  catsBody.appendChild(empty);
+}
+
+function openCats() {
+  catsView = null;
+  renderCats();
+  catsScreen.classList.remove('hidden');
+}
+
+function closeCats() {
+  catsScreen.classList.add('hidden');
 }
 
 function showRewardChoices(choices, info = {}) {
@@ -536,7 +613,7 @@ function ensureGame() {
       updateCombo(combo, mult);
     },
     getStartBonuses() {
-      return getStartBonuses();
+      return getStartBonuses(getEquippedSkin());
     },
     onGameOver(score, isNewRecord, earned = 0, info = {}) {
       hud.classList.add('hidden');
@@ -641,6 +718,13 @@ function beginGame() {
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');
   updateHudRecords(selectedMode);
   // 플레이 중에도 배너를 유지한다. 겹치지 않게 #app 이 배너 몫을 비워 둔다.
+  // 퍼펙트 밴드를 입은 고양이의 '퍼펙트 구간' 강화에 맞춘다.
+  const perfectLevel = getStartBonuses(getEquippedSkin()).perfectLevel;
+  const perfectLo = (PERFECT_LO - perfectLevel * PERFECT_LO_STEP) * 100;
+  if (chargePerfectEl) {
+    chargePerfectEl.style.left = `${perfectLo}%`;
+    chargePerfectEl.style.width = `${PERFECT_HI * 100 - perfectLo}%`;
+  }
   game.start(selectedMode, consumeArmed());
 }
 
@@ -784,9 +868,15 @@ modeButtons.forEach((btn) => {
   btn.addEventListener('click', () => setMode(btn.dataset.mode));
 });
 
-btnShop?.addEventListener('click', () => openShop('items'));
-btnShopGameover?.addEventListener('click', () => openShop('items'));
-btnCharacters?.addEventListener('click', () => openShop('skins'));
+btnShop?.addEventListener('click', () => openShop());
+btnShopGameover?.addEventListener('click', () => openShop());
+btnCharacters?.addEventListener('click', () => openCats());
+btnCatsBack?.addEventListener('click', () => {
+  playClickSound();
+  catsView = null;
+  renderCats();
+});
+btnCatsClose?.addEventListener('click', closeCats);
 btnShopClose?.addEventListener('click', closeShop);
 
 btnReroll?.addEventListener('click', () => game?.rerollReward());
@@ -822,17 +912,44 @@ window.addEventListener('pointerdown', () => {
   startBgm();
 }, { once: true });
 
-function updateMuteBtn() {
-  if (!btnMute) return;
-  const muted = isBgmMuted();
-  btnMute.textContent = muted ? '🔇' : '🔊';
-  btnMute.setAttribute('aria-label', muted ? t('sound.off') : t('sound.on'));
-  btnMute.title = muted ? t('sound.off') : t('sound.on');
+// ── 설정 화면: 배경음 · 효과음 · 진동 · 언어 · 개인정보 처리방침 ──
+const settingsScreen = document.getElementById('settings-screen');
+const toggleBgmEl = document.getElementById('toggle-bgm');
+const toggleSfxEl = document.getElementById('toggle-sfx');
+const toggleHapticsEl = document.getElementById('toggle-haptics');
+
+function setSwitch(el, on) {
+  el?.setAttribute('aria-checked', on ? 'true' : 'false');
 }
-btnMute?.addEventListener('click', () => {
+
+function renderSettings() {
+  setSwitch(toggleBgmEl, !isBgmMuted());
+  setSwitch(toggleSfxEl, !isSfxMuted());
+  setSwitch(toggleHapticsEl, isHapticsOn());
+}
+
+toggleBgmEl?.addEventListener('click', () => {
   toggleBgm();
-  setSfxMuted(isBgmMuted()); // 효과음도 함께 on/off
-  updateMuteBtn();
+  playClickSound();
+  renderSettings();
+});
+toggleSfxEl?.addEventListener('click', () => {
+  setSfxMuted(!isSfxMuted());
+  playClickSound(); // 켰을 때만 들린다
+  renderSettings();
+});
+toggleHapticsEl?.addEventListener('click', () => {
+  setHapticsOn(!isHapticsOn());
+  playClickSound();
+  renderSettings();
+});
+btnSettings?.addEventListener('click', () => {
+  playClickSound();
+  renderSettings();
+  settingsScreen.classList.remove('hidden');
+});
+document.getElementById('btn-settings-close')?.addEventListener('click', () => {
+  settingsScreen.classList.add('hidden');
 });
 
 // 언어 선택기: 버튼을 만들고, 누르면 언어 전환 + 화면 문구 갱신.
@@ -847,7 +964,7 @@ function renderLangSelector() {
     b.addEventListener('click', () => {
       setLang(code);
       applyStaticI18n();
-      updateMuteBtn();
+      renderSettings();
       setMode(selectedMode); // 모드 힌트 갱신
       refreshMenuRecords();
       renderConsumableArm();
@@ -870,8 +987,8 @@ async function boot() {
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
-  setSfxMuted(isBgmMuted()); // 저장된 음소거 설정을 효과음에도 반영
-  updateMuteBtn();
+  setSfxMuted(isSfxMuted()); // 저장된 효과음 설정 반영
+  renderSettings();
   setMode(selectedMode);
   renderConsumableArm();
   await initScores();
@@ -883,6 +1000,7 @@ async function boot() {
 // 기간 한정 복장 지급(10월 = 마녀 고양이). 이번에 처음 받았으면 선물 창을 띄운다.
 const giftScreen = document.getElementById('gift-screen');
 function showSeasonalGift() {
+  migratePerCatUpgrades();
   const granted = grantSeasonalSkins();
   if (!granted.includes('witch') || !giftScreen) return;
   giftScreen.classList.remove('hidden');
