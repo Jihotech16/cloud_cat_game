@@ -32,6 +32,17 @@ const BUBBLE_EXIT_OFFSET_X = -16.5;          // float 칸 대비 exit 칸 위치
 const BUBBLE_EXIT_OFFSET_Y = -44;
 const BUBBLE_EXIT_RISE = [0, 0, 48, 58, 47, 46, 48, 35];
 
+// 밧줄 고양이. fire 시트(128px, 4×2): 0~3 = 발사 반동(한 번), 4~7 = 발사기를 겨눈 채 버티기(반복).
+// 반동 칸은 발끝이 5px 낮게 그려져 있어 올린다. flight 시트(112px, 4×2)는 왼쪽 위로 나는 그림이고,
+// 공중에서는 속도 방향에 맞춰 돌려 그린다(2~3 = 도약, 4~7 = 비행 반복).
+const GRAPPLE_FIRE_MS = [60, 60, 70, 80];
+const GRAPPLE_HOLD_MS = 220;
+const GRAPPLE_FIRE_DX = -3;
+const GRAPPLE_FIRE_DY = [-5, -5, -5, -5, 0, 0, 0, 0];
+const GRAPPLE_FLIGHT_CELL = 112;
+const GRAPPLE_FLIGHT_HEADING = Math.atan2(-0.5, -0.87); // 그림 속 고양이가 향하는 방향(왼쪽 위)
+const GRAPPLE_MAX_TILT = Math.PI / 3;
+
 function frameAt(durations, ms) {
   let elapsed = ms;
   for (let i = 0; i < durations.length; i++) {
@@ -88,6 +99,20 @@ const SKIN_SPRITES = {
     readyDy: [-3, -2, 0],
     jumpingDy: -3,
   },
+  // 밧줄 고양이: 발사기를 든 대기(4프레임). 준비·점프 그림 대신 발사(fire)·비행(flight) 시트를 쓴다.
+  grapple: {
+    idleSheet: 'assets/cat-grapple-idle-sheet.png',
+    idleSheetDx: 4,
+    idleSheetDy: 1,
+    idle: null,
+    ready: null,
+    jumping: null,
+    idleDy: 0,
+    readyDy: [0, 0, 0],
+    jumpingDy: 0,
+    fire: 'assets/cat-grapple-fire.png',
+    flight: 'assets/cat-grapple-flight.png',
+  },
   // 비눗방울 고양이: 대기 중에 작은 비눗방울을 분다(8프레임). 그림이 칸 가운데보다 왼쪽에 있어
   // 대기·준비 그림을 8px 오른쪽으로 옮겨 다른 고양이와 같은 자리에 선다.
   bubble: {
@@ -139,6 +164,8 @@ function spritesFor(id) {
       float: loadImage(def.float),
       pop: loadImage(def.pop),
       exit: loadImage(def.exit),
+      fire: loadImage(def.fire),
+      flight: loadImage(def.flight),
     };
   }
   return loaded[id];
@@ -179,6 +206,8 @@ export class Player {
     this.trail = [];   // 빠르게 상승/하강 시 잔상용 최근 위치
     this.idleElapsedMs = 0; // 대기 애니메이션 진행 시간(서 있을 때만 흐른다)
     this.bubbleAnim = null; // 비눗방울 고양이 특수 동작 { phase: 'blow'|'float'|'pop', t(게임 프레임) }
+    this.grappleAnim = null; // 밧줄 고양이 발사 중 { t(게임 프레임) }
+    this.airFrames = 0;      // 이번 비행 시간(밧줄 고양이 비행 그림용)
   }
 
   get left() {
@@ -233,6 +262,7 @@ export class Player {
     this.charging = false;
     this.chargeLevel = 0;
     this.jumpPeakVy = jumpForce;
+    this.airFrames = 0;
     this.wallBounced = false; // 새 비행 시작 — 벽 반사 기록 초기화
     this.squash = -0.32; // 점프 순간 길쭉하게
     this.trail.length = 0;
@@ -246,6 +276,7 @@ export class Player {
 
   // 매 프레임 호출: 스쿼시 감쇠 + 잔상 갱신.
   tickAnim(timeScale = 1) {
+    if (this._isInAir()) this.airFrames += timeScale;
     // 대기 애니메이션: 차지 중이거나 공중이면 처음(눈 뜬 프레임)으로 되돌린다.
     if (this.charging || this._isInAir()) {
       this.idleElapsedMs = 0;
@@ -407,6 +438,36 @@ export class Player {
         ctx.drawImage(bubbleSheet.img, col * cell, row * cell, cell, cell,
           floatX - BUBBLE_POP_OFFSET_X * unit, floatY - BUBBLE_POP_OFFSET_Y * unit, cell * unit, cell * unit);
       }
+      ctx.restore();
+      return;
+    }
+
+    // 밧줄 고양이: 갈고리를 쏜 동안은 발사 그림, 공중에서는 속도 방향으로 돌린 비행 그림.
+    if (skin.def.fire && this.grappleAnim && skin.fire.ready) {
+      if (faceRight) ctx.scale(-1, 1);
+      const ms = this.grappleAnim.t * (1000 / 60);
+      let frame = frameAt(GRAPPLE_FIRE_MS, ms);
+      if (frame < 0) frame = 4 + (Math.floor((ms - sumMs(GRAPPLE_FIRE_MS)) / GRAPPLE_HOLD_MS) % 4);
+      ctx.drawImage(skin.fire.img, (frame % 4) * FRAME_SIZE, Math.floor(frame / 4) * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE,
+        -size / 2 + GRAPPLE_FIRE_DX * unit, -size / 2 + GRAPPLE_FIRE_DY[frame] * unit, size, size);
+      ctx.restore();
+      return;
+    }
+    if (skin.def.flight && this._isInAir() && skin.flight.ready) {
+      if (faceRight) ctx.scale(-1, 1);
+      // 뒤집은 좌표계에서의 속도 방향과 그림 방향의 차이만큼 기울인다.
+      const vx = faceRight ? -this.vx : this.vx;
+      const heading = Math.atan2(this.vy, vx === 0 ? -0.001 : vx);
+      let tilt = heading - GRAPPLE_FLIGHT_HEADING;
+      while (tilt > Math.PI) tilt -= Math.PI * 2;
+      while (tilt < -Math.PI) tilt += Math.PI * 2;
+      ctx.rotate(Math.max(-GRAPPLE_MAX_TILT, Math.min(GRAPPLE_MAX_TILT, tilt)));
+      const t = this.airFrames;
+      const frame = t < 5 ? 2 : t < 10 ? 3 : 4 + (Math.floor((t - 10) / 7) % 4);
+      const cell = GRAPPLE_FLIGHT_CELL;
+      const drawSize = cell * unit;
+      ctx.drawImage(skin.flight.img, (frame % 4) * cell, Math.floor(frame / 4) * cell, cell, cell,
+        -drawSize / 2, -drawSize / 2, drawSize, drawSize);
       ctx.restore();
       return;
     }

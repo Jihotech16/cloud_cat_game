@@ -768,6 +768,7 @@ html:not(.is-native) .native-only {
 .skin-preview--witch { background-image: url('../assets/cat-witch-jumpready.png'); }
 .skin-preview--pajamas { background-image: url('../assets/cat-cloud-pajamas-jumpready.png'); }
 .skin-preview--bubble { background-image: url('../assets/cat-bubble-jumpready.png'); }
+.skin-preview--grapple { background-image: url('../assets/cat-grapple-idle-sheet.png'); background-size: 400% 100%; }
 
 .shop-item--locked .skin-preview {
   filter: grayscale(1) brightness(0.9);
