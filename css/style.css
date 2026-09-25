@@ -311,21 +311,27 @@ img.gauge-icon {
 
 /* 모드 선택 */
 .mode-select {
+  /* 모드 선택은 버튼이 아니라 탭(알약 모양 스위치)처럼 보이게 해서
+     바로 위 분홍 '게임 시작' 버튼과 헷갈리지 않게 한다. */
   display: flex;
-  gap: 8px;
+  gap: 4px;
   margin: 14px 0 6px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(110, 198, 255, 0.45);
+  border-radius: 999px;
 }
 
 .mode-btn {
   flex: 1;
-  padding: 11px 8px;
+  padding: 9px 8px;
   font-family: inherit;
   font-size: 0.92rem;
   font-weight: 700;
   color: #636e72;
-  background: rgba(110, 198, 255, 0.1);
-  border: 2px solid rgba(110, 198, 255, 0.35);
-  border-radius: 14px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
   cursor: pointer;
   transition: all 0.12s;
   -webkit-appearance: none;
@@ -334,9 +340,8 @@ img.gauge-icon {
 
 .mode-btn.active {
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-  border-color: transparent;
-  box-shadow: 0 3px 10px rgba(232, 93, 138, 0.35);
+  background: linear-gradient(135deg, #6ec6ff, #3a9ee8);
+  box-shadow: 0 2px 8px rgba(58, 158, 232, 0.35);
 }
 
 .mode-hint {
@@ -1134,8 +1139,7 @@ img.reward-icon {
 }
 
 /* 흰 패널이 없어졌으니 하늘 위에서도 읽히도록 버튼은 불투명하게, 옅은 글자는 진하게 */
-.overlay--full .btn-secondary,
-.overlay--full .mode-btn:not(.active) {
+.overlay--full .btn-secondary {
   background: rgba(255, 255, 255, 0.9);
 }
 
