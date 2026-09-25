@@ -1,4 +1,5 @@
 import { Game } from './game.js';
+import { playRewardSelection } from './reward-fx.js';
 import { isMobileDevice, isPortrait } from './device.js';
 import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initAppCheck } from './appcheck.js';
@@ -543,7 +544,11 @@ function closeCats() {
   catsScreen.classList.add('hidden');
 }
 
+let rewardSelecting = false;
 function showRewardChoices(choices, info = {}) {
+  rewardSelecting = false;
+  rewardScreen.classList.remove('reward-selecting');
+  if (btnSkip) btnSkip.disabled = false;
   rewardCards.innerHTML = '';
   for (const reward of choices) {
     const card = document.createElement('button');
@@ -571,16 +576,45 @@ function showRewardChoices(choices, info = {}) {
       ? `<img class="reward-icon" src="${reward.icon}" alt="">`
       : `<span class="reward-icon">${reward.icon}</span>`;
     card.innerHTML = `
-      ${iconHtml}
+      <span class="reward-art"><img src="assets/reward-cards/${reward.id}-card.png?v=3" alt="" loading="eager"></span>
       <span class="reward-body">
         <span class="reward-label">${t(`reward.${reward.id}.label`)}<span class="reward-tier">${tierLabel}</span>${levelChip}</span>
         <span class="reward-desc">${t(`reward.${reward.id}.desc`)} ${tagChips}</span>
         ${downside}${evoChip}
       </span>
     `;
-    card.addEventListener('click', () => {
-      rewardScreen.classList.add('hidden');
-      game.chooseReward(reward.id);
+    card.querySelector('.reward-art img').addEventListener('error', () => {
+      card.querySelector('.reward-art').innerHTML = iconHtml;
+    }, { once: true });
+    card.addEventListener('click', async () => {
+      if (rewardSelecting || game?.state !== 'reward') return;
+      rewardSelecting = true;
+      rewardScreen.classList.add('reward-selecting');
+      const selectedGame = game;
+      const controls = [...rewardScreen.querySelectorAll('button')];
+      const disabled = controls.map(b => b.disabled);
+      controls.forEach(b => { b.disabled = true; });
+      const rect = canvas.getBoundingClientRect();
+      const player = selectedGame.player;
+      const target = {
+        x: rect.left + player.x / selectedGame.worldWidth * rect.width,
+        y: rect.top + (player.y - selectedGame.cameraY) / selectedGame.worldHeight * rect.height,
+      };
+      const valid = () => game === selectedGame && game.state === 'reward' && card.isConnected && !rewardScreen.classList.contains('hidden');
+      try {
+        await playRewardSelection({ card, screen: rewardScreen, reward, target, valid });
+      } catch (error) {
+        console.warn('Reward animation skipped:', error);
+      } finally {
+        const apply = valid();
+        rewardSelecting = false;
+        rewardScreen.classList.remove('reward-selecting');
+        controls.forEach((b, i) => { b.disabled = disabled[i]; });
+        if (apply) {
+          rewardScreen.classList.add('hidden');
+          selectedGame.chooseReward(reward.id);
+        }
+      }
     });
     rewardCards.appendChild(card);
   }
@@ -898,8 +932,9 @@ btnCatsBack?.addEventListener('click', () => {
 btnCatsClose?.addEventListener('click', closeCats);
 btnShopClose?.addEventListener('click', closeShop);
 
-btnReroll?.addEventListener('click', () => game?.rerollReward());
+btnReroll?.addEventListener('click', () => { if (!rewardSelecting) game?.rerollReward(); });
 btnSkip?.addEventListener('click', () => {
+  if (rewardSelecting) return;
   rewardScreen.classList.add('hidden');
   game?.skipReward();
 });

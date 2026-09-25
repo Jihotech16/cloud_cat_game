@@ -828,6 +828,23 @@ html:not(.is-native) .native-only {
   background: rgba(110, 198, 255, 0.24);
 }
 
+.reward-art {
+  display: block;
+  flex: 0 0 70px;
+  width: 70px;
+  height: 70px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.reward-art img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+.reward-selecting { pointer-events: none; }
+.reward-selecting .reward-card:disabled { cursor: default; }
+.reward-fx-layer { position: fixed; inset: 0; z-index: 10000; pointer-events: none; overflow: hidden; }
+.reward-fx-ghost { display: block; transform-origin: center; }
+@media (max-width: 360px) {
+  .reward-art { flex-basis: 52px; width: 52px; height: 52px; }
+}
+
 /* 아이콘 오른쪽의 텍스트(라벨·설명·대가·진화)를 세로로 쌓는 본문 열 */
 .reward-body {
   display: flex;
