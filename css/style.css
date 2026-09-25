@@ -618,16 +618,6 @@ img.shop-icon {
   font-size: 0.85rem;
 }
 
-/* 시작 화면 오른쪽 위 설정 버튼 */
-.settings-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 40px;
-  height: 40px;
-  font-size: 1.15rem;
-}
-
 /* 설정 화면 */
 .settings-list {
   display: flex;

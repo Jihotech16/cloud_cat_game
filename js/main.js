@@ -926,7 +926,6 @@ function renderSettings() {
   setSwitch(toggleBgmEl, !isBgmMuted());
   setSwitch(toggleSfxEl, !isSfxMuted());
   setSwitch(toggleHapticsEl, isHapticsOn());
-  btnSettings?.setAttribute('aria-label', t('settings.title'));
 }
 
 toggleBgmEl?.addEventListener('click', () => {
