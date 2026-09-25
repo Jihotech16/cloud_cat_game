@@ -607,8 +607,15 @@ img.shop-icon {
   text-align: left;
 }
 
+/* 고양이 상세의 뒤로 버튼: 화면 왼쪽 위 */
 #btn-cats-back {
-  margin-bottom: 8px;
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  width: auto;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.85rem;
 }
 
 /* 복장 미리보기: 준비 동작 시트의 첫 프레임(선 자세)만 보여준다 */
@@ -999,11 +1006,71 @@ img.reward-icon {
   display: none;
 }
 
-/* 시작 화면: 업로드한 픽셀 하늘 배경 */
+/* 메뉴 화면(시작·고양이·상점·튜토리얼)은 팝업이 아니라 화면 전체를 쓴다.
+   게임 중에 뜨는 일시정지·게임오버·보상·선물은 기존 팝업(.panel) 그대로. */
+.overlay--full {
+  background: linear-gradient(180deg, #d6eeff 0%, #eef8ff 40%, #ffffff 100%);
+  backdrop-filter: none;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom), calc(12px + var(--banner-reserve))) max(16px, env(safe-area-inset-left));
+}
+
+.overlay--full > .panel {
+  display: flex;
+  flex-direction: column;
+  max-width: 440px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 8px 4px;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* 닫기 버튼은 화면 아래쪽에 붙고, 목록이 길어 스크롤해도 늘 보인다 */
+.overlay--full > .panel {
+  position: relative;
+}
+
+.overlay--full > .panel > .btn-primary:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: auto;
+}
+
+/* 전체 화면에서는 목록이 따로 스크롤되지 않고 화면째 스크롤된다 */
+.overlay--full .shop-list {
+  max-height: none;
+  overflow: visible;
+}
+
+/* 시작 화면: 픽셀 하늘 배경 위에 내용을 바로 올리고 세로 가운데 정렬 */
 #start-screen {
   background: #b9c2d6 url('../assets/sky-bg.png') center / cover no-repeat;
   image-rendering: pixelated;
-  backdrop-filter: none;
+}
+
+#start-screen > .panel {
+  justify-content: center;
+}
+
+/* 흰 패널이 없어졌으니 하늘 위에서도 읽히도록 버튼은 불투명하게, 옅은 글자는 진하게 */
+.overlay--full .btn-secondary,
+.overlay--full .mode-btn:not(.active) {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#start-screen .touch-hint.sub,
+#start-screen .install-hint,
+#start-screen .mode-hint {
+  color: #5d6d7e;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .panel {

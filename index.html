@@ -88,7 +88,7 @@
       </div>
     </div>
 
-    <div id="start-screen" class="overlay">
+    <div id="start-screen" class="overlay overlay--full">
       <div class="panel">
         <h1 class="title">☁️ Poing: Cloud Jump</h1>
         <p class="subtitle" data-i18n="start.subtitle">구름 위를 뛰어올라 하늘 끝까지!</p>
@@ -159,7 +159,7 @@
       </div>
     </div>
 
-    <div id="tutorial-screen" class="overlay hidden">
+    <div id="tutorial-screen" class="overlay overlay--full hidden">
       <div class="panel">
         <h2 class="title"><img class="star-ico" src="assets/star.png" alt=""> <span data-i18n="tutorial.title">어드벤처 모드</span></h2>
         <p class="subtitle" data-i18n="tutorial.subtitle">오브를 모아 능력을 키우세요!</p>
@@ -167,14 +167,14 @@
           <li><span class="tut-ico">🔮</span> <span data-i18n="tutorial.li1">떠 있는 오브를 모아 게이지를 채워요</span></li>
           <li><span class="tut-ico">⭐</span> <span data-i18n="tutorial.li2">게이지가 차면 보상 카드 3장 중 하나를 골라요</span></li>
           <li><span class="tut-ico">🎴</span> <span data-i18n="tutorial.li3">같은 계열을 모으면 세트 시너지 발동</span></li>
-          <li><span class="tut-ico"><img class="cart-ico" src="assets/shop-cart.png" alt=""></span> <span data-i18n="tutorial.li4">모은 코인으로 상점에서 영구 강화</span></li>
+          <li><span class="tut-ico"><img class="cart-ico" src="assets/shop-cart.png" alt=""></span> <span data-i18n="tutorial.li4">모은 코인으로 고양이를 강화하고 상점에서 아이템 구매</span></li>
           <li><span class="tut-ico">⚠️</span> <span data-i18n="tutorial.li5">떠다니는 가시를 피하세요!</span></li>
         </ul>
         <button id="btn-tutorial-start" class="btn-primary" data-i18n="tutorial.start">시작하기</button>
       </div>
     </div>
 
-    <div id="shop-screen" class="overlay hidden">
+    <div id="shop-screen" class="overlay overlay--full hidden">
       <div class="panel">
         <h2 class="title"><img class="cart-ico" src="assets/shop-cart.png" alt=""> <span id="shop-title">상점</span></h2>
         <p class="shop-mode"><span id="shop-mode"></span></p>
@@ -185,12 +185,12 @@
     </div>
 
     <!-- 고양이 메뉴: 목록에서 고양이를 누르면 상세(입기·구매·전용 특성 강화)로 들어간다 -->
-    <div id="cats-screen" class="overlay hidden">
+    <div id="cats-screen" class="overlay overlay--full hidden">
       <div class="panel">
         <h2 class="title"><img class="cart-ico" src="assets/cat.png" alt=""> <span data-i18n="cats.title">고양이</span></h2>
         <p class="subtitle"><span data-i18n="shop.coinsHeld">보유 코인:</span> <img class="coin-ico" src="assets/coin-paw.png" alt=""> <strong id="cats-coins">0</strong></p>
         <div id="cats-body" class="cats-body"></div>
-        <button id="btn-cats-back" class="btn-secondary hidden" data-i18n="cats.back">← 목록으로</button>
+        <button id="btn-cats-back" class="btn-secondary hidden" data-i18n="cats.back">← 목록</button>
         <button id="btn-cats-close" class="btn-primary" data-i18n="shop.close">닫기</button>
       </div>
     </div>
