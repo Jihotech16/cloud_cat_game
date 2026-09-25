@@ -104,7 +104,7 @@ export const SYN_SHIELD_REGEN_FRAMES = 900; // 생존 4세트: N프레임마다 
 // 일시 효과(프레임)
 export const SLOWMO_DURATION = 6 * 60;
 export const SLOWMO_FACTOR = 0.5;
-export const BIGCLOUD_DURATION = 8 * 60;
+export const BIGCLOUD_DURATION = 12 * 60;
 export const BIGCLOUD_SCALE = 1.5;
 export const FEATHER_DURATION = 6 * 60;
 export const FEATHER_MAX_FALL = 4 * GAME_SCALE; // 깃털 시 최대 낙하 속도
