@@ -25,6 +25,12 @@ const BUBBLE_FLOAT_DY = -10;
 // pop 시트는 방울 속 고양이가 float 시트보다 (35, 92)px 오른쪽 아래에 그려져 있다.
 const BUBBLE_POP_OFFSET_X = 35;
 const BUBBLE_POP_OFFSET_Y = 92;
+// exit 시트(160px, 4×2): 방울 속에서 스스로 뛰어나간다. 첫 두 칸(준비)은 게임에서도 떠 있는 동안이고,
+// 셋째 칸부터 실제 점프가 시작된다. 그림 속 상승(머리 위치 변화)은 물리 이동과 겹치지 않게 칸마다 되돌린다.
+const BUBBLE_EXIT_MS = [80, 90, 60, 70, 90, 110, 130, 250];
+const BUBBLE_EXIT_OFFSET_X = -16.5;          // float 칸 대비 exit 칸 위치(머리 기준)
+const BUBBLE_EXIT_OFFSET_Y = -44;
+const BUBBLE_EXIT_RISE = [0, 0, 48, 58, 47, 46, 48, 35];
 
 function frameAt(durations, ms) {
   let elapsed = ms;
@@ -98,6 +104,7 @@ const SKIN_SPRITES = {
     jumpingDy: 0,
     float: 'assets/cat-bubble-float-sheet.png',
     pop: 'assets/cat-bubble-pop-sheet.png',
+    exit: 'assets/cat-bubble-exit-sheet.png',
   },
 };
 
@@ -131,6 +138,7 @@ function spritesFor(id) {
       jumping: loadImage(def.jumping),
       float: loadImage(def.float),
       pop: loadImage(def.pop),
+      exit: loadImage(def.exit),
     };
   }
   return loaded[id];
@@ -277,6 +285,10 @@ export class Player {
       const i = Math.floor(ms / BUBBLE_FLOAT_FRAME_MS) % BUBBLE_FLOAT_LOOP.length;
       return { sheet: 'float', frame: BUBBLE_FLOAT_LOOP[i] };
     }
+    if (anim.phase === 'exit') {
+      const f = frameAt(BUBBLE_EXIT_MS, ms);
+      return f < 0 ? null : { sheet: 'exit', frame: f };
+    }
     const f = frameAt(BUBBLE_POP_MS, ms);
     return f < 0 ? null : { sheet: 'pop', frame: f };
   }
@@ -380,6 +392,14 @@ export class Player {
         const row = Math.floor(bubble.frame / 4);
         ctx.drawImage(bubbleSheet.img, col * FRAME_SIZE, row * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE,
           floatX, floatY, size, size);
+      } else if (bubble.sheet === 'exit') {
+        const cell = 160;
+        const col = bubble.frame % 4;
+        const row = Math.floor(bubble.frame / 4);
+        ctx.drawImage(bubbleSheet.img, col * cell, row * cell, cell, cell,
+          floatX + BUBBLE_EXIT_OFFSET_X * unit,
+          floatY + (BUBBLE_EXIT_OFFSET_Y + BUBBLE_EXIT_RISE[bubble.frame]) * unit,
+          cell * unit, cell * unit);
       } else {
         const cell = 208;
         const col = bubble.frame % 4;

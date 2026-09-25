@@ -144,6 +144,9 @@ export const BUBBLE_FLOAT_METERS = 25;
 export const BUBBLE_SCORE_MULT = 0.5;            // 떠 있는 동안 오른 높이는 점수 절반
 export const BUBBLE_POP_GRACE_FRAMES = 45;       // 터진 직후 같은 장애물에 바로 죽지 않게
 export const BUBBLE_HIT_RADIUS = 20 * GAME_SCALE; // 비눗방울 크기만큼 넓게 부딪힌다
+// 떠 있는 동안 화면을 눌렀다 떼면 방울을 터뜨리며 위로 뛰어나간다.
+export const BUBBLE_EXIT_PREP_FRAMES = 10;       // 뒷다리를 모으는 준비(그동안은 계속 떠 있다)
+export const BUBBLE_EXIT_JUMP_MULT = 1.5;        // 뛰어나가는 점프 세기(JUMP_FORCE 배율)
 
 // 소모품 '출발 부스터': 그 판의 첫 점프만 이 배율로 세게 뛴다.
 export const BOOSTER_JUMP_MULT = 2.5;

@@ -52,6 +52,8 @@ import {
   BUBBLE_SCORE_MULT,
   BUBBLE_POP_GRACE_FRAMES,
   BUBBLE_HIT_RADIUS,
+  BUBBLE_EXIT_PREP_FRAMES,
+  BUBBLE_EXIT_JUMP_MULT,
   COIN_BONUS_STEP,
   PERFECT_HI,
   PERFECT_JUMP_MULT,
@@ -350,7 +352,11 @@ export class Game {
 
   _tryJump() {
     if (!this.player) return;
-    if (this.bubble && this.bubble.phase !== 'pop') return; // 비눗방울을 불거나 떠 있는 동안
+    if (this.bubble?.phase === 'float') {
+      this._jumpOutOfBubble(); // 떠 있는 동안 누르면 방울을 터뜨리며 뛰어나간다
+      return;
+    }
+    if (this._bubbleHolds()) return; // 비눗방울을 부는 중이거나 뛰어나갈 준비 중
     // 점프력 배율 = 레벨 보너스 × 시너지 × 트레이드오프 × 진화(메가 점프)
     const evolveJump = this.jumpLevel >= 5 ? 1.25 : 1;
     const upgrade = (1 + this.jumpLevel * JUMP_LEVEL_STEP)
@@ -587,7 +593,7 @@ export class Game {
         this.player.facing = this.player.vx > 0 ? 1 : -1;
       }
       this.player.alignFeetTo(cloud.top);
-      if (this.bubble?.phase === 'pop') this._setBubble(null);
+      if (this.bubble?.phase === 'pop' || this.bubble?.phase === 'exit') this._setBubble(null);
       this.player.bounce(BOUNCE_FORCE);
       this.airJumpsLeft = this.doubleJumpLevel;
       playBounceSound();
@@ -636,7 +642,7 @@ export class Game {
     const sw = this._shockwaveRadius();
     if (sw > 0) this._shockwaveAbsorb(sw, this.legend.alwaysShockwave);
 
-    if (this.bubble?.phase === 'pop') this._setBubble(null);
+    if (this.bubble?.phase === 'pop' || this.bubble?.phase === 'exit') this._setBubble(null);
     // 비눗방울 고양이: 비눗방울물 게이지가 찬 채로 착지하면 비눗방울을 분다.
     if (this.cat === 'bubble' && this.soap >= SOAP_NEEDED && !this.bubble && this.effects.rocket <= 0) {
       this._startBubble();
@@ -948,7 +954,8 @@ export class Game {
     this.soaps = this.soaps.filter((sp) => !sp.collected);
   }
 
-  // bubble: null | { phase: 'blow' | 'float' | 'pop', t }
+  // bubble: null | { phase: 'blow' | 'float' | 'exit' | 'pop', t, launched? }
+  // 'exit' 는 방울 속에서 스스로 뛰어나가는 동작: 준비 동안은 계속 떠 있다가(launched=false) 점프한다.
   _setBubble(bubble) {
     this.bubble = bubble;
     if (this.player) this.player.bubbleAnim = bubble ? { phase: bubble.phase, t: 0 } : null;
@@ -962,6 +969,16 @@ export class Game {
     this.chargeHold = 0;
     this.callbacks.onCharge?.(0, false);
     this._setBubble({ phase: 'blow', t: 0 });
+  }
+
+  // 방울이 고양이를 붙잡고 있는 상태(불기·부양·뛰어나갈 준비): 점프·착지·일반 물리를 막고, 점수는 절반.
+  _bubbleHolds() {
+    const b = this.bubble;
+    return !!b && (b.phase === 'blow' || b.phase === 'float' || (b.phase === 'exit' && !b.launched));
+  }
+
+  _jumpOutOfBubble() {
+    this._setBubble({ phase: 'exit', t: 0, launched: false });
   }
 
   _popBubble() {
@@ -1002,12 +1019,22 @@ export class Game {
       }
       return true;
     }
-    if (b.phase === 'float') {
+    if (b.phase === 'float' || (b.phase === 'exit' && !b.launched)) {
       const speed = (BUBBLE_FLOAT_METERS * SCORE_DIVISOR) / BUBBLE_FLOAT_FRAMES;
       this.player.vx = 0;
       this.player.vy = -speed;
       this.player.y -= speed * ts;
-      if (b.t >= BUBBLE_FLOAT_FRAMES) this._popBubble();
+      if (b.phase === 'float' && b.t >= BUBBLE_FLOAT_FRAMES) this._popBubble();
+      if (b.phase === 'exit' && b.t >= BUBBLE_EXIT_PREP_FRAMES) {
+        // 방울이 터지며 위로 뛰어오른다. 이후는 보통 점프처럼 떨어지고 착지한다.
+        b.launched = true;
+        this.player.vx = this.player.facing * this.player.baseSpeed;
+        this.player.bounce(JUMP_FORCE * BUBBLE_EXIT_JUMP_MULT);
+        this._spawnParticles(this.player.x, this.player.y, '#bfefff', 14);
+        playJumpSound(0.8);
+        hapticLight();
+        return false;
+      }
       return true;
     }
     // pop: 일반 물리로 떨어진다. 그림은 player 가 터지는 동작을 한 번 보여준 뒤 점프 그림으로 돌아간다.
@@ -1146,7 +1173,7 @@ export class Game {
     const ts = this.effects.slowmo > 0 ? SLOWMO_FACTOR : 1;
     const px = this.player.x;
     const py = this.player.y;
-    const floating = this.bubble && this.bubble.phase !== 'pop';
+    const floating = this._bubbleHolds() && this.bubble.phase !== 'blow';
     // 비눗방울 안에 있으면 방울 크기만큼 넓게 부딪히고, 닿으면 방울만 터진다.
     const hitDist = floating ? BUBBLE_HIT_RADIUS : this.player.width * 0.32;
 
@@ -1357,7 +1384,7 @@ export class Game {
       // 시그니처 페어: 점수배율+로켓 → 로켓 중 점수 추가 2배
       if (this.effects.rocket > 0 && this.taken.has('scoreMul')) burstMult *= 2;
       const beforeCoins = this._currentCoins();
-      const bubbleMult = this.bubble && this.bubble.phase !== 'pop' ? BUBBLE_SCORE_MULT : 1;
+      const bubbleMult = this._bubbleHolds() ? BUBBLE_SCORE_MULT : 1;
       this.score += Math.round(delta * permMult * burstMult * this._comboMult() * bubbleMult);
       this.callbacks.onScore?.(this.score);
       const afterCoins = this._currentCoins();
