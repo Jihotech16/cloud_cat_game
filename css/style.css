@@ -1038,6 +1038,8 @@ img.reward-icon {
   bottom: 0;
   z-index: 1;
   margin-top: auto;
+  /* 버튼 둘레를 배경 아래쪽 색(흰색)으로 덮어 스크롤된 목록이 버튼 밑으로 비치지 않게 */
+  box-shadow: 0 4px 16px rgba(232, 93, 138, 0.4), 0 0 0 16px #ffffff;
 }
 
 /* 전체 화면에서는 목록이 따로 스크롤되지 않고 화면째 스크롤된다 */
@@ -1599,6 +1601,20 @@ img.reward-icon {
   .install-hint,
   .lang-label {
     margin-top: 8px;
+  }
+}
+
+/* iPhone SE(667pt) 급: 전체 화면 시작 메뉴가 스크롤 없이 들어가게 조금 더 줄인다 */
+@media (max-height: 700px) {
+  .overlay--full > .panel {
+    padding: 0 4px;
+  }
+  .cat-preview {
+    max-width: 120px;
+    margin: 2px auto 8px;
+  }
+  .controls {
+    margin-bottom: 10px;
   }
 }
 
