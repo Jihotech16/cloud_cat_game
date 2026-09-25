@@ -14,6 +14,7 @@ import {
   showRewardedAd,
 } from './ads.js';
 import { addCoins } from './meta.js';
+import { PERFECT_LO, PERFECT_HI, PERFECT_LO_STEP } from './config.js';
 import { onGameFinished } from './review.js';
 import { SKINS, ownsSkin, getEquippedSkin, equipSkin, grantSeasonalSkins, buySkin } from './skins.js';
 import { setPlayerSkin } from './player.js';
@@ -101,6 +102,7 @@ const shopCoinsEl = document.getElementById('shop-coins');
 const shopModeEl = document.getElementById('shop-mode');
 const shopTitleEl = document.getElementById('shop-title');
 const btnCharacters = document.getElementById('btn-characters');
+const chargePerfectEl = document.querySelector('.charge-perfect');
 const btnShopClose = document.getElementById('btn-shop-close');
 
 const modeButtons = document.querySelectorAll('.mode-btn');
@@ -715,6 +717,13 @@ function beginGame() {
   app.classList.toggle('mode-adventure', selectedMode === 'adventure');
   updateHudRecords(selectedMode);
   // 플레이 중에도 배너를 유지한다. 겹치지 않게 #app 이 배너 몫을 비워 둔다.
+  // 퍼펙트 밴드를 입은 고양이의 '퍼펙트 구간' 강화에 맞춘다.
+  const perfectLevel = getStartBonuses(getEquippedSkin()).perfectLevel;
+  const perfectLo = (PERFECT_LO - perfectLevel * PERFECT_LO_STEP) * 100;
+  if (chargePerfectEl) {
+    chargePerfectEl.style.left = `${perfectLo}%`;
+    chargePerfectEl.style.width = `${PERFECT_HI * 100 - perfectLo}%`;
+  }
   game.start(selectedMode, consumeArmed());
 }
 

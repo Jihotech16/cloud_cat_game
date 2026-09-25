@@ -19,6 +19,10 @@ export const CHARGE_CAP_BASE = 0.55; // 시작 시 모을 수 있는 최대치(5
 // '거의 끝까지 모았다가 정점에서 떼는' 타이밍 스킬을 요구한다.
 export const PERFECT_LO = 0.80;
 export const PERFECT_HI = 0.985;
+// 고양이별 강화 '퍼펙트 구간': 레벨당 시작점을 이만큼 낮춘다(5레벨 = 0.70).
+export const PERFECT_LO_STEP = 0.02;
+// 고양이별 강화 '코인 보너스': 레벨당 판 코인 +5%(5레벨 = +25%).
+export const COIN_BONUS_STEP = 0.05;
 export const PERFECT_JUMP_MULT = 1.18; // 퍼펙트 시 점프력 배율
 export const PERFECT_SCORE_BONUS = 12;  // 퍼펙트 시 점수 보너스(기본)
 export const CHARGE_CAP_STEP = 0.15; // '최대치 ⬆' 보상 1회당 +15% (최대 100%)

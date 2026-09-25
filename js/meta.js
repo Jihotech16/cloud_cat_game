@@ -11,6 +11,8 @@ const UPG_KEY = 'cloudCat_upgrades';
 export const UPGRADES = [
   { id: 'startJump', icon: 'assets/rocket.png', label: '시작 점프 레벨', desc: '매 판 점프력 보너스를 갖고 시작', max: 10, cost: (l) => 100 * (l + 1) ** 2, modes: ['classic', 'adventure'], perCat: true },
   { id: 'startScore', icon: '📈', label: '시작 점수 배율', desc: '매 판 점수 배율을 갖고 시작', max: 10, cost: (l) => 120 * (l + 1) ** 2, modes: ['classic', 'adventure'], perCat: true },
+  { id: 'coinBonus', icon: 'assets/coin-paw.png', max: 5, cost: (l) => 150 * (l + 1) ** 2, modes: ['classic', 'adventure'], perCat: true },
+  { id: 'perfectZone', icon: 'assets/star.png', max: 5, cost: (l) => 150 * (l + 1) ** 2, modes: ['classic', 'adventure'], perCat: true },
   { id: 'startGauge', icon: 'assets/star.png', label: '시작 게이지', desc: '매 판 게이지를 일부 채우고 시작', max: 10, cost: (l) => 80 * (l + 1) ** 2, modes: ['adventure'] },
 ];
 
@@ -155,6 +157,8 @@ export function getStartBonuses(cat) {
   return {
     jumpLevel: getUpgradeLevel('startJump', cat),
     scoreLevel: getUpgradeLevel('startScore', cat),
+    coinLevel: getUpgradeLevel('coinBonus', cat),
+    perfectLevel: getUpgradeLevel('perfectZone', cat),
     gaugeFill: getUpgradeLevel('startGauge') * 9, // 레벨당 게이지 9% (최대 10레벨 = 90%)
   };
 }
