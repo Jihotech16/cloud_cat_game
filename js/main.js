@@ -30,6 +30,7 @@ import {
   getUpgradeLevel,
   nextCost,
   buyUpgrade,
+  migratePerCatUpgrades,
 } from './meta.js';
 
 const app = document.getElementById('app');
@@ -349,38 +350,47 @@ function renderShop() {
   if (shopModeEl) shopModeEl.textContent = t(`start.mode${selectedMode === 'adventure' ? 'Adventure' : 'Classic'}`);
   shopList.innerHTML = '';
   renderConsumables();
-  shopSectionTitle(t('shop.upgrades'));
-  // 고른 모드에서 효과가 있는 강화만 보여준다.
-  for (const up of UPGRADES.filter((u) => (u.modes ?? ['classic', 'adventure']).includes(selectedMode))) {
-    const level = getUpgradeLevel(up.id);
-    const cost = nextCost(up.id);
-    const maxed = cost === null;
-    const affordable = !maxed && coins >= cost;
-
-    const iconHtml = up.icon.endsWith('.png')
-      ? `<img class="shop-icon" src="${up.icon}" alt="">`
-      : `<span class="shop-icon">${up.icon}</span>`;
-
-    const row = document.createElement('div');
-    row.className = 'shop-item';
-    row.innerHTML = `
-      ${iconHtml}
-      <span class="shop-info">
-        <span class="shop-label">${t(`upgrade.${up.id}.label`)} <em>Lv.${level}/${up.max}</em></span>
-        <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
-      </span>
-      <button class="shop-buy" ${maxed || !affordable ? 'disabled' : ''}>
-        ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost.toLocaleString()}`}
-      </button>
-    `;
-    if (!maxed && affordable) {
-      row.querySelector('.shop-buy').addEventListener('click', () => {
-        const res = buyUpgrade(up.id);
-        if (res.ok) renderShop();
-      });
-    }
-    shopList.appendChild(row);
+  // 공통 강화 중 고른 모드에서 효과가 있는 것만. 고양이별 강화는 고양이 메뉴에서 산다.
+  const common = UPGRADES.filter((u) => !u.perCat && (u.modes ?? ['classic', 'adventure']).includes(selectedMode));
+  if (common.length) {
+    shopSectionTitle(t('shop.upgrades'));
+    for (const up of common) shopList.appendChild(upgradeRow(up, coins, null, true, renderShop));
   }
+  const hint = document.createElement('p');
+  hint.className = 'shop-hint';
+  hint.textContent = t('shop.catUpgradesHint');
+  shopList.appendChild(hint);
+}
+
+// 강화 한 줄. cat 은 perCat 강화일 때 대상 고양이, enabled=false 면 구매 버튼을 막는다(안 가진 고양이).
+function upgradeRow(up, coins, cat, enabled, onBought) {
+  const level = getUpgradeLevel(up.id, cat);
+  const cost = nextCost(up.id, cat);
+  const maxed = cost === null;
+  const canBuy = enabled && !maxed && coins >= cost;
+
+  const iconHtml = up.icon.endsWith('.png')
+    ? `<img class="shop-icon" src="${up.icon}" alt="">`
+    : `<span class="shop-icon">${up.icon}</span>`;
+
+  const row = document.createElement('div');
+  row.className = 'shop-item';
+  row.innerHTML = `
+    ${iconHtml}
+    <span class="shop-info">
+      <span class="shop-label">${t(`upgrade.${up.id}.label`)} <em>Lv.${level}/${up.max}</em></span>
+      <span class="shop-desc">${t(`upgrade.${up.id}.desc`)}</span>
+    </span>
+    <button class="shop-buy" ${canBuy ? '' : 'disabled'}>
+      ${maxed ? t('shop.max') : `<img class="coin-ico" src="assets/coin-paw.png" alt=""> ${cost.toLocaleString()}`}
+    </button>
+  `;
+  if (canBuy) {
+    row.querySelector('.shop-buy').addEventListener('click', () => {
+      if (buyUpgrade(up.id, cat).ok) onBought();
+    });
+  }
+  return row;
 }
 
 function openShop() {
@@ -478,6 +488,21 @@ function renderCatDetail(skin, coins) {
     });
   }
   catsBody.appendChild(head);
+
+  // 이 고양이의 강화(점프·점수 등). 가진 고양이만 살 수 있다.
+  const upTitle = document.createElement('div');
+  upTitle.className = 'shop-section-title';
+  upTitle.textContent = t('cats.upgrades');
+  catsBody.appendChild(upTitle);
+  for (const up of UPGRADES.filter((u) => u.perCat)) {
+    catsBody.appendChild(upgradeRow(up, coins, skin.id, st.owned, renderCats));
+  }
+  if (!st.owned) {
+    const note = document.createElement('p');
+    note.className = 'shop-hint';
+    note.textContent = t('cats.upgradesLocked');
+    catsBody.appendChild(note);
+  }
 
   const title = document.createElement('div');
   title.className = 'shop-section-title';
@@ -585,7 +610,7 @@ function ensureGame() {
       updateCombo(combo, mult);
     },
     getStartBonuses() {
-      return getStartBonuses();
+      return getStartBonuses(getEquippedSkin());
     },
     onGameOver(score, isNewRecord, earned = 0, info = {}) {
       hud.classList.add('hidden');
@@ -938,6 +963,8 @@ async function boot() {
 // 기간 한정 복장 지급(10월 = 마녀 고양이). 이번에 처음 받았으면 선물 창을 띄운다.
 const giftScreen = document.getElementById('gift-screen');
 function showSeasonalGift() {
+  // 기간 한정 지급 전에 옮겨야 새로 받은 고양이에게까지 예전 강화가 복사되지 않는다.
+  migratePerCatUpgrades(SKINS.filter((skin) => ownsSkin(skin.id)).map((skin) => skin.id));
   const granted = grantSeasonalSkins();
   if (!granted.includes('witch') || !giftScreen) return;
   giftScreen.classList.remove('hidden');

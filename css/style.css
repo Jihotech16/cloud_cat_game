@@ -599,6 +599,14 @@ img.shop-icon {
   text-align: center;
 }
 
+/* 상점·고양이 메뉴의 작은 안내 문구 */
+.shop-hint {
+  margin: 0 2px;
+  font-size: 0.72rem;
+  color: #95a5a6;
+  text-align: left;
+}
+
 #btn-cats-back {
   margin-bottom: 8px;
 }
