@@ -370,7 +370,7 @@ export function pickCloudType(heightScore) {
   const pBounce = 0.03 + 0.07 * t; // 트램펄린(도움): 3% → 10%
   const pBoost = 0.03 + 0.07 * t; // 부스트(도움): 3% → 10%
   const pIce = 0.09 * tIce; // 얼음(미끄럼): 0% → 9%
-  // 번개 구름은 발판으로는 빼고, 나중에 화면 위에서 가끔 크게 내리치는 이벤트로 바꿀 예정.
+  // 번개는 lightning.js의 화면 상단 이벤트로만 등장하며 발판으로 생성하지 않는다.
   const pThunder = 0;
   const pGlass = 0.04 + 0.02 * t; // 유리: 4% → 6%, 일반 구름 일부 대체
   const pDirection = 0.05; // 방향 선택 구름: 5%, 일반 구름 일부 대체

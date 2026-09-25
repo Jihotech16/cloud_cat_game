@@ -2,6 +2,7 @@ import { Player } from './player.js';
 import { Cloud, CLOUD_TYPES, pickCloudType, randomCloudWidth } from './cloud.js';
 import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
+import { LightningEvent } from './lightning.js';
 import { BalloonWhale } from './whale.js';
 import { CoinPickup } from './coin.js';
 import { SoapToken } from './soap.js';
@@ -203,6 +204,8 @@ export class Game {
 
     this.orbs = [];
     this.hazards = [];
+    this.lightning = null;
+    this.lightningTimer = 600;
     this.particles = [];
     this.soaps = [];
     this.soap = 0;
@@ -723,6 +726,8 @@ export class Game {
     this.hazards = [];
     this.particles = [];
     this.platformSpawnCount = 0;
+    this.lightning = null;
+    this.lightningTimer = 600;
     this.sinceWhale = 0;
     this.lastZapFrame = -999;
     this.coinPickups = [];
@@ -1469,30 +1474,31 @@ export class Game {
     }
   }
 
-  // 번개: 공중에서 줄기에 닿으면 상승이 끊기고 그대로 떨어진다(구름 위에 서 있는 건 안전).
+  _updateLightning(ts) {
+    if (this.mode !== 'adventure' || this.score < HAZARD_START_SCORE) return;
+    if (this.lightning) {
+      this.lightning.update(ts);
+      if (this.lightning.dead) {
+        this.lightning = null;
+        this.lightningTimer = 600 + Math.random() * 480;
+      }
+    } else {
+      this.lightningTimer -= ts;
+      if (this.lightningTimer <= 0) {
+        const margin = Math.min(70, this.worldWidth * .18);
+        this.lightning = new LightningEvent(margin + Math.random() * (this.worldWidth - margin * 2));
+      }
+    }
+  }
+
+  // 번개 이벤트: 화면 위의 구름부터 바닥까지. 기존 공중 피격 효과를 유지한다.
   _checkLightning(previous = null) {
     if (this.player.groundedCloud) return;
     if (this.frame - this.lastZapFrame < ZAP_COOLDOWN_FRAMES) return;
-    const scale = this._cloudScale();
-    const halfW = this.player.width * 0.28;
-    // 한 프레임에 18px 넘게 움직이는데 번개 줄기는 13px 남짓이라, 지금 위치만 보면
-    // 빠른 점프가 줄기를 뚫고 지나간다. 직전 위치까지 포함한 경로로 판정한다.
-    const prevY = previous ? previous.y : this.player.y;
-    const prevX = previous ? previous.x : this.player.x;
-    const dy = this.player.y - prevY;
-    const top = Math.min(this.player.y, prevY) - this.player.height * 0.3;
-    const bottom = Math.max(this.player.y, prevY) + (this.player.bottom - this.player.y);
-    const left = Math.min(this.player.x, prevX) - halfW;
-    const right = Math.max(this.player.x, prevX) + halfW;
-    for (const cloud of this.clouds) {
-      if (cloud.type !== CLOUD_TYPES.THUNDER || !cloud.isStriking(this.frame)) continue;
-      const zone = cloud.strikeZone(scale);
-      if (!zone) continue;
-      const hitX = right > zone.left && left < zone.right;
-      const hitY = bottom > zone.top && top < zone.bottom;
-      if (!hitX || !hitY) continue;
-      this._zap(dy);
-      return;
+    const prev = previous || this.player;
+    if (this.lightning?.intersects(prev, this.player, this.cameraY, this.worldWidth, this.worldHeight)) {
+      this.lightning.hit = true;
+      this._zap(this.player.y - prev.y);
     }
   }
 
@@ -1665,6 +1671,7 @@ export class Game {
     const ts = this.effects.slowmo > 0 ? SLOWMO_FACTOR : 1;
 
     this.player.tickAnim(ts);
+    this._updateLightning(ts);
 
     for (const cloud of this.clouds) {
       cloud.update(this.worldWidth, ts);
@@ -2147,6 +2154,8 @@ export class Game {
 
   // 보호막으로 부활: 화면 중앙으로 끌어올리고 받쳐줄 구름을 둔다.
   _revive() {
+    this.lightning = null;
+    this.lightningTimer = 600;
     this._setBubble(null);
     this.hook = null;
     this.player.grappleAnim = null;
@@ -2580,6 +2589,7 @@ export class Game {
 
     if (this.cat === 'grapple') this._drawGrapple();
     this.player.draw(this.ctx, this.cameraY);
+    this.lightning?.draw(this.ctx, this.worldWidth, this.worldHeight);
 
     if (this.shields > 0) {
       this._drawShield();
