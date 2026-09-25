@@ -1,0 +1,13 @@
+Use case: precise-object-edit. Asset: eight-frame pixel-art game animation of a kitten voluntarily JUMPING UP OUT OF its soap bubble, which POPS AT TAKEOFF.
+Reference 1 bottom row: starting pose, kitten entirely INSIDE bubble. Reference 2: same kitten and tools in jumping poses. Preserve orange cream kitten, face, proportions, camera scale; aqua wand viewer-left paw, aqua bottle viewer-right paw in all frames. No gear dropped, no outfit.
+Exactly 4 columns x 2 rows of equal square cells, 8 frames row-major. Transparent background. Fixed camera coordinate system shared across cells: bubble center initially at (50%,65%) of cell, diameter about 52% cell width, cat height about 38% cell height. Leave generous upper room for upward leap. Cat remains same head and body size throughout; only pose and vertical position change.
+1 cat floating calmly INSIDE whole bubble.
+2 cat gathers hind legs underneath, subtle crouch INSIDE bubble, determined expression, preparing deliberate jump.
+3 TAKEOFF: cat forcefully extends hind legs and launches UPWARD; head passes through bubble upper film. Bubble pops immediately at this frame, circle tears wide open at top and sides with short soft soap-film arcs. No intact enclosing circle after this frame.
+4 cat rising clearly ABOVE its previous position, feet below torso, bubble has completely disintegrated into four short liquid arcs and a few pastel droplets BELOW the ascending cat at former bubble position.
+5 cat rises farther, tucks knees, relaxed confident expression; fragments below shrink to tiny droplets.
+6 cat near upward jump apex, feet tucked; only two faint droplets below.
+7 clean airborne cat at apex, bubble and ALL fragments gone.
+8 clean normal jump pose matching reference2, ready to hand off to gameplay jumping animation. Cat never falls during this short takeoff sequence.
+IMPORTANT: This is NOT accidental popping with a startled fall. It is an intentional jump with confident eyes, no scared O mouth. Bubble MUST burst simultaneously with upward push, not linger intact under the cat like a platform. Never stand on exterior of bubble. Clear causal anticipation -> upward push/pop -> ascent. Actual pose redraws, not only translating identical sprite.
+Crisp restrained game pixel art, clean silhouettes, thin pastel cyan/pink/lavender film highlights. No explosion, flame, smoke, glass shards, noisy glow, labels, grid, text, watermark, ground or scenery. Actual transparent RGBA background. All sprites and droplets fully inside their individual cells, no overlaps.

@@ -1,0 +1,7 @@
+Mode: built-in image_gen
+Use case: precise-object-edit.
+Asset type: single transparent pixel-art idle character sprite for Poing.
+Input image 1: authoritative original cat identity, style, scale, and pose reference.
+Primary request: The SAME original orange-and-cream kitten holding soap-bubble play tools. NOT a cat inside a bubble. Keep the existing cat's exact head/body proportions, relative canvas size, baseline, front-facing upright idle pose, big glossy black eyes, pink ears, cream muzzle and tummy, orange tail on viewer right, and chunky pixel-art style. No outfit or hat.
+One little front paw holds a small pastel aqua bottle of bubble solution at waist height. The other little front paw holds a short bubble wand with one clear round ring just to the side of its cheek, below ear height, without obscuring face. Both tools are clearly readable, simple and tiny relative to the kitten. One single tiny delicate soap bubble near the wand ring, with a restrained pale pink/cyan iridescent edge, no bright effects. Pose relaxed, sweet and ready to blow bubbles. Tools should look held naturally by the paws.
+Full body and complete tail visible. Original cat occupies the same proportion of the square canvas as in the reference; do not shrink or enlarge the cat. Preserve clear margins around accessories. Pixelated outlines, coherent pixel clusters, limited soft colors, no smooth vector or 3D. Genuinely transparent RGBA background; no ground, shadow, scenery, enclosure, large bubble around cat, text, watermark or checkerboard. One sprite only, no sheet.

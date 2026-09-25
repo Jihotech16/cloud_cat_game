@@ -1,0 +1,12 @@
+Mode: built-in image_gen
+Use case: precise-object-edit. Edit this existing eight-frame bubble-pop sprite sheet. Main requested change: kitten is STARTLED when bubble pops, NOT happily smiling.
+Preserve exact orange cream kitten identity, head/body scale, aqua wand in viewer-left paw and bottle in viewer-right paw. Same 4 columns x 2 rows, eight equal cells, transparent RGBA, same bubble disintegration progression. No costume changes, no tools dropped.
+Frame1 unchanged calm kitten fully INSIDE intact bubble.
+Frame2 bubble quivers, kitten notices, eyes slightly wider, smile disappears.
+Frame3 membrane opens, kitten has round surprised eyes with visible small cream-white sclera rims around dark pupils, eyebrows raised, small dark O mouth, ears perk.
+Frame4 moment of POP: clear cute startled expression, wide eyes and O mouth, shoulders lift, forearms jerk outward slightly while gripping bottle and wand, hind legs splay a little, tail stiffens. NO smiling or happy closed eyes. Same head width and body volume, no stretching or zoom.
+Frame5 recoil settles, still surprised, mouth smaller O, hind legs extend for descent.
+Frame6 relieved recovery, eyes returning to normal, mouth closed, only tiny fading droplets.
+Frame7 returns to normal neutral airborne pose.
+Frame8 same neutral airborne pose ready to land. No smile at pop itself.
+Redraw complete coherent reaction poses, not just overlays. Keep cat visually anchored with only a tiny natural recoil (1-2 pixels at final game resolution). Cat remains same size in all frames. Preserve continuous bubble opening then separated curved liquid films then droplets then nothing. Soft soap pop, no explosion, no glass shards, no injury. Clean crisp pixel art, transparent background, no text, no exclamation marks or symbols, no labels, no noisy fringes. Place frames centered in equal square cells with clear margin.

@@ -1,0 +1,23 @@
+Mode: built-in image_gen
+Initial generation:
+Use case: precise-object-edit. Asset type: 12-frame special ability pixel-art game sprite sheet, large soap bubble inflation then riding it.
+Reference 1: exact orange cream kitten identity and bubble tools. Reference 2: established small bubble blowing animation style. Preserve same cat, head/body proportions, colors, aqua bottle held in viewer-right paw and circular aqua wand held in viewer-left paw. No clothing, no hat.
+Draw exactly TWELVE frames, grid FOUR columns by THREE rows, equal square cells, read left to right then top to bottom. Every cell is a fixed camera with the SAME cat scale. Cat standing full height is 36 percent of a cell height throughout. Plenty of empty transparent room for a giant bubble at viewer-left and below cat. Never shrink cat to accommodate bubble. Reference cat remains original size while ONLY bubble expands.
+Frame progression:
+1 landing softly after a jump, knees slightly bent, no bubble, tools held securely.
+2 straightens, raises ring to mouth and takes breath, cheeks subtly puff.
+3 blows a small bubble attached to ring at viewer-left of mouth.
+4 continues blowing: bubble diameter equal to head width, still attached.
+5 continues blowing: bubble diameter equal to cat body height, beside cat, not enclosing cat.
+6 bubble grows to 1.3x cat standing height, thin iridescent rim; now detaches from ring. Cat relaxes mouth.
+7 giant bubble floats down a little toward below/front-left of cat; cat bends knees to hop onto it.
+8 cat hops diagonally up-left toward bubble's TOP surface, tools still in paws, bubble below paws.
+9 cat lands gently with both hind paws on TOP of giant bubble, full cat OUTSIDE bubble, bubble round except tiny weight depression. Not inside or behind bubble.
+10 stable riding pose on top of bubble, knees slightly bent, content smile.
+11 riding idle: bubble lightly squashes only 2 percent and rainbow rim shimmers, cat tiny balance adjustment, same cat size.
+12 riding idle: bubble returns to frame10 round shape, cat returns to frame10 pose for looping frames10-12.
+Keep continuity of bubble growth and path; only one bubble per cell. Feet physically touch bubble's top in riding frames. No cloud painted in: game provides the cloud/platform. Transparent outside and almost transparent inside bubble; sparse pastel cyan lavender pink pixel rim and two white reflection arcs. No opaque blue ball.
+Crisp chunky pixel art matching references, warm dark cat outline, no smooth 3D, no dramatic glow. Redraw full articulated cat each frame. Entire ears/tail/tools/bubble inside own cell with margins. Genuinely transparent RGBA background. No grid lines, text, numbering, scenery, floor or watermark.
+
+Bubble material refinement:
+Use case: precise-object-edit. Edit this twelve-frame 4x3 pixel-art sheet. SINGLE TARGETED CORRECTION: soap-bubble material and alpha edge cleanup. Keep EXACT same 12 poses, cell layout, character scale, timing progression, paws, tools, cat colors and positions. Replace each thick glowing bubble with a DELICATE CLEAN THIN iridescent circle: rim only 2-3 low-resolution pixels thick, mainly pale cyan with tiny pink/lavender accents, just TWO restrained white highlight arcs; center genuinely transparent, no white swirls, no dense white rim, no glow or haze. Keep the same bubble diameter and position in each frame, cat still on TOP in bottom row. Remove ALL isolated colored pixel noise and red fringes outside intended cat/tool/bubble silhouettes. Clean full transparency outside sprites and inside bubbles. Crisp intentional pixel clusters, no gray backdrop, no black backdrop, no labels or grid. Entire first sheet composition unchanged except bubble transparency/rim and edge cleanup.

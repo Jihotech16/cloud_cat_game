@@ -1,0 +1,15 @@
+Use case: stylized-concept.
+Create an eight-frame pixel-art animation spritesheet, exactly 4 columns by 2 rows of equal square cells, row-major order, transparent RGBA.
+Reference: identity/style of the existing orange-and-cream kitten holding the mint grappling launcher with tan rope spool. Preserve same head size, markings, large black eyes, pink cheeks, gun design and tail. No clothes.
+Action is FIRING THE GRAPPLING GUN, not launching the cat. Cat stays upright, front-facing, feet anchored on same baseline and location. Gun aimed slightly up toward screen-left, held in both paws. Minimal aim changes; no rotating character, no flight.
+Frames:
+1 ready holding loaded launcher, silver hook docked in muzzle.
+2 small anticipation, bend knees slightly, firm two-paw grip.
+3 trigger release, hook has LEFT the muzzle (do NOT draw hook/projectile anywhere in cell), little white/cyan compressed-air puff at muzzle, forepaws recoil toward chest.
+4 peak mild recoil, torso leans back slightly, eyes squeeze briefly, small dissipating air puff, empty open muzzle.
+5 recover balance, eyes open, paws ease forward, no puff, hook remains absent.
+6 steady two-handed grip, focused eyes looking toward screen-left, empty muzzle.
+7 gently brace knees as line catches, arms firm, empty muzzle.
+8 settled upright braced hold, ready for subsequent tension charging, empty muzzle.
+The hook and rope will be drawn separately in the game, therefore after frame2 there must be NO silver hook still attached to the muzzle. Keep visible barrel and tan spool unchanged. No drawn long rope, no cloud, no external target, no directional arrow.
+Each frame fully redrawn with natural subtle changes; constant anatomical scale, consistent camera and feet baseline. Full ears, paws, tail, muzzle inside each cell with 12% margin. Same center, no traveling across cells. Crisp square pixel clusters, clean outline, restrained shading matching reference. NO text, labels, cell borders, background, ground, shadow, explosions, flames, bullets or realistic weapons. Actual transparent background.
