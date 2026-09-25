@@ -148,6 +148,64 @@ Free, one hand, portrait, offline-friendly. How high can you climb?
 
 ---
 
+## 🆕 1.8 새로운 기능 (What's New)
+
+App Store Connect 1.8 버전에 4개 언어로 입력 완료(2026-09-25). ASC 가 거부하는 문자(이모지, •, —, …, →)는 쓰지 않았다.
+
+**ko**
+```
+새 고양이 2마리가 왔어요!
+- 비눗방울 고양이: 비눗방울물을 모아 큰 비눗방울을 타고 두둥실 떠올라요
+- 밧줄 고양이: 갈고리를 쏴서 원하는 방향으로 날아가요
+
+- 고양이 메뉴가 생겼어요. 고양이마다 따로 강화하고, 코인 보너스와 퍼펙트 구간 강화가 새로 추가됐어요
+- 잠옷 고양이는 가만히 있으면 스르르 잠들어요
+- 어드벤처 모드: 보상이 귀여운 카드로 바뀌고, 화면 위에서 큰 번개가 내리쳐요
+- 설정 메뉴(배경음, 효과음, 진동, 언어)와 새 메뉴 화면
+- 큰 발판 효과가 더 오래 가요
+```
+
+**en-US**
+```
+Two new cats are here!
+- Bubble Cat: collect bubble soap and float up inside a giant bubble
+- Grapple Cat: fire a hook and fly in any direction you choose
+
+- New Cats menu. Upgrade each cat separately, with new Coin Bonus and Perfect Zone upgrades
+- Pajama Cat now dozes off when left alone
+- Adventure mode: rewards are now cute cards, and giant lightning strikes from the top of the screen
+- New Settings menu (music, sound effects, vibration, language) and refreshed menu screens
+- Big Platform lasts longer
+```
+
+**ja**
+```
+新しいネコが2匹登場！
+- シャボン玉ネコ：シャボン液を集めて大きなシャボン玉でふわふわ浮かび上がります
+- ロープネコ：フックを発射して好きな方向へ飛んでいきます
+
+- ネコメニューを追加。ネコごとに強化でき、コインボーナスとパーフェクト幅の強化も新登場
+- パジャマネコはじっとしているとすやすや眠ります
+- アドベンチャーモード：報酬がかわいいカードになり、画面の上から大きな雷が落ちてきます
+- 設定メニュー（BGM、効果音、振動、言語）と新しいメニュー画面
+- 大きな足場の効果が長くなりました
+```
+
+**zh-Hans**
+```
+两只新猫咪登场！
+- 泡泡猫咪：收集泡泡水，乘着大泡泡轻飘飘地升空
+- 绳索猫咪：发射钩爪，朝你想要的方向飞去
+
+- 新增猫咪菜单。每只猫咪可分别强化，并新增金币加成和完美区间强化
+- 睡衣猫咪静静待着时会慢慢睡着
+- 冒险模式：奖励变成可爱的卡片，屏幕上方还会劈下巨大闪电
+- 新增设置菜单（背景音乐、音效、振动、语言）并焕新菜单画面
+- 大平台效果持续时间更长
+```
+
+---
+
 ## 📝 참고
 - **앱 이름**은 브랜드 일관성을 위해 4개 언어 모두 `Poing: Cloud Jump` 권장. (한/중/일 시장 검색 최적화를 원하면 현지어 병기 가능 — 예: `Poing: 클라우드 점프`)
 - **스크린샷**은 언어별로 UI 언어를 바꿔 캡처하면 가장 좋습니다(앱 내 언어 버튼으로 전환 후 촬영).
