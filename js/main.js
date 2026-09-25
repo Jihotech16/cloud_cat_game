@@ -164,6 +164,8 @@ function refreshMenuRecords() {
 function setMode(mode) {
   selectedMode = mode;
   if (menuCatImage) menuCatImage.src = menuCatSources[mode] ?? menuCatSources.classic;
+  // 시작 화면 배경도 모드별로: 일반 = 낮 하늘, 어드벤처 = 보랏빛 별 하늘
+  startScreen?.classList.toggle('is-adventure', mode === 'adventure');
   modeButtons.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });

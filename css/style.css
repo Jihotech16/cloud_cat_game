@@ -1138,6 +1138,42 @@ img.reward-icon {
   justify-content: center;
 }
 
+/* 어드벤처 모드를 고르면 시작 화면 배경이 보랏빛 별 하늘로 서서히 바뀐다 */
+#start-screen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: #7a5fb0 url('../assets/menu-bg-adventure.png') center / cover no-repeat;
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+#start-screen.is-adventure::before {
+  opacity: 1;
+}
+
+#start-screen > .panel {
+  z-index: 1;
+}
+
+/* 어두운 배경 위 글자는 흰색으로 */
+#start-screen.is-adventure .title,
+#start-screen.is-adventure .subtitle,
+#start-screen.is-adventure .controls,
+#start-screen.is-adventure .touch-hint.sub,
+#start-screen.is-adventure .mode-hint,
+#start-screen.is-adventure .best-record,
+#start-screen.is-adventure .install-hint {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(40, 20, 80, 0.55);
+}
+
+#start-screen.is-adventure .best-record strong {
+  color: #ffe27a;
+}
+
 /* 흰 패널이 없어졌으니 하늘 위에서도 읽히도록 버튼은 불투명하게, 옅은 글자는 진하게 */
 .overlay--full .btn-secondary {
   background: rgba(255, 255, 255, 0.9);
