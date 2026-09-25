@@ -155,6 +155,7 @@ export function migratePerCatUpgrades() {
 // cat: 이번 판에 입은 고양이(점프·점수 강화는 고양이별).
 export function getStartBonuses(cat) {
   return {
+    cat,
     jumpLevel: getUpgradeLevel('startJump', cat),
     scoreLevel: getUpgradeLevel('startScore', cat),
     coinLevel: getUpgradeLevel('coinBonus', cat),
