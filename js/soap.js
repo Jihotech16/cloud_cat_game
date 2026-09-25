@@ -1,6 +1,6 @@
 // 비눗방울물(비눗방울 고양이 전용 아이템). 비눗방울 고양이를 입었을 때만 두 모드 모두에 나온다.
 // 다섯 개를 모으면 게이지가 차고, 그 뒤 구름에 착지하면 큰 비눗방울을 불어 떠오른다(game.js).
-// 그림은 고양이가 든 병을 잘라 만든 임시 그림(assets/soap-item.png)이다.
+// 그림: resources/cat-bubble/soap-item-v2.png 를 64px 칸에 넣은 assets/soap-item.png.
 import { SOAP_RADIUS } from './config.js';
 
 let sprite = null;
