@@ -164,12 +164,25 @@ function refreshMenuRecords() {
 function setMode(mode) {
   selectedMode = mode;
   if (menuCatImage) menuCatImage.src = menuCatSources[mode] ?? menuCatSources.classic;
+  // 시작 화면 배경도 모드별로: 일반 = 낮 하늘, 어드벤처 = 보랏빛 별 하늘
+  startScreen?.classList.toggle('is-adventure', mode === 'adventure');
   modeButtons.forEach((btn) => {
     btn.classList.toggle('active', btn.dataset.mode === mode);
   });
   if (modeHint) modeHint.textContent = t(`mode.${mode}`);
   // 상점은 두 모드 모두에서 연다. 복장은 모드와 상관없고, 강화만 어드벤처 전용이다.
   refreshMenuRecords();
+}
+
+// 비눗방울물 게이지: 모은 개수만큼 칸이 차고, 다 차면 반짝인다(비눗방울 고양이일 때만 보인다).
+const soapHud = document.getElementById('soap-hud');
+function updateSoapHud(ratio, active) {
+  if (!soapHud) return;
+  soapHud.classList.toggle('hidden', !active);
+  const pips = soapHud.querySelectorAll('.soap-pips i');
+  const filled = Math.round(ratio * pips.length);
+  pips.forEach((pip, i) => pip.classList.toggle('on', i < filled));
+  soapHud.classList.toggle('full', ratio >= 1);
 }
 
 function updateGauge(ratio) {
@@ -511,10 +524,13 @@ function renderCatDetail(skin, coins) {
   title.className = 'shop-section-title';
   title.textContent = t('cats.traits');
   catsBody.appendChild(title);
-  const empty = document.createElement('div');
-  empty.className = 'shop-empty';
-  empty.textContent = t('cats.traitsSoon');
-  catsBody.appendChild(empty);
+  // 전용 특성이 있는 고양이는 설명을, 없으면 준비 중 안내를 보여준다.
+  const traitKey = `trait.${skin.id}`;
+  const hasTrait = t(traitKey) !== traitKey;
+  const trait = document.createElement('div');
+  trait.className = hasTrait ? 'cat-trait' : 'shop-empty';
+  trait.textContent = hasTrait ? t(traitKey) : t('cats.traitsSoon');
+  catsBody.appendChild(trait);
 }
 
 function openCats() {
@@ -608,6 +624,9 @@ function ensureGame() {
     },
     onCoins(coins) {
       updateCoinHud(coins);
+    },
+    onSoap(ratio, active) {
+      updateSoapHud(ratio, active);
     },
     onCombo(combo, mult) {
       updateCombo(combo, mult);

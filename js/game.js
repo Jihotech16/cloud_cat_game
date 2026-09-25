@@ -4,6 +4,7 @@ import { Orb, pickRewardChoices, REWARDS, SIGNATURE_PAIRS } from './orb.js';
 import { Hazard } from './hazard.js';
 import { BalloonWhale } from './whale.js';
 import { CoinPickup } from './coin.js';
+import { SoapToken } from './soap.js';
 import { LetterToken, LETTERS } from './letters.js';
 import { getBestScore, saveBestScore } from './score.js';
 import { addCoins } from './meta.js';
@@ -42,6 +43,17 @@ import {
   CHARGE_HOLD_FRAMES,
   PERFECT_LO,
   PERFECT_LO_STEP,
+  SOAP_NEEDED,
+  SOAP_GAP,
+  SOAP_CHANCE,
+  BUBBLE_BLOW_FRAMES,
+  BUBBLE_FLOAT_FRAMES,
+  BUBBLE_FLOAT_METERS,
+  BUBBLE_SCORE_MULT,
+  BUBBLE_POP_GRACE_FRAMES,
+  BUBBLE_HIT_RADIUS,
+  BUBBLE_EXIT_PREP_FRAMES,
+  BUBBLE_EXIT_JUMP_MULT,
   COIN_BONUS_STEP,
   PERFECT_HI,
   PERFECT_JUMP_MULT,
@@ -182,6 +194,11 @@ export class Game {
     this.orbs = [];
     this.hazards = [];
     this.particles = [];
+    this.soaps = [];
+    this.soap = 0;
+    this.bubble = null;
+    this.bubbleGrace = 0;
+    this.cat = 'default';
     this.gauge = 0;
     this.gaugeNeeded = GAUGE_MAX;
     this.rewardCount = 0;
@@ -335,6 +352,11 @@ export class Game {
 
   _tryJump() {
     if (!this.player) return;
+    if (this.bubble?.phase === 'float') {
+      this._jumpOutOfBubble(); // 떠 있는 동안 누르면 방울을 터뜨리며 뛰어나간다
+      return;
+    }
+    if (this._bubbleHolds()) return; // 비눗방울을 부는 중이거나 뛰어나갈 준비 중
     // 점프력 배율 = 레벨 보너스 × 시너지 × 트레이드오프 × 진화(메가 점프)
     const evolveJump = this.jumpLevel >= 5 ? 1.25 : 1;
     const upgrade = (1 + this.jumpLevel * JUMP_LEVEL_STEP)
@@ -571,6 +593,7 @@ export class Game {
         this.player.facing = this.player.vx > 0 ? 1 : -1;
       }
       this.player.alignFeetTo(cloud.top);
+      if (this.bubble?.phase === 'pop' || this.bubble?.phase === 'exit') this._setBubble(null);
       this.player.bounce(BOUNCE_FORCE);
       this.airJumpsLeft = this.doubleJumpLevel;
       playBounceSound();
@@ -618,6 +641,12 @@ export class Game {
 
     const sw = this._shockwaveRadius();
     if (sw > 0) this._shockwaveAbsorb(sw, this.legend.alwaysShockwave);
+
+    if (this.bubble?.phase === 'pop' || this.bubble?.phase === 'exit') this._setBubble(null);
+    // 비눗방울 고양이: 비눗방울물 게이지가 찬 채로 착지하면 비눗방울을 분다.
+    if (this.cat === 'bubble' && this.soap >= SOAP_NEEDED && !this.bubble && this.effects.rocket <= 0) {
+      this._startBubble();
+    }
   }
 
   // 착지 충격파: 반경 내 오브를 흡수한다. breakHazards=true 면 가시도 부순다(전설).
@@ -723,6 +752,7 @@ export class Game {
     this.jumpLevel = meta.jumpLevel ?? 0;
     this.scoreLevel = meta.scoreLevel ?? 0;
     this.coinMult = 1 + (meta.coinLevel ?? 0) * COIN_BONUS_STEP;
+    this.cat = meta.cat ?? 'default';
     this.perfectLo = PERFECT_LO - (meta.perfectLevel ?? 0) * PERFECT_LO_STEP;
     // 보호막은 소모품으로만 갖고 시작한다(영구 강화에서 제외).
     // 소모품은 시작 화면에서 켜고 시작할 때 main.js 가 이미 한 개 차감해 넘겨준다.
@@ -770,6 +800,12 @@ export class Game {
     this.highestHazardY = startY;
     this.highestCoinY = startY;
     this.coinPickups = [];
+    this.highestSoapY = startY;
+    this.soaps = [];
+    this.soap = 0;
+    this._setBubble(null);
+    this.bubbleGrace = 0;
+    this.callbacks.onSoap?.(0, this.cat === 'bubble');
     this.highestLetterY = startY;
     this.letters = [];
     this.nextLetter = 0;
@@ -777,6 +813,7 @@ export class Game {
     this.letterSets = 0;
     this._spawnOrbs(); // 시작 화면(대기 상태)부터 오브가 보이도록 미리 생성
     this._spawnCoinPickups(); // 코인도 시작부터 보이게
+    this._spawnSoaps();
     this._spawnLetters();
 
     this._initDecor();
@@ -871,6 +908,7 @@ export class Game {
     this.clouds = this.clouds.filter((c) => c.y < cullBelow && !c.dead);
     this.orbs = this.orbs.filter((o) => !o.collected && o.y < cullBelow);
     this.coinPickups = this.coinPickups.filter((c) => c.y < cullBelow);
+    this.soaps = this.soaps.filter((sp) => sp.y < cullBelow);
     this.letters = this.letters.filter((tk) => tk.y < cullBelow);
   }
 
@@ -884,6 +922,123 @@ export class Game {
       const x = margin + Math.random() * (this.worldWidth - margin * 2);
       this.coinPickups.push(new CoinPickup(x, this.highestCoinY));
     }
+  }
+
+  // ── 비눗방울 고양이 ──
+  // 비눗방울물: 비눗방울 고양이를 입었을 때만, 두 모드 모두 일정 간격마다 확률로 놓는다.
+  _spawnSoaps() {
+    if (this.cat !== 'bubble') return;
+    const spawnAbove = this.cameraY - this.worldHeight * SPAWN_LOOKAHEAD;
+    while (this.highestSoapY > spawnAbove) {
+      this.highestSoapY -= SOAP_GAP * (0.8 + Math.random() * 0.4);
+      if (Math.random() > SOAP_CHANCE) continue;
+      const margin = this.worldWidth * 0.14;
+      const x = margin + Math.random() * (this.worldWidth - margin * 2);
+      this.soaps.push(new SoapToken(x, this.highestSoapY));
+    }
+  }
+
+  _collectSoaps() {
+    if (!this.soaps.length) return;
+    const reach = this.player.width * 0.32;
+    for (const sp of this.soaps) {
+      if (sp.collected) continue;
+      if (Math.hypot(this.player.x - sp.x, this.player.y - sp.y) > sp.r + reach) continue;
+      sp.collected = true;
+      this.soap = Math.min(SOAP_NEEDED, this.soap + 1);
+      this.callbacks.onSoap?.(this.soap / SOAP_NEEDED, true);
+      this._spawnParticles(sp.x, sp.y, '#8bf0e1', 10);
+      playCollectSound();
+      hapticLight();
+    }
+    this.soaps = this.soaps.filter((sp) => !sp.collected);
+  }
+
+  // bubble: null | { phase: 'blow' | 'float' | 'exit' | 'pop', t, launched? }
+  // 'exit' 는 방울 속에서 스스로 뛰어나가는 동작: 준비 동안은 계속 떠 있다가(launched=false) 점프한다.
+  _setBubble(bubble) {
+    this.bubble = bubble;
+    if (this.player) this.player.bubbleAnim = bubble ? { phase: bubble.phase, t: 0 } : null;
+  }
+
+  // 게이지가 찬 채로 구름에 착지하면 호출: 구름 위에서 비눗방울을 분다.
+  _startBubble() {
+    this.soap = 0;
+    this.callbacks.onSoap?.(0, true);
+    this.charge = 0;
+    this.chargeHold = 0;
+    this.callbacks.onCharge?.(0, false);
+    this._setBubble({ phase: 'blow', t: 0 });
+  }
+
+  // 방울이 고양이를 붙잡고 있는 상태(불기·부양·뛰어나갈 준비): 점프·착지·일반 물리를 막고, 점수는 절반.
+  _bubbleHolds() {
+    const b = this.bubble;
+    return !!b && (b.phase === 'blow' || b.phase === 'float' || (b.phase === 'exit' && !b.launched));
+  }
+
+  _jumpOutOfBubble() {
+    this._setBubble({ phase: 'exit', t: 0, launched: false });
+  }
+
+  _popBubble() {
+    if (!this.bubble || this.bubble.phase === 'pop') return;
+    this.player.groundedCloud = null;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.player.jumpPeakVy = JUMP_FORCE; // 떨어지는 점프 그림으로 이어지게
+    this.bubbleGrace = BUBBLE_POP_GRACE_FRAMES;
+    this._spawnParticles(this.player.x, this.player.y, '#bfefff', 14);
+    playBreakSound();
+    hapticMedium();
+    this._setBubble({ phase: 'pop', t: 0 });
+  }
+
+  // 매 프레임: 부는 중이면 구름에 붙어 있고, 떠 있으면 일정 속도로 올라간다.
+  // 이 동안은 일반 물리(착지·고래·번개)를 건너뛴다. true 를 돌려주면 이번 프레임 이동을 처리한 것.
+  _updateBubble(ts) {
+    const b = this.bubble;
+    if (this.bubbleGrace > 0) this.bubbleGrace -= ts;
+    if (!b) return false;
+    b.t += ts;
+    if (this.player.bubbleAnim) this.player.bubbleAnim.t = b.t;
+
+    if (b.phase === 'blow') {
+      const cloud = this.player.groundedCloud;
+      if (!cloud || cloud.broken || !cloud.isSolid) {
+        this._popBubble(); // 발밑 구름이 사라지면 불다 말고 떨어진다
+        return false;
+      }
+      if (cloud.type === CLOUD_TYPES.MOVING) this.player.x += cloud.vx * ts;
+      this.player.alignFeetTo(cloud.top);
+      this.player.vy = 0;
+      if (b.t >= BUBBLE_BLOW_FRAMES) {
+        this.player.groundedCloud = null;
+        this.player.onGround = false;
+        this._setBubble({ phase: 'float', t: 0 });
+      }
+      return true;
+    }
+    if (b.phase === 'float' || (b.phase === 'exit' && !b.launched)) {
+      const speed = (BUBBLE_FLOAT_METERS * SCORE_DIVISOR) / BUBBLE_FLOAT_FRAMES;
+      this.player.vx = 0;
+      this.player.vy = -speed;
+      this.player.y -= speed * ts;
+      if (b.phase === 'float' && b.t >= BUBBLE_FLOAT_FRAMES) this._popBubble();
+      if (b.phase === 'exit' && b.t >= BUBBLE_EXIT_PREP_FRAMES) {
+        // 방울이 터지며 위로 뛰어오른다. 이후는 보통 점프처럼 떨어지고 착지한다.
+        b.launched = true;
+        this.player.vx = this.player.facing * this.player.baseSpeed;
+        this.player.bounce(JUMP_FORCE * BUBBLE_EXIT_JUMP_MULT);
+        this._spawnParticles(this.player.x, this.player.y, '#bfefff', 14);
+        playJumpSound(0.8);
+        hapticLight();
+        return false;
+      }
+      return true;
+    }
+    // pop: 일반 물리로 떨어진다. 그림은 player 가 터지는 동작을 한 번 보여준 뒤 점프 그림으로 돌아간다.
+    return false;
   }
 
   // 글자: 순서대로 하나씩, 좌우로 흩어지게 놓는다.
@@ -1018,12 +1173,19 @@ export class Game {
     const ts = this.effects.slowmo > 0 ? SLOWMO_FACTOR : 1;
     const px = this.player.x;
     const py = this.player.y;
-    const hitDist = this.player.width * 0.32;
+    const floating = this._bubbleHolds() && this.bubble.phase !== 'blow';
+    // 비눗방울 안에 있으면 방울 크기만큼 넓게 부딪히고, 닿으면 방울만 터진다.
+    const hitDist = floating ? BUBBLE_HIT_RADIUS : this.player.width * 0.32;
 
     for (const h of this.hazards) {
       if (h.dead) continue;
       h.update(this.worldWidth, ts);
       if (Math.hypot(px - h.x, py - h.y) < hitDist + h.r) {
+        if (floating) {
+          this._popBubble();
+          return;
+        }
+        if (this.bubbleGrace > 0) continue; // 방금 터진 방울 — 같은 가시에 바로 죽지 않게
         this._onHazardHit(h);
         if (this.state !== 'playing') return; // 게임오버 시 중단
       }
@@ -1222,7 +1384,8 @@ export class Game {
       // 시그니처 페어: 점수배율+로켓 → 로켓 중 점수 추가 2배
       if (this.effects.rocket > 0 && this.taken.has('scoreMul')) burstMult *= 2;
       const beforeCoins = this._currentCoins();
-      this.score += Math.round(delta * permMult * burstMult * this._comboMult());
+      const bubbleMult = this._bubbleHolds() ? BUBBLE_SCORE_MULT : 1;
+      this.score += Math.round(delta * permMult * burstMult * this._comboMult() * bubbleMult);
       this.callbacks.onScore?.(this.score);
       const afterCoins = this._currentCoins();
       if (afterCoins !== beforeCoins) this.callbacks.onCoins?.(afterCoins);
@@ -1259,7 +1422,9 @@ export class Game {
       cloud.update(this.worldWidth, ts);
     }
 
-    if (this.effects.rocket > 0) {
+    if (this._updateBubble(ts)) {
+      // 비눗방울을 부는 중이거나 떠 있는 중: 이동은 _updateBubble 이 처리했다.
+    } else if (this.effects.rocket > 0) {
       // 로켓 부스트: 중력 무시하고 위로 쭉 상승
       this.player.groundedCloud = null;
       this.player.onGround = false;
@@ -1287,10 +1452,12 @@ export class Game {
     this._spawnClouds();
     this._spawnOrbs();
     this._spawnCoinPickups();
+    this._spawnSoaps();
     this._spawnLetters();
     this._spawnHazards();
     this._updateOrbs();
     this._collectCoinPickups();
+    this._collectSoaps();
     this._collectLetters();
     this._updateHazards();
     if (this.state !== 'playing' && this.state !== 'ready') return; // 장애물로 게임오버
@@ -1730,6 +1897,7 @@ export class Game {
 
   // 보호막으로 부활: 화면 중앙으로 끌어올리고 받쳐줄 구름을 둔다.
   _revive() {
+    this._setBubble(null);
     const reviveY = this.cameraY + this.worldHeight * 0.4;
     this.clouds.push(new Cloud(
       this.worldWidth / 2,
@@ -2141,6 +2309,9 @@ export class Game {
 
     for (const coin of this.coinPickups) {
       coin.draw(this.ctx, this.cameraY, this.frame);
+    }
+    for (const sp of this.soaps) {
+      sp.draw(this.ctx, this.cameraY, this.frame);
     }
     for (const token of this.letters) {
       token.draw(this.ctx, this.cameraY, this.frame);

@@ -1,0 +1,14 @@
+Use case: stylized-concept.
+Asset type: game pixel-art animation spritesheet, 8 frames in exactly 4 columns x 2 rows, row-major chronological order, transparent RGBA background.
+Reference image: identity and pixel style reference of the existing orange cream kitten holding a mint grappling rope launcher with tan rope spool. Retain this exact character design, face, proportions, colors and recognizable launcher. New action drawings, not a static copy.
+Primary request: the kitten has grappled a cloud, charged tension, then releases and flies in that direction. Draw the CAT animation only: charge-to-launch-to-airborne. No cloud, no scenery, no external rope line, no arrow, no detached hook or effects. The game will separately draw the rope and direction indicator.
+Simple useful canonical direction: toward upper left, gentle diagonal, face in readable front three-quarter view, head leads and hind paws/tail trail lower right. Kitten firmly holds the same launcher in BOTH front paws, muzzle oriented upper-left throughout. Do not rotate camera between frames. No clothes.
+Frame1: compact suspended bracing pose, knees bent, focused eyes.
+Frame2: slightly more tightly gathered charge pose, ears gently back, same scale.
+Frame3: releases tension, begins extending torso and hind legs toward lower right while head leads upper left.
+Frame4: full launch stretch, streamlined diagonal flying kitten with both paws clutching gun forward and legs trailing.
+Frame5: sustained flight, legs slightly relaxed, tail waving gently.
+Frame6: sustained flight, small leg/tail change.
+Frame7: sustained flight, small alternate tail change.
+Frame8: sustained flight returns near frame5 pose so frames5-8 loop smoothly.
+Keep cat's anatomical size/head width constant in every cell, no growth or squashing head. Draw every frame individually. Consistent sprite center/pivot, NO movement across canvas: movement will be handled by game physics. Exactly eight equally sized square cells, generous identical padding, all ears/tail/gun fully within each cell. Clean crisp pixel clusters and dark outline, no blur, no painterly smoothing. No text, numbers, gridlines, border, glow or motion streaks. Truly transparent background, not checkerboard painted into image.

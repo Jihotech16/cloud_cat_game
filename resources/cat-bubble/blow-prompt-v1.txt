@@ -1,0 +1,15 @@
+Mode: built-in image_gen
+Use case: precise-object-edit.
+Asset type: eight-frame soap-bubble-blowing idle animation sprite sheet for Poing pixel-art game.
+Input image 1 is authoritative character identity and prop reference. Preserve same orange cream kitten, black eyes, pink ears, orange tail to viewer right, aqua bubble bottle always in viewer-right paw, aqua round-ring wand always in viewer-left paw, no clothing. Change the articulated blowing action, not the character design.
+Layout: EXACTLY 4 columns x 2 rows of EQUAL SQUARE cells, 8 complete full-body drawings read left-to-right then top-to-bottom. Fixed camera, exact same cat/head size, fixed body center and foot baseline across all eight cells. Cat height about 68 percent of each cell; foot baseline at 88 percent cell height, leave space beside and above head for the bubble. Do not let bubbles affect character scale or positioning. No grid or labels.
+Frame 1 neutral smile wand beside cheek, no bubble.
+Frame 2 left forearm lifts wand inward, ring almost at mouth; head tilts very slightly toward wand.
+Frame 3 ring directly in front of pursed tiny O mouth, cheeks subtly puff, a tiny soap film bulges outward from ring toward viewer-left.
+Frame 4 gentle exhale, small round bubble grows attached to outward side of ring.
+Frame 5 bubble reaches about one third of head width and detaches, narrow transparent gap visible between ring and bubble. Mouth still blowing.
+Frame 6 bubble drifts diagonally up-left above the wand, cheeks relax, wand starts lowering.
+Frame 7 bubble higher up-left and fainter, arm halfway back to initial position.
+Frame 8 wand back in exact neutral frame-1 pose, bubble gone, original smile. Smooth looping endpoints.
+Animation must show real mouth/cheek/arm changes and bubble growth then drift, not just a static cat with moving dot. Bottle remains upright in right paw at waist. Cat never jumps, bounces, shrinks or grows. Redraw complete frames consistently.
+Crisp low-resolution pixel-art clusters matching reference, clean warm outlines, restrained pastel cyan/pink bubble rim, mostly transparent bubble interior. Actual transparent RGBA background. No black or white rectangle, no checkerboard painted in, no floor, no scenery, no huge surrounding bubble, no extra limbs, no text, no watermark. Every element entirely within its own cell.

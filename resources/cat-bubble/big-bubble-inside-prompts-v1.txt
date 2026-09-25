@@ -1,0 +1,25 @@
+Mode: built-in image_gen
+Initial prompt:
+Use case: precise-object-edit. Asset type: 12-frame pixel-art special ability animation sheet for a game.
+Reference image: exact orange and cream kitten identity, pixel style, proportions, aqua bottle in viewer-right paw and aqua circular bubble wand in viewer-left paw. Same tools in same paws throughout.
+CORRECT ACTION: cat blows a large transparent soap bubble, ENTERS INSIDE it, and FLOATS ENCLOSED INSIDE the sphere. Never on top, never sitting on bubble exterior, never using bubble as a platform.
+Exactly 4 columns x 3 rows of equally sized square cells, 12 complete poses in row-major order. No lines or labels. Same cat head size and body scale throughout, cat about 40% cell height. Large bubble final diameter 65% cell height. Plenty of transparent padding around each cell, all elements fully within own cell. Fixed camera. Cat must NOT shrink when entering.
+1 landing softly feet planted, no bubble.
+2 raises wand to pursed lips, slight inhale.
+3 tiny bubble forms at wand to left of face.
+4 attached bubble grows to head size.
+5 bubble grows to cat height, to left of cat.
+6 bubble is now 1.5 times cat height and detaches, mostly on left of cell with cat to right; position both within cell.
+7 cat leans and steps sideways through the bubble's right surface, magical film gently stretches around leading arm, not bursting.
+8 cat halfway through film: head and torso inside, hind paw crossing bubble rim, film curls gently around entry point.
+9 cat ENTIRELY INSIDE centered within bubble; film closes to full unbroken circular outline.
+10 cat floating INSIDE bubble, both feet relaxed and lifted, bubble clearly surrounds ears, tail, tools and feet with visible clear gap all around, happy face.
+11 same enclosed float pose, subtle bob by 1-2 final sprite pixels, small rim shimmer.
+12 back to frame10 enclosed pose for looping frames10-12.
+In final four frames outer circle surrounds entire kitten from ABOVE EARS to BELOW FEET, not below it. Kitten fully visible through clear bubble, not tinted or obscured. Delicate thin pale cyan pink lavender iridescent rim, two restrained white highlight arcs, nearly transparent interior and truly transparent exterior. No thick glow, no opaque blue fill, no noisy edge pixels. No cloud/platform/background/scenery/text/watermark. Crisp coherent pixel clusters, match original adorable game style. Redraw complete character articulation each frame, retain exact character identity, no clothing or extra props.
+
+Cleanup and layout refinement:
+Use case: precise-object-edit. Clean production sprite-sheet redraw of the attached 12-frame INSIDE-bubble animation. Preserve exact character and sequence, especially last row kitten COMPLETELY INSIDE the bubble.
+CRITICAL LAYOUT: landscape 4:3 canvas, exactly FOUR equal columns and THREE equal rows, 12 square cells. Put each full character/effect at the CENTER of its cell, with at least 8% EMPTY transparent padding on ALL sides. Top row must fill the top third, NOT huge empty space above. Row two stays entirely in middle third. Row three entirely in bottom third. No clipping and no overlap between cells.
+CLEANUP: remove every particle, aura, spray, smoke, foam, glitter, noise, white background patch, colored fringe. Absolutely NOTHING outside the deliberate character, tools and ONE thin bubble outline. Simplify each bubble to a clean 2-pixel-wide low-res pastel cyan/pink circle with two SMALL white crescent highlights, clear transparent interior. No thick shiny donut, no surrounding glow. Last row must clearly show complete cat inside transparent circle with gap above ears and below feet.
+Keep same cat SIZE across cells and same head width, no shrinking to fit; use a roomy cell instead. Same orange tabby, cream belly, bottle viewer-right paw, wand viewer-left paw. First six frames inflate the bubble, frames7-8 step THROUGH film, frame9 entirely enclosed, frames10-12 float sitting INSIDE sphere. NEVER on top of bubble. Crisp restrained pixel art, clean transparent RGBA background, no grid lines, captions or labels.

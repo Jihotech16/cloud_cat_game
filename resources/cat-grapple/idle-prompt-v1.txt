@@ -1,0 +1,9 @@
+Mode: built-in image_gen
+Use case: precise-object-edit. Asset type: FOUR-frame subtle idle animation sprite sheet for existing pixel-art grappling launcher cat.
+Input image is authoritative character and tool reference. Draw exact same orange/cream kitten with black glossy eyes, pink ears, curled striped tail on viewer right, holding ONE mint teal grappling-rope launcher with two paws. Exact same launcher design, coil of tan rope, cream grip and blunt silver hook pointing toward viewer-left. The launcher direction is FIXED, no aiming, turning or firing. Cat and launcher unified in each frame, not separate layers.
+Exactly FOUR complete full-body frames in ONE horizontal row, four equal cells, consistent generous margins. Cat same size and head/body proportions in all frames, feet on identical baseline, body centered, no zoom or squash.
+Frame1 calm open-eyed reference pose.
+Frame2 soft small inhale, chest and tail tip move at most ONE final-resolution pixel, upper eyelids lowered slightly, launcher held absolutely steady at reference angle.
+Frame3 gentle full blink, relaxed closed eyelids, body settles toward initial pose, tail tip shifts only one pixel; no sleep, no crouch.
+Frame4 eyes reopen, return to reference pose almost identical to frame1 for seamless loop.
+Redraw coherent full sprites, retain same stable silhouette, little paw grip, face marking and tool dimensions. Subdued motion, not bouncy. No walking, no jump, no arrows, no rotating gun, no rope firing, no muzzle flash. Crisp chunky original pixel-art clusters and restrained palette, not smooth vector or 3D. Genuinely transparent RGBA background, no floor/shadow/scenery/noise/glow, no labels, grids, numbers, text or watermark.

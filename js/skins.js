@@ -18,6 +18,8 @@ export const SKINS = [
   // 코인은 어드벤처 모드에서 한 판에 대략 25~40개 모인다 → 500코인이면 15판 안팎.
   { id: 'pajamas', price: 500 },
   { id: 'witch', season: 'halloween' },
+  // 비눗방울 고양이: 비눗방울물을 모아 큰 비눗방울을 타고 떠오르는 전용 특성(game.js).
+  { id: 'bubble', price: 1000 },
 ];
 
 export function isHalloweenSeason(date = new Date()) {

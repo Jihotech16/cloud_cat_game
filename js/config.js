@@ -131,6 +131,23 @@ export const LETTER_SCORE_BONUS = 120;    // 한 세트 완성 시 점수(세트
 export const LETTER_SCORE_STEP = 60;      // 세트마다 추가되는 점수
 export const LETTER_DUPLICATE_COINS = 2;  // 이미 모은 글자를 또 먹었을 때 주는 코인
 
+// 비눗방울 고양이: 비눗방울물 SOAP_NEEDED 개로 게이지가 차고, 찬 뒤 구름에 착지하면
+// 비눗방울을 불어(BUBBLE_BLOW_FRAMES) 그 안에 들어가 BUBBLE_FLOAT_FRAMES 동안 떠오른다.
+// 떠 있는 동안 가시·장애물에 닿으면 터져서 떨어진다(무적 아님, 대신 그 충돌로 죽지는 않는다).
+export const SOAP_RADIUS = 12 * GAME_SCALE;
+export const SOAP_NEEDED = 5;
+export const SOAP_GAP = 100 * GAME_SCALE;  // 세로 간격(월드 px). 아래 확률과 함께 약 12m 에 하나
+export const SOAP_CHANCE = 0.8;
+export const BUBBLE_BLOW_FRAMES = 72;            // 부는 동작 1.2초(구름 위에 선 채)
+export const BUBBLE_FLOAT_FRAMES = 180;          // 3초
+export const BUBBLE_FLOAT_METERS = 25;
+export const BUBBLE_SCORE_MULT = 0.5;            // 떠 있는 동안 오른 높이는 점수 절반
+export const BUBBLE_POP_GRACE_FRAMES = 45;       // 터진 직후 같은 장애물에 바로 죽지 않게
+export const BUBBLE_HIT_RADIUS = 20 * GAME_SCALE; // 비눗방울 크기만큼 넓게 부딪힌다
+// 떠 있는 동안 화면을 눌렀다 떼면 방울을 터뜨리며 위로 뛰어나간다.
+export const BUBBLE_EXIT_PREP_FRAMES = 10;       // 뒷다리를 모으는 준비(그동안은 계속 떠 있다)
+export const BUBBLE_EXIT_JUMP_MULT = 1.5;        // 뛰어나가는 점프 세기(JUMP_FORCE 배율)
+
 // 소모품 '출발 부스터': 그 판의 첫 점프만 이 배율로 세게 뛴다.
 export const BOOSTER_JUMP_MULT = 2.5;
 

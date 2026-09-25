@@ -1,0 +1,13 @@
+Mode: built-in image_gen
+Use case: precise-object-edit. Asset type: eight-frame bubble POP / exit animation for pixel-art game.
+Reference 1 bottom row establishes cat floating INSIDE a transparent bubble. Reference 2 is authoritative character identity and tools. Draw a NEW 8-frame sequence continuing from the enclosed floating pose.
+EXACT layout: 4 columns x 2 rows, eight equal square cells in row-major order. Cat same head width, body proportions, camera scale and center in ALL cells, no shrinking or enlarging after bubble disappears. Leave 10% empty margins. Cat full standing height roughly 55% cell height. Bubble diameter roughly 80% cell height.
+1: full intact iridescent bubble, cat entirely INSIDE, seated float pose, feet tucked, bottle viewer-right paw and wand viewer-left paw.
+2: bubble slightly quivers, tiny pinch at its upper-right rim, cat notices with open eyes.
+3: membrane opens at upper-right and rapidly retracts; circle now missing its top-right quarter. Cat begins extending hind feet.
+4: whole bubble POPS: no intact circle remains, only four separated short curved wisps of soap film traveling outward, 4 tiny droplets. Cat briefly blinks, feet extend. Soft friendly pop, not explosion.
+5: soap wisps shorten into droplets farther out; cat eyes open, feet lower into airborne descent pose, tools securely in same paws.
+6: only three very small fading droplets outside cat; no ring, no aura. Cat holds a normal midair jump/descent posture.
+7: clean cat alone, all bubble material gone. Feet down ready to land, tail relaxed.
+8: same clean falling pose, ready to transition into existing jumping animation. No ground/landing impact.
+Preserve kitten identity, orange cream fur, pink ears, black glossy eyes, tail on viewer right, aqua bottle and ring wand. Redraw full consistent poses, do not merely erase a ring on identical frames. Keep face unobstructed. Thin delicate cyan pink lavender pixel rim, actual transparent interior and exterior, restrained white highlights. Bubble must disintegrate into LIQUID droplets, not glass shards, fire, smoke, starburst, violent explosion or confetti. Crisp controlled pixel art and clean transparency. No noisy fringes, no background patches, no text, grid, labels, watermarks or scenery. Cat is unharmed and NEVER on top of bubble.

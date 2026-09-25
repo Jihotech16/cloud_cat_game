@@ -7,9 +7,39 @@ import {
 const FRAME_SIZE = 128;
 const JUMP_READY_FRAME_COUNT = 3;
 const JUMPING_FRAME_COUNT = 4;
-// 대기 애니메이션(4프레임): 눈을 뜨고 머물다가 짧게 깜빡인다.
+// 대기 애니메이션(기본 4프레임): 눈을 뜨고 머물다가 짧게 깜빡인다.
+// 복장마다 idleDurations 로 프레임 수·길이를 바꿀 수 있다(비눗방울 고양이는 8프레임).
 const IDLE_FRAME_DURATIONS = [1100, 550, 120, 650];
-const IDLE_CYCLE_MS = IDLE_FRAME_DURATIONS.reduce((sum, ms) => sum + ms, 0);
+const sumMs = (list) => list.reduce((sum, ms) => sum + ms, 0);
+
+// 비눗방울 고양이 특수 동작. 시간(ms)은 게임 속도에 맞춰 원본 그림보다 빠르게 잡았다.
+// float 시트(128px, 4×3): 0~8 = 불고 들어가기(부는 단계에 한 번), 9~11 = 방울 안에서 떠다니기(반복).
+// pop 시트(208px, 4×2): 방울이 터지고 놀라며 떨어진다(한 번).
+const BUBBLE_BLOW_MS = [98, 136, 153, 164, 191, 164, 98, 87, 109]; // 합 1.2초 = BUBBLE_BLOW_FRAMES
+const BUBBLE_FLOAT_LOOP = [9, 10, 11];
+const BUBBLE_FLOAT_FRAME_MS = 350;
+const BUBBLE_POP_MS = [100, 80, 80, 100, 100, 120, 150, 300];
+// float 시트 첫 프레임의 고양이(머리 가운데 x 69.5, 발끝 y 122)를 보통 그림(가운데 ~66, 발끝 112)에 맞춘다.
+const BUBBLE_FLOAT_DX = -3.5;
+const BUBBLE_FLOAT_DY = -10;
+// pop 시트는 방울 속 고양이가 float 시트보다 (35, 92)px 오른쪽 아래에 그려져 있다.
+const BUBBLE_POP_OFFSET_X = 35;
+const BUBBLE_POP_OFFSET_Y = 92;
+// exit 시트(160px, 4×2): 방울 속에서 스스로 뛰어나간다. 첫 두 칸(준비)은 게임에서도 떠 있는 동안이고,
+// 셋째 칸부터 실제 점프가 시작된다. 그림 속 상승(머리 위치 변화)은 물리 이동과 겹치지 않게 칸마다 되돌린다.
+const BUBBLE_EXIT_MS = [80, 90, 60, 70, 90, 110, 130, 250];
+const BUBBLE_EXIT_OFFSET_X = -16.5;          // float 칸 대비 exit 칸 위치(머리 기준)
+const BUBBLE_EXIT_OFFSET_Y = -44;
+const BUBBLE_EXIT_RISE = [0, 0, 48, 58, 47, 46, 48, 35];
+
+function frameAt(durations, ms) {
+  let elapsed = ms;
+  for (let i = 0; i < durations.length; i++) {
+    if (elapsed < durations[i]) return i;
+    elapsed -= durations[i];
+  }
+  return -1; // 끝남
+}
 const IDLE_SHEET_FEET_Y = 112; // 대기 시트는 세 복장 모두 발끝이 이 줄에 맞춰져 있다
 
 // 복장(스킨)별 스프라이트. 모든 시트는 128px 정사각 프레임 규격을 따른다.
@@ -58,9 +88,31 @@ const SKIN_SPRITES = {
     readyDy: [-3, -2, 0],
     jumpingDy: -3,
   },
+  // 비눗방울 고양이: 대기 중에 작은 비눗방울을 분다(8프레임). 그림이 칸 가운데보다 왼쪽에 있어
+  // 대기·준비 그림을 8px 오른쪽으로 옮겨 다른 고양이와 같은 자리에 선다.
+  bubble: {
+    idleSheet: 'assets/cat-bubble-idle-sheet.png',
+    idleDurations: [900, 200, 250, 300, 250, 300, 300, 600],
+    idleSheetDx: 8,
+    idleSheetDy: 1,
+    idle: null,
+    ready: 'assets/cat-bubble-jumpready.png',
+    jumping: 'assets/cat-bubble-jumping.png',
+    idleDy: 0,
+    readyDx: 8,
+    readyDy: [0, 0, 0],
+    jumpingDy: 0,
+    float: 'assets/cat-bubble-float-sheet.png',
+    pop: 'assets/cat-bubble-pop-sheet.png',
+    exit: 'assets/cat-bubble-exit-sheet.png',
+  },
 };
 
 const loaded = {};
+
+function idleDurationsOf(def) {
+  return def.idleDurations ?? IDLE_FRAME_DURATIONS;
+}
 
 // size 를 주면 그 크기가 맞을 때만 ready 로 본다(규격이 틀린 시트는 쓰지 않고 다음 그림으로 대체).
 function loadImage(src, size = null) {
@@ -80,10 +132,13 @@ function spritesFor(id) {
     const def = SKIN_SPRITES[id] ?? SKIN_SPRITES.default;
     loaded[id] = {
       def,
-      idleSheet: loadImage(def.idleSheet, { w: FRAME_SIZE * IDLE_FRAME_DURATIONS.length, h: FRAME_SIZE }),
+      idleSheet: loadImage(def.idleSheet, { w: FRAME_SIZE * idleDurationsOf(def).length, h: FRAME_SIZE }),
       idle: loadImage(def.idle),
       ready: loadImage(def.ready),
       jumping: loadImage(def.jumping),
+      float: loadImage(def.float),
+      pop: loadImage(def.pop),
+      exit: loadImage(def.exit),
     };
   }
   return loaded[id];
@@ -123,6 +178,7 @@ export class Player {
     this.squash = 0;   // +면 착지(납작), -면 점프(길쭉). 매 프레임 0으로 감쇠.
     this.trail = [];   // 빠르게 상승/하강 시 잔상용 최근 위치
     this.idleElapsedMs = 0; // 대기 애니메이션 진행 시간(서 있을 때만 흐른다)
+    this.bubbleAnim = null; // 비눗방울 고양이 특수 동작 { phase: 'blow'|'float'|'pop', t(게임 프레임) }
   }
 
   get left() {
@@ -194,7 +250,8 @@ export class Player {
     if (this.charging || this._isInAir()) {
       this.idleElapsedMs = 0;
     } else {
-      this.idleElapsedMs = (this.idleElapsedMs + (1000 / 60) * timeScale) % IDLE_CYCLE_MS;
+      this.idleElapsedMs = (this.idleElapsedMs + (1000 / 60) * timeScale)
+        % sumMs(idleDurationsOf(spritesFor(currentSkin).idleSheet.ready ? spritesFor(currentSkin).def : SKIN_SPRITES.default));
     }
     // 0을 향해 부드럽게 복귀
     this.squash *= Math.pow(0.72, timeScale);
@@ -210,13 +267,30 @@ export class Player {
     }
   }
 
-  _getIdleFrame() {
-    let elapsed = this.idleElapsedMs;
-    for (let i = 0; i < IDLE_FRAME_DURATIONS.length; i++) {
-      if (elapsed < IDLE_FRAME_DURATIONS[i]) return i;
-      elapsed -= IDLE_FRAME_DURATIONS[i];
+  _getIdleFrame(def) {
+    const frame = frameAt(idleDurationsOf(def), this.idleElapsedMs);
+    return frame < 0 ? 0 : frame;
+  }
+
+  // 비눗방울 특수 동작: 그릴 시트와 프레임. 없거나 끝났으면 null(보통 그림으로 그린다).
+  _bubbleFrame() {
+    const anim = this.bubbleAnim;
+    if (!anim) return null;
+    const ms = anim.t * (1000 / 60);
+    if (anim.phase === 'blow') {
+      const f = frameAt(BUBBLE_BLOW_MS, ms);
+      return { sheet: 'float', frame: f < 0 ? BUBBLE_BLOW_MS.length - 1 : f };
     }
-    return 0;
+    if (anim.phase === 'float') {
+      const i = Math.floor(ms / BUBBLE_FLOAT_FRAME_MS) % BUBBLE_FLOAT_LOOP.length;
+      return { sheet: 'float', frame: BUBBLE_FLOAT_LOOP[i] };
+    }
+    if (anim.phase === 'exit') {
+      const f = frameAt(BUBBLE_EXIT_MS, ms);
+      return f < 0 ? null : { sheet: 'exit', frame: f };
+    }
+    const f = frameAt(BUBBLE_POP_MS, ms);
+    return f < 0 ? null : { sheet: 'pop', frame: f };
   }
 
   _getReadyFrame() {
@@ -256,7 +330,7 @@ export class Player {
     const drawIdle = (animate = true) => {
       const sheetSet = pick('idleSheet');
       if (sheetSet.idleSheet.ready) {
-        const frame = animate ? this._getIdleFrame() : 0;
+        const frame = animate ? this._getIdleFrame(sheetSet.def) : 0;
         const { idleSheetDx = 0, idleSheetDy = 0, idleSheetScale = 1 } = sheetSet.def;
         // 발끝 위치는 그대로 두고 가운데를 기준으로 키운다.
         const feetY = -size / 2 + (IDLE_SHEET_FEET_Y + idleSheetDy) * unit;
@@ -305,6 +379,38 @@ export class Player {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.translate(this.x, screenY);
+
+    // 비눗방울 고양이 특수 동작(불기·방울 속 부양·터짐)은 전용 시트로 그린다.
+    const bubble = this._bubbleFrame();
+    const bubbleSheet = bubble && skin[bubble.sheet]?.ready ? skin[bubble.sheet] : null;
+    if (bubbleSheet) {
+      if (faceRight) ctx.scale(-1, 1);
+      const floatX = -size / 2 + BUBBLE_FLOAT_DX * unit;
+      const floatY = -size / 2 + BUBBLE_FLOAT_DY * unit;
+      if (bubble.sheet === 'float') {
+        const col = bubble.frame % 4;
+        const row = Math.floor(bubble.frame / 4);
+        ctx.drawImage(bubbleSheet.img, col * FRAME_SIZE, row * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE,
+          floatX, floatY, size, size);
+      } else if (bubble.sheet === 'exit') {
+        const cell = 160;
+        const col = bubble.frame % 4;
+        const row = Math.floor(bubble.frame / 4);
+        ctx.drawImage(bubbleSheet.img, col * cell, row * cell, cell, cell,
+          floatX + BUBBLE_EXIT_OFFSET_X * unit,
+          floatY + (BUBBLE_EXIT_OFFSET_Y + BUBBLE_EXIT_RISE[bubble.frame]) * unit,
+          cell * unit, cell * unit);
+      } else {
+        const cell = 208;
+        const col = bubble.frame % 4;
+        const row = Math.floor(bubble.frame / 4);
+        ctx.drawImage(bubbleSheet.img, col * cell, row * cell, cell, cell,
+          floatX - BUBBLE_POP_OFFSET_X * unit, floatY - BUBBLE_POP_OFFSET_Y * unit, cell * unit, cell * unit);
+      }
+      ctx.restore();
+      return;
+    }
+
     // 스쿼시&스트레치 — 발밑을 기준으로 눌리고 늘어난다.
     if (this.squash !== 0) {
       const footY = size / 2 - Player.FEET_INSET;
@@ -323,7 +429,7 @@ export class Player {
       ctx.drawImage(
         readySet.ready.img,
         frame * FRAME_SIZE, 0, FRAME_SIZE, FRAME_SIZE,
-        -size / 2, -size / 2 + (readySet.def.readyDy[frame] ?? 0) * unit, size, size,
+        -size / 2 + (readySet.def.readyDx ?? 0) * unit, -size / 2 + (readySet.def.readyDy[frame] ?? 0) * unit, size, size,
       );
     } else if (useJumping) {
       const frame = this._getJumpingFrame();
