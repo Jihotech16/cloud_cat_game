@@ -4,7 +4,8 @@ import { initScores, getBestScore, getGlobalBest } from './score.js';
 import { initAppCheck } from './appcheck.js';
 import { initNative } from './native.js';
 import { shareResult } from './share.js';
-import { playClickSound, setSfxMuted } from './audio.js';
+import { playClickSound, setSfxMuted, isSfxMuted } from './audio.js';
+import { isHapticsOn, setHapticsOn } from './haptics.js';
 import { startBgm, toggleBgm, isBgmMuted, setBgmScene } from './bgm.js';
 import {
   initAds,
@@ -73,7 +74,7 @@ const btnStart = document.getElementById('btn-start');
 const btnRetry = document.getElementById('btn-retry');
 const btnShare = document.getElementById('btn-share');
 const shareLabel = document.getElementById('share-label');
-const btnMute = document.getElementById('btn-mute');
+const btnSettings = document.getElementById('btn-settings');
 const btnRewardCoins = document.getElementById('btn-reward-coins');
 const btnMenu = document.getElementById('btn-menu');
 const btnRevive = document.getElementById('btn-revive');
@@ -911,17 +912,45 @@ window.addEventListener('pointerdown', () => {
   startBgm();
 }, { once: true });
 
-function updateMuteBtn() {
-  if (!btnMute) return;
-  const muted = isBgmMuted();
-  btnMute.textContent = muted ? '🔇' : '🔊';
-  btnMute.setAttribute('aria-label', muted ? t('sound.off') : t('sound.on'));
-  btnMute.title = muted ? t('sound.off') : t('sound.on');
+// ── 설정 화면: 배경음 · 효과음 · 진동 · 언어 · 개인정보 처리방침 ──
+const settingsScreen = document.getElementById('settings-screen');
+const toggleBgmEl = document.getElementById('toggle-bgm');
+const toggleSfxEl = document.getElementById('toggle-sfx');
+const toggleHapticsEl = document.getElementById('toggle-haptics');
+
+function setSwitch(el, on) {
+  el?.setAttribute('aria-checked', on ? 'true' : 'false');
 }
-btnMute?.addEventListener('click', () => {
+
+function renderSettings() {
+  setSwitch(toggleBgmEl, !isBgmMuted());
+  setSwitch(toggleSfxEl, !isSfxMuted());
+  setSwitch(toggleHapticsEl, isHapticsOn());
+  btnSettings?.setAttribute('aria-label', t('settings.title'));
+}
+
+toggleBgmEl?.addEventListener('click', () => {
   toggleBgm();
-  setSfxMuted(isBgmMuted()); // 효과음도 함께 on/off
-  updateMuteBtn();
+  playClickSound();
+  renderSettings();
+});
+toggleSfxEl?.addEventListener('click', () => {
+  setSfxMuted(!isSfxMuted());
+  playClickSound(); // 켰을 때만 들린다
+  renderSettings();
+});
+toggleHapticsEl?.addEventListener('click', () => {
+  setHapticsOn(!isHapticsOn());
+  playClickSound();
+  renderSettings();
+});
+btnSettings?.addEventListener('click', () => {
+  playClickSound();
+  renderSettings();
+  settingsScreen.classList.remove('hidden');
+});
+document.getElementById('btn-settings-close')?.addEventListener('click', () => {
+  settingsScreen.classList.add('hidden');
 });
 
 // 언어 선택기: 버튼을 만들고, 누르면 언어 전환 + 화면 문구 갱신.
@@ -936,7 +965,7 @@ function renderLangSelector() {
     b.addEventListener('click', () => {
       setLang(code);
       applyStaticI18n();
-      updateMuteBtn();
+      renderSettings();
       setMode(selectedMode); // 모드 힌트 갱신
       refreshMenuRecords();
       renderConsumableArm();
@@ -959,8 +988,8 @@ async function boot() {
   await initAds();
   showBanner(); // 시작 화면(메뉴)에서 배너 노출
   if (menuCoinsEl) menuCoinsEl.textContent = getCoins().toLocaleString();
-  setSfxMuted(isBgmMuted()); // 저장된 음소거 설정을 효과음에도 반영
-  updateMuteBtn();
+  setSfxMuted(isSfxMuted()); // 저장된 효과음 설정 반영
+  renderSettings();
   setMode(selectedMode);
   renderConsumableArm();
   await initScores();

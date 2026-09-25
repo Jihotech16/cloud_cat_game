@@ -4,7 +4,27 @@
 //
 // 사용 플러그인: @capacitor/haptics (Capacitor 8 호환 8.x)
 
+// 설정 화면의 '진동' 토글. 기본은 켜짐.
+const HAPTICS_OFF_KEY = 'cloudCat_hapticsOff';
+
+export function isHapticsOn() {
+  try {
+    return localStorage.getItem(HAPTICS_OFF_KEY) !== '1';
+  } catch {
+    return true;
+  }
+}
+
+export function setHapticsOn(on) {
+  try {
+    localStorage.setItem(HAPTICS_OFF_KEY, on ? '0' : '1');
+  } catch {
+    // 저장이 막혀 있으면 무시
+  }
+}
+
 function haptics() {
+  if (!isHapticsOn()) return null;
   const cap = window.Capacitor;
   if (!cap?.isNativePlatform?.()) return null;
   return cap.Plugins?.Haptics ?? null;

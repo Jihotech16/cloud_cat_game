@@ -90,6 +90,7 @@
 
     <div id="start-screen" class="overlay overlay--full">
       <div class="panel">
+        <button id="btn-settings" class="icon-btn settings-btn" aria-label="Settings">⚙️</button>
         <h1 class="title">☁️ Poing: Cloud Jump</h1>
         <p class="subtitle" data-i18n="start.subtitle">구름 위를 뛰어올라 하늘 끝까지!</p>
         <div class="cat-preview" aria-hidden="true">
@@ -112,16 +113,12 @@
         </div>
         <div class="wallet-row">
           <p class="wallet"><img class="coin-ico" src="assets/coin-paw.png" alt=""> <strong id="menu-coins">0</strong></p>
-          <button id="btn-mute" class="icon-btn" aria-label="Sound">🔊</button>
         </div>
         <div class="records">
           <p class="best-record"><span data-i18n="start.myBest">내 최고 기록</span>: <strong id="menu-best">0</strong>m</p>
           <p class="best-record global-record"><span data-i18n="start.globalBest">전체 최고 기록</span>: <strong id="menu-global-best">0</strong>m</p>
         </div>
         <p class="install-hint pwa-only" data-i18n="start.installHint">홈 화면에 추가하면 앱처럼 플레이할 수 있어요</p>
-        <p class="install-hint"><a href="privacy.html" target="_blank" rel="noopener" data-i18n="start.privacy">개인정보 처리방침</a></p>
-        <p class="lang-label" data-i18n="start.language">언어</p>
-        <div id="lang-select" class="lang-select" aria-label="Language"></div>
       </div>
     </div>
 
@@ -192,6 +189,36 @@
         <div id="cats-body" class="cats-body"></div>
         <button id="btn-cats-back" class="btn-secondary hidden" data-i18n="cats.back">← 목록</button>
         <button id="btn-cats-close" class="btn-primary" data-i18n="shop.close">닫기</button>
+      </div>
+    </div>
+
+    <!-- 설정: 소리·진동·언어·개인정보 처리방침 -->
+    <div id="settings-screen" class="overlay overlay--full hidden">
+      <div class="panel">
+        <h2 class="title">⚙️ <span data-i18n="settings.title">설정</span></h2>
+        <div class="settings-list">
+          <div class="settings-row">
+            <span data-i18n="settings.bgm">배경음</span>
+            <button id="toggle-bgm" class="switch" role="switch" aria-checked="true"><span class="switch-knob"></span></button>
+          </div>
+          <div class="settings-row">
+            <span data-i18n="settings.sfx">효과음</span>
+            <button id="toggle-sfx" class="switch" role="switch" aria-checked="true"><span class="switch-knob"></span></button>
+          </div>
+          <div class="settings-row native-only">
+            <span data-i18n="settings.haptics">진동</span>
+            <button id="toggle-haptics" class="switch" role="switch" aria-checked="true"><span class="switch-knob"></span></button>
+          </div>
+          <div class="settings-row settings-row--stack">
+            <span data-i18n="start.language">언어</span>
+            <div id="lang-select" class="lang-select" aria-label="Language"></div>
+          </div>
+          <a class="settings-row settings-link" href="privacy.html" target="_blank" rel="noopener">
+            <span data-i18n="start.privacy">개인정보 처리방침</span>
+            <span aria-hidden="true">›</span>
+          </a>
+        </div>
+        <button id="btn-settings-close" class="btn-primary" data-i18n="shop.close">닫기</button>
       </div>
     </div>
 

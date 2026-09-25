@@ -19,10 +19,29 @@ function getCtx() {
   return audioCtx;
 }
 
-// 효과음 음소거(전체 음소거에 연동). master 게인을 0으로 낮춘다.
+// 효과음 음소거(설정 화면에서 배경음과 따로 켜고 끈다). master 게인을 0으로 낮춘다.
+// 예전엔 배경음 음소거에 묶여 있었으므로, 따로 저장된 값이 없으면 그 값을 따른다.
+const SFX_MUTE_KEY = 'cloudCat_sfxMuted';
+const LEGACY_MUTE_KEY = 'cloudCat_bgmMuted';
+
+export function isSfxMuted() {
+  try {
+    const v = localStorage.getItem(SFX_MUTE_KEY);
+    if (v !== null) return v === '1';
+    return localStorage.getItem(LEGACY_MUTE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function setSfxMuted(muted) {
   sfxMuted = !!muted;
   if (master) master.gain.value = sfxMuted ? 0 : SFX_VOLUME;
+  try {
+    localStorage.setItem(SFX_MUTE_KEY, sfxMuted ? '1' : '0');
+  } catch {
+    // 저장이 막혀 있으면 이번 실행 동안만 적용된다.
+  }
 }
 
 // 단일 보이스: 주파수 글라이드 + 부드러운 엔벨로프 + (선택)로우패스.
